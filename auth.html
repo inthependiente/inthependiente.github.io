@@ -126,7 +126,7 @@ async function enviarMagicLink() {
 
   // redirectTo: a dónde vuelve Supabase después de hacer click en el link
   // Debe coincidir con lo que configuraste en Supabase → URL Configuration
-  const redirectTo = inthependiente.github.io/llamado_v2.html?id=1;
+  const redirectTo = window.location.origin + window.location.pathname;
 
   const { error } = await sb.auth.signInWithOtp({
     email,
