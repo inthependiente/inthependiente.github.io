@@ -1,0 +1,6 @@
+{
+  "name": "Admin Hojas de Llamado - Gecko Films",
+  "description": "Panel de administración para gestionar proyectos, llamados, locaciones, personal, elenco y shotlists con subida de imágenes de referencia a Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
