@@ -500,7 +500,7 @@ function cancelarEdit(tabla, id, campo, valorOriginal, wid) {
 function horaEditable(tabla, id, campo, valor, wid) {
   const fmt = formatHora(valor);
   return `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
-    <span class="font-condensed font-bold text-[12px] text-red-700">${fmt}</span>
+    <span class="">${fmt}</span>
     ${userSession ? `<button class="edit-btn no-print" onclick="activarEditHora('${tabla}',${id},'${campo}','${fmt}','${wid}')">✎</button>` : ''}
   </span>`;
 }
@@ -599,7 +599,7 @@ function cancelarUrl(tabla, id, campo, valorOriginal, wid, labelBtn) {
 // ── Referencias PDR: URLs + upload ───────────────
 function refEditable(pdrId, shotlistId, urlsActuales, wid) {
   const imgs = (urlsActuales||'').split(',').map(u=>u.trim()).filter(Boolean);
-  const imgsHtml = imgs.map(u=>`<img src="${u}" class="h-10 w-14 object-cover rounded border inline-block mr-1">`).join('');
+  const imgsHtml = imgs.map(u=>`<img src="${u}" class="max-w-full h-auto object-cover inline-block">`).join('');
   return `<div id="ref-display-${wid}">
     <div>${imgsHtml || '<span class="text-neutral-300 italic text-[10px]">sin imágenes</span>'}</div>
     ${userSession ? `<button class="edit-btn no-print mt-0.5" style="width:auto;padding:1px 5px" onclick="activarEditRef(${pdrId},${shotlistId},'${(urlsActuales||'').replace(/'/g,"\\'")}','${wid}')">✎ editar refs</button>` : ''}
@@ -749,7 +749,7 @@ async function loadCronograma() {
           ${editableSpan('escenas', r.id, 'escena', r.escena||'', `esc-escena-${r.id}`)}
         </span>
       </td>
-      <td class="border px-1 py-1 text-center content-center">
+      <td class="border px-1 py-1 font-condensed font-bold text-[13px] text-center content-center">
         ${horaEditable('escenas', r.id, 'hora', r.hora, wId)}
       </td>
       <td class="border px-1 py-1 leading-none content-center">
@@ -763,12 +763,12 @@ async function loadCronograma() {
       <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
         <div>${editableSpan('locaciones', locId, 'locacion', loc.locacion||'', `loc-nom-${r.id}`)}</div>
         <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_loc', loc.direccion_loc||'', `loc-dir-${r.id}`)}</div>
-        ${urlEditable('locaciones', locId, 'url_loc', loc.url_loc||'', 'Locación', `loc-url-${r.id}`)}
+        ${urlEditable('locaciones', locId, 'url_loc', loc.url_loc||'', 'Ubicación', `loc-url-${r.id}`)}
       </td>
       <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
         <div>${editableSpan('locaciones', locId, 'centro_medico', loc.centro_medico||'', `loc-med-${r.id}`)}</div>
         <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_med', loc.direccion_med||'', `loc-dmed-${r.id}`)}</div>
-        ${urlEditable('locaciones', locId, 'url_med', loc.url_med||'', 'Centro Médico', `loc-umed-${r.id}`)}
+        ${urlEditable('locaciones', locId, 'url_med', loc.url_med||'', 'Ubicación', `loc-umed-${r.id}`)}
       </td>
     </tr>`;
   }).join('');
@@ -784,7 +784,7 @@ function renderListaContactos(rows, containerId) {
     <div class="flex grid grid-cols-3 px-2 py-[1px] ${rowBg(i)} text-[11px] border-b border-neutral-100 items-center">
       <span class="font-semibold">${editableSpan('cliente_agencia', r.id, 'nombre', r.nombre||'', `ca-nom-${r.id}`)}</span>
       <span class="text-neutral-500">${editableSpan('cliente_agencia', r.id, 'empresa', r.empresa||'', `ca-emp-${r.id}`)}</span>
-      <span class="text-right">${horaEditable('cliente_agencia', r.id, 'horario_loc', r.horario_loc, `ca-${r.id}`)}</span>
+      <span class="font-condensed font-bold text-[12px] text-right">${horaEditable('cliente_agencia', r.id, 'horario_loc', r.horario_loc, `ca-${r.id}`)}</span>
     </div>`).join('');
 }
 
@@ -816,11 +816,11 @@ async function loadTalento() {
       <td class="border border-neutral-300 px-1 py-[2px]">
         ${editableSpan('talento', r.id, 'rol', r.rol||'', `tal-rol-${r.id}`)}
       </td>
-      <td class="border border-neutral-300 px-1 py-[2px] text-center">
+      <td class="border border-neutral-300 px-1 py-[2px] text-center font-condensed font-bold text-[12px] text-red-700">
         ${horaEditable('talento', r.id, 'llamado_hora', r.llamado_hora, `tal-${r.id}`)}
       </td>
       <td class="border border-gray-200 px-1 py-[2px]">${loc.locacion||''}</td>
-      <td class="border border-gray-200 px-1 py-[2px] text-center">
+      <td class="border border-gray-200 px-1 py-[2px] text-center font-condensed font-bold text-[12px]">
         ${horaEditable('talento', r.id, 'en_set', r.en_set, `talset-${r.id}`)}
       </td>
       <td class="border border-gray-200 px-1 py-[2px]">
@@ -879,7 +879,7 @@ async function loadCrew() {
           <span class="text-neutral-500">${r.cargo ? r.cargo+':' : ''}</span>
           <span class="font-semibold">${editableSpan('crew', r.id, 'nombre', r.nombre||'', `crew-nom-${r.id}`)}</span>
           <span class="italic text-neutral-500">${editableSpan('crew', r.id, 'notas', r.notas||'', `crew-not-${r.id}`)}</span>
-          <span class="text-right">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
+          <span class="font-condensed font-bold text-[12px] text-right">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
         </div>`).join('')}
     </div>`;
   }
@@ -973,7 +973,7 @@ function renderPDR(pdrRows, llamadoHora) {
       <td class="border border-neutral-600 px-1 py-1">
         ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`)}
       </td>
-      <td class="border border-neutral-600 p-1">
+      <td class="border border-neutral-600 p-0">
         ${refEditable(r.id, s.id, s.referencia_urls||'', wid)}
       </td>
     </tr>`;
