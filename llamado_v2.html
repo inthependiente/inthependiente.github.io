@@ -689,7 +689,7 @@ async function loadLlamado() {
 
   // Campos editables del header — tabla llamados
   const campos = [
-    ['hdr-dia',      'dia_numero', l.d_o_d || '', false],
+    ['hdr-dia',      'd_o_d',       l.d_o_d || '', false],
     ['hdr-fecha',    'fecha',      formatFecha(l.fecha), false],
     ['hdr-llamado',  'llamado_hora', formatHora(l.llamado_hora), true],
     ['hdr-desayuno', 'desayuno',   formatHora(l.desayuno), true],
