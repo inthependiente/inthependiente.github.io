@@ -114,23 +114,34 @@ window.addEventListener('load', () => {
 
 // ── Enviar magic link ────────────────────────────
 async function enviarMagicLink() {
-  const email = document.getElementById('input-email').value.trim();
-  const btn   = document.getElementById('btn-send');
-  const errEl = document.getElementById('error-msg');
+  const emailInput = document.getElementById('input-email');
+  const email = emailInput.value.trim();
+  if (!email) return;
 
-  if (!email) { mostrarError('Ingresa tu email.'); return; }
-
+  const btn = document.getElementById('btn-submit');
   btn.disabled    = true;
   btn.textContent = 'Enviando...';
-  errEl.classList.add('hidden');
+  ocultarError();
 
-  // redirectTo: a dónde vuelve Supabase después de hacer click en el link
-  // Debe coincidir con lo que configuraste en Supabase → URL Configuration
-  const redirectTo = window.location.origin + window.location.pathname;
+  // 1. Detectar si venimos de una página específica (como llamado_v2.html?id=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  const nextParam = urlParams.get('next');
+  
+  let redirectTo;
+  if (nextParam) {
+    // Si existe el parámetro 'next', redirigimos exactamente a esa URL completa
+    redirectTo = nextParam;
+  } else {
+    // Si no existe (login directo), regresa al origen base de la app
+    redirectTo = window.location.origin + window.location.pathname;
+  }
 
+  // 2. Enviar el OTP / Magic Link a Supabase con la redirección explícita
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: redirectTo },
+    options: { 
+      emailRedirectTo: redirectTo 
+    },
   });
 
   if (error) {
