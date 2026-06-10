@@ -123,37 +123,53 @@ async function enviarMagicLink() {
   btn.textContent = 'Enviando...';
   ocultarError();
 
+  // Asegurar que tenemos acceso a 'sb' (el cliente Supabase global)
+  if (typeof sb === 'undefined') {
+    mostrarError("Error interno: El cliente de Supabase no se ha inicializado.");
+    btn.disabled    = false;
+    btn.textContent = 'Enviar Magic Link';
+    return;
+  }
+
   // 1. Detectar si venimos de una página específica (como llamado_v2.html?id=1)
   const urlParams = new URLSearchParams(window.location.search);
   const nextParam = urlParams.get('next');
   
   let redirectTo;
   if (nextParam) {
-    // Si existe el parámetro 'next', redirigimos exactamente a esa URL completa
-    redirectTo = nextParam;
+    // Si existe 'next', usamos esa URL decodificada completa
+    redirectTo = decodeURIComponent(nextParam);
   } else {
-    // Si no existe (login directo), regresa al origen base de la app
+    // Si no existe, regresamos a la raíz limpia
     redirectTo = window.location.origin + window.location.pathname;
   }
 
-  // 2. Enviar el OTP / Magic Link a Supabase con la redirección explícita
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { 
-      emailRedirectTo: redirectTo 
-    },
-  });
+  // 2. Enviar el OTP / Magic Link a Supabase
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { 
+        emailRedirectTo: redirectTo 
+      },
+    });
 
-  if (error) {
-    mostrarError(error.message);
+    if (error) {
+      mostrarError(error.message);
+      btn.disabled    = false;
+      btn.textContent = 'Enviar Magic Link';
+      return;
+    }
+
+    // Si todo sale bien, mostramos la pantalla de éxito
+    document.getElementById('sent-email').textContent = email;
+    document.getElementById('view-form').classList.add('hidden');
+    document.getElementById('view-sent').classList.remove('hidden');
+
+  } catch (err) {
+    mostrarError("Excepción al enviar: " + err.message);
     btn.disabled    = false;
     btn.textContent = 'Enviar Magic Link';
-    return;
   }
-
-  document.getElementById('sent-email').textContent = email;
-  document.getElementById('view-form').classList.add('hidden');
-  document.getElementById('view-sent').classList.remove('hidden');
 }
 
 function mostrarError(msg) {
