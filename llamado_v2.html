@@ -425,73 +425,101 @@ function formatFecha(v) {
   const p = v.toString().split('-');
   return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
 }
-// Convierte DD/MM/YYYY → YYYY-MM-DD para PostgreSQL date
+
+// Convierte DD/MM/YYYY → YYYY-MM-DD para PostgreSQL date (Mejorado)
 function fechaToISO(v) {
+  if (!v) return '';
   const p = v.trim().split('/');
-  if (p.length===3) return `${p[2]}-${p[1]}-${p[0]}`;
+  if (p.length === 3) {
+    const dia = p[0].padStart(2, '0');
+    const mes = p[1].padStart(2, '0');
+    const anio = p[2];
+    return `${anio}-${mes}-${dia}`;
+  }
   return v;
 }
 
-// ═══════════════════════════════════════════════════
-//  EDICIÓN INLINE — PATRÓN GENÉRICO
-//  Cualquier campo de texto: click → input → guardar con Enter o blur
-// ═══════════════════════════════════════════════════
 
-// Renderiza un span editable con click-to-edit
-// tabla, id, campo: destino del PATCH
-// valor: valor actual a mostrar
-// opts: { cls, transform, validate, displayFn }
+// ═══════════════════════════════════════════════════
+//  EDICIÓN INLINE — PATRÓN GENÉRICO (COMPATIBLE) - GEMINI
+// ═══════════════════════════════════════════════════
 function editableSpan(tabla, id, campo, valor, wid, opts = {}) {
-  const display = opts.displayFn ? opts.displayFn(valor) : (valor || '');
+  // Si nos pasan un displayFn (como el de la fecha o día), lo usamos, si no, el valor por defecto
+  const display = opts.displayFn ? opts.displayFn() : (valor || '—');
   const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded px-0.5';
-  return `<span id="ed-${wid}" class="${cls} ${userSession ? '' : ''}"
-    onclick="${userSession ? `activarEdit('${tabla}',${id},'${campo}','${(valor||'').toString().replace(/'/g,"\\'")}','${wid}',${JSON.stringify(opts||{}).replace(/"/g,"'")})` : ''}"
+  
+  return `<span id="ed-${wid}" class="${cls}"
+    onclick="${userSession ? `activarEdit('${tabla}',${id},'${campo}','${(valor||'').toString().replace(/'/g,"\\'")}','${wid}')` : ''}"
     title="${userSession ? 'Click para editar' : ''}">${display}</span>`;
 }
 
-function activarEdit(tabla, id, campo, valorActual, wid, optsStr) {
+function activarEdit(tabla, id, campo, valorActual, wid) {
   if (!userSession) return;
   const el = document.getElementById(`ed-${wid}`);
   if (!el) return;
-  const opts = typeof optsStr === 'string' ? {} : (optsStr || {});
+
+  // Si es fecha, pasamos el formato YYYY-MM-DD a DD/MM/YYYY para que el usuario edite amigablemente
+  let valorParaInput = valorActual;
+  if (campo === 'fecha' && valorActual) {
+    const p = valorActual.split('-');
+    if (p.length === 3) valorParaInput = `${p[2]}/${p[1]}/${p[0]}`;
+  }
+
   el.outerHTML = `
     <span id="ed-${wid}" class="inline-flex items-center gap-0.5">
-      <input id="ei-${wid}" value="${valorActual.replace(/"/g,'&quot;')}"
+      <input id="ei-${wid}" value="${valorParaInput.replace(/"/g,'&quot;')}"
         class="border border-[#14cbb5] rounded px-1 py-0 text-[11px] bg-[#f0fdfb] min-w-[60px] max-w-[160px]"
-        onblur="confirmarEdit('${tabla}',${id},'${campo}','${wid}',false)"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarEdit('${tabla}',${id},'${campo}','${wid}',false)}if(event.key==='Escape'){cancelarEdit('${tabla}',${id},'${campo}','${valorActual.replace(/'/g,"\\'")}','${wid}')}">
+        onblur="confirmarEdit('${tabla}',${id},'${campo}','${wid}')"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarEdit('${tabla}',${id},'${campo}','${wid}')}if(event.key==='Escape'){cancelarEdit('${tabla}',${id},'${campo}','${valorActual.replace(/'/g,"\\'")}','${wid}')}">
     </span>`;
+  
   setTimeout(() => { const i = document.getElementById(`ei-${wid}`); if(i){i.focus();i.select();} }, 30);
 }
 
-async function confirmarEdit(tabla, id, campo, wid, _unused) {
+async function confirmarEdit(tabla, id, campo, wid) {
   const input = document.getElementById(`ei-${wid}`);
   if (!input) return;
+  
   let nuevoValor = input.value.trim();
-  // Convertir fecha si el campo es fecha
-  if (campo === 'fecha') nuevoValor = fechaToISO(nuevoValor);
+  let valorOriginalParaBD = nuevoValor;
+
+  // Interceptamos SOLO si es el campo fecha
+  if (campo === 'fecha') {
+    nuevoValor = fechaToISO(nuevoValor);
+    valorOriginalParaBD = nuevoValor; 
+  }
+
   try {
     await sbPatch(tabla, id, { [campo]: nuevoValor });
-    // Re-renderizar el span con el valor actualizado
-    const display = campo === 'fecha' ? formatFecha(nuevoValor) : nuevoValor;
+    
+    // Al re-renderizar la vista estática, calculamos el display correcto
+    let display = nuevoValor;
+    if (campo === 'fecha') {
+      display = formatFecha(nuevoValor);
+    }
+    
     const el = document.getElementById(`ed-${wid}`);
     if (el) {
       el.outerHTML = `<span id="ed-${wid}"
         class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
-        onclick="activarEdit('${tabla}',${id},'${campo}','${nuevoValor.replace(/'/g,"\\'")}','${wid}',{})"
+        onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginalParaBD.replace(/'/g,"\\'")}','${wid}')"
         title="Click para editar">${display || '—'}</span>`;
     }
     showToast('Guardado ✓');
+    
+    // Solo recarga la página si lo que cambió fue la fecha (para actualizar el clima)
+    if (campo === 'fecha') window.location.reload(); 
   } catch(e) { showToast('Error: ' + e.message, false); }
 }
 
 function cancelarEdit(tabla, id, campo, valorOriginal, wid) {
+  // Si es fecha muestra formato DD/MM/YYYY, si no, el texto original
   const display = campo === 'fecha' ? formatFecha(valorOriginal) : valorOriginal;
   const el = document.getElementById(`ed-${wid}`);
   if (el) {
     el.outerHTML = `<span id="ed-${wid}"
       class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
-      onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginal.replace(/'/g,"\\'")}','${wid}',{})"
+      onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginal.replace(/'/g,"\\'")}','${wid}')"
       title="Click para editar">${display || '—'}</span>`;
   }
 }
@@ -670,9 +698,12 @@ async function loadLlamado() {
     ['hdr-notas',    'notas',      l.notas || '', false],
   ];
 
+  // ... (Aquí se mantiene igual tu definición de const campos = [...])
+
   campos.forEach(([elId, campo, display, esHora]) => {
     const el = document.getElementById(elId);
     if (!el) return;
+    
     const rawVal = campo === 'fecha' ? (l.fecha||'') :
                    esHora           ? (l[campo]||'') :
                                       (l[campo]||'');
@@ -680,10 +711,14 @@ async function loadLlamado() {
       // horas usan el patrón botón ✎
       el.innerHTML = horaEditable('llamados', l.id, campo, rawVal, `hdr-${campo}`);
     } else {
-      // texto: click-to-edit
-      el.innerHTML = editableSpan('llamados', l.id, campo, rawVal, `hdr-${campo}`);
+      // texto / fecha / día: pasamos el formato ya procesado mediante displayFn
+      el.innerHTML = editableSpan('llamados', l.id, campo, rawVal, `hdr-${campo}`, {
+        displayFn: () => display
+      });
     }
   });
+
+  // ... (El resto de la función loadLlamado se queda exactamente igual)
 
   // Proyectos (solo lectura en el llamado)
   set('hdr-productora',     p.productora);
