@@ -118,16 +118,21 @@ async function enviarMagicLink() {
   const email = emailInput.value.trim();
   if (!email) return;
 
-  const btn = document.getElementById('btn-submit');
-  btn.disabled    = true;
-  btn.textContent = 'Enviando...';
+  // Corregido: En tu HTML original el ID es 'btn-login'
+  const btn = document.getElementById('btn-login');
+  if (btn) {
+    btn.disabled    = true;
+    btn.textContent = 'Enviando...';
+  }
   ocultarError();
 
   // Asegurar que tenemos acceso a 'sb' (el cliente Supabase global)
   if (typeof sb === 'undefined') {
     mostrarError("Error interno: El cliente de Supabase no se ha inicializado.");
-    btn.disabled    = false;
-    btn.textContent = 'Enviar Magic Link';
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = 'Enviar Magic Link';
+    }
     return;
   }
 
@@ -155,8 +160,10 @@ async function enviarMagicLink() {
 
     if (error) {
       mostrarError(error.message);
-      btn.disabled    = false;
-      btn.textContent = 'Enviar Magic Link';
+      if (btn) {
+        btn.disabled    = false;
+        btn.textContent = 'Enviar Magic Link';
+      }
       return;
     }
 
@@ -167,8 +174,10 @@ async function enviarMagicLink() {
 
   } catch (err) {
     mostrarError("Excepción al enviar: " + err.message);
-    btn.disabled    = false;
-    btn.textContent = 'Enviar Magic Link';
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = 'Enviar Magic Link';
+    }
   }
 }
 
