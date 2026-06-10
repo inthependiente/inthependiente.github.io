@@ -384,7 +384,7 @@ function badgeDN(val) {
 
 // w_status: SWF=green, SW=yellow, W=blue, WF=red, resto=neutral
 const W_STATUS_COLORS = {
-  SWF: 'bg-green-600', SW: 'bg-yellow-500 text-black', W: 'bg-blue-500', WF: 'bg-red-600',
+  SWF: 'bg-green-500', SW: 'bg-yellow-500 text-black', W: 'bg-blue-500', WF: 'bg-red-600',
 };
 function badgeWStatus(val, id, rowId) {
   const v   = (val||'').toUpperCase().trim();
@@ -965,7 +965,7 @@ function renderPDR(pdrRows, llamadoHora) {
 
   const [hBase, mBase] = llamadoHora.split(':').map(Number);
   let minutos = hBase * 60 + mBase;
-  const planosEspeciales = ['DE','AL','AR','CD','CC','CE','CM','ED'];
+  const planosEspeciales = ['ES'];
 
   tbody.innerHTML = pdrRows.map((r, i) => {
     const s   = r.shotlist || {};
