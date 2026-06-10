@@ -247,7 +247,7 @@
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[30px]">Plano</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[36px]">Inicio</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-left">Descripción</th>
-            <th class="border border-neutral-600 px-1 py-[2px] text-center w-[30px]">Cast</th>
+            
             <th class="border border-neutral-600 px-1 py-[2px] text-left w-[100px]">Locación</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-left w-[140px]">Notas</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[140px]">Referencia</th>
@@ -1001,9 +1001,7 @@ function renderPDR(pdrRows, llamadoHora) {
       <td class="border border-neutral-600 px-1 py-1">
         ${editableSpan('shotlist', s.id, 'descripcion', s.descripcion||'', `pdr-desc-${r.id}`)}
       </td>
-      <td class="border border-neutral-600 px-1 py-1 text-center">
-        ${editableSpan('shotlist', s.id, 'cast_nombres', s.cast_nombres||'', `pdr-cast-${r.id}`)}
-      </td>
+      
       <td class="border border-neutral-600 px-1 py-1">${loc.locacion||''}</td>
       <td class="border border-neutral-600 px-1 py-1">
         ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`)}
