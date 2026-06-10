@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>-</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
@@ -265,67 +266,108 @@
 
   </div>
 
+  <!-- Indicador de sesión — visible solo en pantalla, no al imprimir -->
+  <div id="session-bar" class="no-print fixed bottom-4 right-4 flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-2 text-[12px] border border-neutral-200 hidden">
+    <span id="session-dot" class="w-2 h-2 rounded-full bg-neutral-300"></span>
+    <span id="session-label" class="text-neutral-500">Sin sesión</span>
+    <button id="session-btn" onclick="toggleSesion()"
+      class="ml-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 px-3 py-1 rounded-full font-medium transition-colors">
+      Iniciar sesión
+    </button>
+  </div>
+
+
 
 <script>
 // ═══════════════════════════════════════════════════
-//  CONFIGURACIÓN
+//  CONFIG
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL  = 'https://mvmlwelmilhitoetessx.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12bWx3ZWxtaWxoaXRvZXRlc3N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTYxOTksImV4cCI6MjA5NjUzMjE5OX0.1MIsmOLAZM31b1BsysxII88U6JzOQWMp5kNDRiFmCnc';
+const LLAMADO_ID    = parseInt(new URLSearchParams(window.location.search).get('id'), 10);
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-const LLAMADO_ID = parseInt(new URLSearchParams(window.location.search).get('id'), 10);
+let crewRows    = [];
+let userSession = null;
 
-let crewRows = [];
+// Orden canónico de departamentos de crew
+const DEPT_ORDER = [
+  'dirección','producción','cámara','arte','foto fija',
+  'sonido','luces/grip','maquillaje y vestuario','transporte','catering'
+];
 
 // ═══════════════════════════════════════════════════
 //  SUPABASE HELPERS
 // ═══════════════════════════════════════════════════
-const SB_HEADERS = {
-  'apikey':        SUPABASE_ANON,
-  'Authorization': `Bearer ${SUPABASE_ANON}`,
-  'Content-Type':  'application/json',
-  'Prefer':        'return=representation',
-};
+function getHeaders() {
+  const token = userSession?.access_token || SUPABASE_ANON;
+  return {
+    'apikey': SUPABASE_ANON,
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+  };
+}
 
-// GET — lectura con joins via select embedding
 async function fetchSupabase(tabla, filtros = {}, orden = null, select = '*') {
   const params = new URLSearchParams({ select });
   Object.entries(filtros).forEach(([col, val]) => params.append(col, `eq.${val}`));
   if (orden) params.append('order', `${orden}.asc`);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${params}`, { headers: SB_HEADERS });
-  if (!res.ok) throw new Error(`Error ${res.status} al cargar ${tabla}: ${await res.text()}`);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${params}`, { headers: getHeaders() });
+  if (!res.ok) throw new Error(`Error ${res.status} en ${tabla}: ${await res.text()}`);
   return res.json();
 }
 
-// PATCH — actualiza un registro por id
-// Es la operación adecuada para CRUD: mínima, solo envía el campo modificado
 async function sbPatch(tabla, id, data) {
+  if (!userSession) { showToast('Inicia sesión para editar', false); throw new Error('Sin sesión'); }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
-    method:  'PATCH',
-    headers: SB_HEADERS,
-    body:    JSON.stringify(data),
+    method: 'PATCH', headers: getHeaders(), body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Error ${res.status} al guardar en ${tabla}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
-// ── Helpers UI ────────────────────────────────────
+// Upload imagen al bucket de Supabase Storage
+async function sbUpload(file) {
+  if (!userSession) { showToast('Inicia sesión para subir imágenes', false); throw new Error('Sin sesión'); }
+  const ext  = file.name.split('.').pop();
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/referencias/${name}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${userSession.access_token}`, 'Content-Type': file.type },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Upload error: ${await res.text()}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/referencias/${name}`;
+}
+
+// ═══════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════
 function set(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = (val !== null && val !== undefined && val !== '') ? val : '—';
 }
 function rowBg(i) { return i % 2 === 0 ? 'bg-white' : 'bg-neutral-100'; }
 
-const mapPin = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4 inline-block"><path fill-rule="evenodd" d="M12 1.5a.75.75 0 0 1 .75.75V4.5a.75.75 0 0 1-1.5 0V2.25A.75.75 0 0 1 12 1.5ZM5.636 4.136a.75.75 0 0 1 1.06 0l1.592 1.591a.75.75 0 0 1-1.061 1.06l-1.591-1.59a.75.75 0 0 1 0-1.061Zm12.728 0a.75.75 0 0 1 0 1.06l-1.591 1.592a.75.75 0 0 1-1.06-1.061l1.59-1.591a.75.75 0 0 1 1.061 0Zm-6.816 4.496a.75.75 0 0 1 .82.311l5.228 7.917a.75.75 0 0 1-.777 1.148l-2.097-.43 1.045 3.9a.75.75 0 0 1-1.45.388l-1.044-3.899-1.601 1.42a.75.75 0 0 1-1.247-.606l.569-9.47a.75.75 0 0 1 .554-.68ZM3 10.5a.75.75 0 0 1 .75-.75H6a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10.5Zm14.25 0a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H18a.75.75 0 0 1-.75-.75Zm-8.962 3.712a.75.75 0 0 1 0 1.061l-1.591 1.591a.75.75 0 1 1-1.061-1.06l1.591-1.592a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>`;
-
-function locationBtn(url) {
-  if (!url) return '';
-  return `<a href="${url}" target="_blank" class="no-print">
-    <div class="bg-blue-600 text-white text-center font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors">
-      ${mapPin} Ubicación
-    </div>
-  </a>`;
+// Toast
+function showToast(msg, ok = true) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.className = 'no-print fixed top-3 right-3 z-50 px-4 py-2 rounded-lg text-white text-[12px] font-semibold shadow-lg';
+    document.body.appendChild(t);
+  }
+  t.textContent    = msg;
+  t.style.background = ok ? '#14cbb5' : '#ef4444';
+  t.style.opacity  = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
+
+const mapPin = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4 inline-block"><path fill-rule="evenodd" d="M12 1.5a.75.75 0 0 1 .75.75V4.5a.75.75 0 0 1-1.5 0V2.25A.75.75 0 0 1 12 1.5ZM5.636 4.136a.75.75 0 0 1 1.06 0l1.592 1.591a.75.75 0 0 1-1.061 1.06l-1.591-1.59a.75.75 0 0 1 0-1.061Zm12.728 0a.75.75 0 0 1 0 1.06l-1.591 1.592a.75.75 0 0 1-1.06-1.061l1.59-1.591a.75.75 0 0 1 1.061 0Zm-6.816 4.496a.75.75 0 0 1 .82.311l5.228 7.917a.75.75 0 0 1-.777 1.148l-2.097-.43 1.045 3.9a.75.75 0 0 1-1.45.388l-1.044-3.899-1.601 1.42a.75.75 0 0 1-1.247-.606l.569-9.47a.75.75 0 0 1 .554-.68ZM3 10.5a.75.75 0 0 1 .75-.75H6a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10.5Zm14.25 0a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H18a.75.75 0 0 1-.75-.75Zm-8.962 3.712a.75.75 0 0 1 0 1.061l-1.591 1.591a.75.75 0 1 1-1.061-1.06l1.591-1.592a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd"/></svg>`;
 
 function badgeIntExt(val) {
   const v = (val||'').toUpperCase().trim();
@@ -339,10 +381,37 @@ function badgeDN(val) {
   if (v==='N') return `<span class="bg-black text-white font-condensed font-bold text-[12px] px-1.5 py-[1px] rounded-sm">N</span>`;
   return val;
 }
-function badgeStatus(val) {
-  const v = (val||'').toUpperCase().trim();
-  const colors = { SWF:'bg-green-700', HOLD:'bg-yellow-500', DROP:'bg-red-600' };
-  return v ? `<span class="${colors[v]||'bg-neutral-500'} text-white font-condensed font-bold text-[11px] px-1 py-[1px] rounded-sm">${v}</span>` : '';
+
+// w_status: SWF=green, SW=yellow, W=blue, WF=red, resto=neutral
+const W_STATUS_COLORS = {
+  SWF: 'bg-green-600', SW: 'bg-yellow-500 text-black', W: 'bg-blue-500', WF: 'bg-red-600',
+};
+function badgeWStatus(val, id, rowId) {
+  const v   = (val||'').toUpperCase().trim();
+  const cls = W_STATUS_COLORS[v] || 'bg-neutral-400';
+  const txt = v || '—';
+  // Click cicla al siguiente estado; solo si hay sesión
+  return `<span id="ws-${rowId}" onclick="ciclarWStatus(${rowId},'${v}')"
+    class="${cls} text-white font-condensed font-bold text-[11px] px-1 py-[1px] rounded-sm cursor-pointer no-print-cursor select-none"
+    title="Click para cambiar estado">${txt}</span>`;
+}
+
+const W_STATUS_CYCLE = ['SWF','SW','W','WF',''];
+async function ciclarWStatus(id, valorActual) {
+  if (!userSession) { showToast('Inicia sesión para editar', false); return; }
+  const idx      = W_STATUS_CYCLE.indexOf(valorActual.toUpperCase());
+  const siguiente = W_STATUS_CYCLE[(idx + 1) % W_STATUS_CYCLE.length];
+  try {
+    await sbPatch('talento', id, { w_status: siguiente });
+    const el  = document.getElementById(`ws-${id}`);
+    if (el) {
+      const cls = W_STATUS_COLORS[siguiente] || 'bg-neutral-400';
+      el.className = `${cls} text-white font-condensed font-bold text-[11px] px-1 py-[1px] rounded-sm cursor-pointer select-none`;
+      el.textContent = siguiente || '—';
+      el.setAttribute('onclick', `ciclarWStatus(${id},'${siguiente}')`);
+    }
+    showToast(`Status → ${siguiente || 'vacío'} ✓`);
+  } catch(e) { showToast('Error: ' + e.message, false); }
 }
 
 function formatHora(val) {
@@ -352,306 +421,431 @@ function formatHora(val) {
   return s;
 }
 function formatFecha(v) {
-  if (!v||typeof v!=='string') return '—';
-  const p = v.split('-');
+  if (!v) return '—';
+  const p = v.toString().split('-');
   return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
 }
-
-// ── Toast ─────────────────────────────────────────
-function showToast(msg, ok=true) {
-  let t = document.getElementById('_toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = '_toast';
-    t.className = 'no-print fixed top-3 right-3 z-50 px-4 py-2 rounded-lg text-white text-[12px] font-semibold shadow-lg transition-opacity';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.background = ok ? '#14cbb5' : '#ef4444';
-  t.style.opacity = '1';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+// Convierte DD/MM/YYYY → YYYY-MM-DD para PostgreSQL date
+function fechaToISO(v) {
+  const p = v.trim().split('/');
+  if (p.length===3) return `${p[2]}-${p[1]}-${p[0]}`;
+  return v;
 }
 
 // ═══════════════════════════════════════════════════
-//  EDICIÓN INLINE DE HORA
-//  Patrón: el span de hora tiene un botón de lápiz al lado.
-//  Al hacer click se reemplaza el span por un input + botón guardar.
-//  Al guardar se hace PATCH a Supabase y se vuelve al span.
+//  EDICIÓN INLINE — PATRÓN GENÉRICO
+//  Cualquier campo de texto: click → input → guardar con Enter o blur
 // ═══════════════════════════════════════════════════
 
-// Genera el HTML de una celda de hora editable
-// tabla: nombre de la tabla en Supabase
-// id: id del registro
-// campo: nombre de la columna a editar
-// valor: valor actual
-// wrapperId: id del elemento que contiene todo (para re-renderizar)
-function horaEditable(tabla, id, campo, valor, wrapperId) {
-  const horaFmt = formatHora(valor);
-  return `
-    <span id="hora-display-${wrapperId}" class="inline-flex items-center gap-0.5">
-      <span class="font-condensed font-bold text-[12px] text-red-700">${horaFmt}</span>
-      <button class="edit-btn no-print" title="Editar hora"
-        onclick="activarEditHora('${tabla}',${id},'${campo}','${horaFmt}','${wrapperId}')">✎</button>
-    </span>`;
+// Renderiza un span editable con click-to-edit
+// tabla, id, campo: destino del PATCH
+// valor: valor actual a mostrar
+// opts: { cls, transform, validate, displayFn }
+function editableSpan(tabla, id, campo, valor, wid, opts = {}) {
+  const display = opts.displayFn ? opts.displayFn(valor) : (valor || '');
+  const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded px-0.5';
+  return `<span id="ed-${wid}" class="${cls} ${userSession ? '' : ''}"
+    onclick="${userSession ? `activarEdit('${tabla}',${id},'${campo}','${(valor||'').toString().replace(/'/g,"\\'")}','${wid}',${JSON.stringify(opts||{}).replace(/"/g,"'")})` : ''}"
+    title="${userSession ? 'Click para editar' : ''}">${display}</span>`;
 }
 
-function activarEditHora(tabla, id, campo, valorActual, wrapperId) {
-  const wrapper = document.getElementById(`hora-display-${wrapperId}`);
-  if (!wrapper) return;
-  wrapper.outerHTML = `
-    <span id="hora-display-${wrapperId}" class="inline-flex items-center gap-0.5">
-      <input id="hora-input-${wrapperId}" class="edit-inline-input" value="${valorActual}" maxlength="5" placeholder="HH:MM">
-      <button class="save-btn no-print" onclick="guardarHora('${tabla}',${id},'${campo}','${wrapperId}')">✓</button>
-      <button class="save-btn no-print" style="background:#9ca3af"
-        onclick="cancelarEditHora('${tabla}',${id},'${campo}','${valorActual}','${wrapperId}')">✕</button>
+function activarEdit(tabla, id, campo, valorActual, wid, optsStr) {
+  if (!userSession) return;
+  const el = document.getElementById(`ed-${wid}`);
+  if (!el) return;
+  const opts = typeof optsStr === 'string' ? {} : (optsStr || {});
+  el.outerHTML = `
+    <span id="ed-${wid}" class="inline-flex items-center gap-0.5">
+      <input id="ei-${wid}" value="${valorActual.replace(/"/g,'&quot;')}"
+        class="border border-[#14cbb5] rounded px-1 py-0 text-[11px] bg-[#f0fdfb] min-w-[60px] max-w-[160px]"
+        onblur="confirmarEdit('${tabla}',${id},'${campo}','${wid}',false)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarEdit('${tabla}',${id},'${campo}','${wid}',false)}if(event.key==='Escape'){cancelarEdit('${tabla}',${id},'${campo}','${valorActual.replace(/'/g,"\\'")}','${wid}')}">
     </span>`;
-  setTimeout(() => document.getElementById(`hora-input-${wrapperId}`)?.focus(), 50);
+  setTimeout(() => { const i = document.getElementById(`ei-${wid}`); if(i){i.focus();i.select();} }, 30);
 }
 
-async function guardarHora(tabla, id, campo, wrapperId) {
-  const input = document.getElementById(`hora-input-${wrapperId}`);
+async function confirmarEdit(tabla, id, campo, wid, _unused) {
+  const input = document.getElementById(`ei-${wid}`);
   if (!input) return;
-  const nuevoValor = input.value.trim();
-  // Validar formato HH:MM
-  if (!nuevoValor.match(/^\d{2}:\d{2}$/)) {
-    showToast('Formato inválido. Usa HH:MM', false);
-    return;
-  }
+  let nuevoValor = input.value.trim();
+  // Convertir fecha si el campo es fecha
+  if (campo === 'fecha') nuevoValor = fechaToISO(nuevoValor);
   try {
     await sbPatch(tabla, id, { [campo]: nuevoValor });
-    // Volver al modo display con el nuevo valor
-    const wrapper = document.getElementById(`hora-display-${wrapperId}`);
-    if (wrapper) {
-      wrapper.outerHTML = `
-        <span id="hora-display-${wrapperId}" class="inline-flex items-center gap-0.5">
-          <span class="font-condensed font-bold text-[12px] text-red-700">${nuevoValor}</span>
-          <button class="edit-btn no-print" title="Editar hora"
-            onclick="activarEditHora('${tabla}',${id},'${campo}','${nuevoValor}','${wrapperId}')">✎</button>
-        </span>`;
+    // Re-renderizar el span con el valor actualizado
+    const display = campo === 'fecha' ? formatFecha(nuevoValor) : nuevoValor;
+    const el = document.getElementById(`ed-${wid}`);
+    if (el) {
+      el.outerHTML = `<span id="ed-${wid}"
+        class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
+        onclick="activarEdit('${tabla}',${id},'${campo}','${nuevoValor.replace(/'/g,"\\'")}','${wid}',{})"
+        title="Click para editar">${display || '—'}</span>`;
     }
-    showToast('Hora guardada ✓');
-  } catch(e) {
-    showToast('Error al guardar: ' + e.message, false);
+    showToast('Guardado ✓');
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+function cancelarEdit(tabla, id, campo, valorOriginal, wid) {
+  const display = campo === 'fecha' ? formatFecha(valorOriginal) : valorOriginal;
+  const el = document.getElementById(`ed-${wid}`);
+  if (el) {
+    el.outerHTML = `<span id="ed-${wid}"
+      class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
+      onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginal.replace(/'/g,"\\'")}','${wid}',{})"
+      title="Click para editar">${display || '—'}</span>`;
   }
 }
 
-function cancelarEditHora(tabla, id, campo, valorOriginal, wrapperId) {
-  const wrapper = document.getElementById(`hora-display-${wrapperId}`);
-  if (wrapper) {
-    wrapper.outerHTML = `
-      <span id="hora-display-${wrapperId}" class="inline-flex items-center gap-0.5">
-        <span class="font-condensed font-bold text-[12px] text-red-700">${valorOriginal}</span>
-        <button class="edit-btn no-print" title="Editar hora"
-          onclick="activarEditHora('${tabla}',${id},'${campo}','${valorOriginal}','${wrapperId}')">✎</button>
+// ── Hora editable (botón ✎ al lado) ──────────────
+function horaEditable(tabla, id, campo, valor, wid) {
+  const fmt = formatHora(valor);
+  return `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
+    <span class="font-condensed font-bold text-[12px] text-red-700">${fmt}</span>
+    ${userSession ? `<button class="edit-btn no-print" onclick="activarEditHora('${tabla}',${id},'${campo}','${fmt}','${wid}')">✎</button>` : ''}
+  </span>`;
+}
+
+function activarEditHora(tabla, id, campo, valorActual, wid) {
+  const wrapper = document.getElementById(`hora-display-${wid}`);
+  if (!wrapper) return;
+  wrapper.outerHTML = `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
+    <input id="hora-input-${wid}" class="edit-inline-input" value="${valorActual}" maxlength="5" placeholder="HH:MM">
+    <button class="save-btn" onclick="guardarHora('${tabla}',${id},'${campo}','${wid}')">✓</button>
+    <button class="save-btn" style="background:#9ca3af" onclick="cancelarEditHora('${tabla}',${id},'${campo}','${valorActual}','${wid}')">✕</button>
+  </span>`;
+  setTimeout(() => document.getElementById(`hora-input-${wid}`)?.focus(), 30);
+}
+
+async function guardarHora(tabla, id, campo, wid) {
+  const input = document.getElementById(`hora-input-${wid}`);
+  if (!input) return;
+  const v = input.value.trim();
+  if (!v.match(/^\d{2}:\d{2}$/)) { showToast('Formato inválido. Usa HH:MM', false); return; }
+  try {
+    await sbPatch(tabla, id, { [campo]: v });
+    const wrapper = document.getElementById(`hora-display-${wid}`);
+    if (wrapper) wrapper.outerHTML = `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
+      <span class="font-condensed font-bold text-[12px] text-red-700">${v}</span>
+      <button class="edit-btn no-print" onclick="activarEditHora('${tabla}',${id},'${campo}','${v}','${wid}')">✎</button>
+    </span>`;
+    showToast('Hora guardada ✓');
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+function cancelarEditHora(tabla, id, campo, valorOriginal, wid) {
+  const wrapper = document.getElementById(`hora-display-${wid}`);
+  if (wrapper) wrapper.outerHTML = `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
+    <span class="font-condensed font-bold text-[12px] text-red-700">${valorOriginal}</span>
+    <button class="edit-btn no-print" onclick="activarEditHora('${tabla}',${id},'${campo}','${valorOriginal}','${wid}')">✎</button>
+  </span>`;
+}
+
+// ── URL editable (botón ✎ al lado, no el texto del link) ──
+function urlEditable(tabla, id, campo, url, labelBtn, wid) {
+  const linkHtml = url
+    ? `<a href="${url}" target="_blank" class="bg-blue-600 text-white font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors inline-flex items-center gap-1">${mapPin} ${labelBtn}</a>`
+    : `<span class="text-neutral-300 italic text-[10px]">sin URL</span>`;
+  return `<span id="url-display-${wid}" class="inline-flex items-center gap-0.5">
+    ${linkHtml}
+    ${userSession ? `<button class="edit-btn no-print" onclick="activarEditUrl('${tabla}',${id},'${campo}','${(url||'').replace(/'/g,"\\'")}','${wid}','${labelBtn}')">✎</button>` : ''}
+  </span>`;
+}
+
+function activarEditUrl(tabla, id, campo, valorActual, wid, labelBtn) {
+  const wrapper = document.getElementById(`url-display-${wid}`);
+  if (!wrapper) return;
+  wrapper.outerHTML = `<span id="url-display-${wid}" class="inline-flex items-center gap-0.5 flex-wrap">
+    <input id="url-input-${wid}" value="${valorActual}" placeholder="https://..."
+      class="border border-[#14cbb5] rounded px-1 py-0 text-[10px] bg-[#f0fdfb] w-[140px]">
+    <button class="save-btn" onclick="guardarUrl('${tabla}',${id},'${campo}','${wid}','${labelBtn}')">✓</button>
+    <button class="save-btn" style="background:#9ca3af" onclick="cancelarUrl('${tabla}',${id},'${campo}','${valorActual.replace(/'/g,"\\'")}','${wid}','${labelBtn}')">✕</button>
+  </span>`;
+  setTimeout(() => document.getElementById(`url-input-${wid}`)?.focus(), 30);
+}
+
+async function guardarUrl(tabla, id, campo, wid, labelBtn) {
+  const input = document.getElementById(`url-input-${wid}`);
+  if (!input) return;
+  const v = input.value.trim();
+  try {
+    await sbPatch(tabla, id, { [campo]: v });
+    const wrapper = document.getElementById(`url-display-${wid}`);
+    if (wrapper) {
+      const linkHtml = v
+        ? `<a href="${v}" target="_blank" class="bg-blue-600 text-white font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors inline-flex items-center gap-1">${mapPin} ${labelBtn}</a>`
+        : `<span class="text-neutral-300 italic text-[10px]">sin URL</span>`;
+      wrapper.outerHTML = `<span id="url-display-${wid}" class="inline-flex items-center gap-0.5">
+        ${linkHtml}
+        <button class="edit-btn no-print" onclick="activarEditUrl('${tabla}',${id},'${campo}','${v.replace(/'/g,"\\'")}','${wid}','${labelBtn}')">✎</button>
       </span>`;
+    }
+    showToast('URL guardada ✓');
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+function cancelarUrl(tabla, id, campo, valorOriginal, wid, labelBtn) {
+  const wrapper = document.getElementById(`url-display-${wid}`);
+  if (wrapper) {
+    const linkHtml = valorOriginal
+      ? `<a href="${valorOriginal}" target="_blank" class="bg-blue-600 text-white font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors inline-flex items-center gap-1">${mapPin} ${labelBtn}</a>`
+      : `<span class="text-neutral-300 italic text-[10px]">sin URL</span>`;
+    wrapper.outerHTML = `<span id="url-display-${wid}" class="inline-flex items-center gap-0.5">
+      ${linkHtml}
+      <button class="edit-btn no-print" onclick="activarEditUrl('${tabla}',${id},'${campo}','${valorOriginal.replace(/'/g,"\\'")}','${wid}','${labelBtn}')">✎</button>
+    </span>`;
   }
+}
+
+// ── Referencias PDR: URLs + upload ───────────────
+function refEditable(pdrId, shotlistId, urlsActuales, wid) {
+  const imgs = (urlsActuales||'').split(',').map(u=>u.trim()).filter(Boolean);
+  const imgsHtml = imgs.map(u=>`<img src="${u}" class="h-10 w-14 object-cover rounded border inline-block mr-1">`).join('');
+  return `<div id="ref-display-${wid}">
+    <div>${imgsHtml || '<span class="text-neutral-300 italic text-[10px]">sin imágenes</span>'}</div>
+    ${userSession ? `<button class="edit-btn no-print mt-0.5" style="width:auto;padding:1px 5px" onclick="activarEditRef(${pdrId},${shotlistId},'${(urlsActuales||'').replace(/'/g,"\\'")}','${wid}')">✎ editar refs</button>` : ''}
+  </div>`;
+}
+
+function activarEditRef(pdrId, shotlistId, urlsActuales, wid) {
+  const wrapper = document.getElementById(`ref-display-${wid}`);
+  if (!wrapper) return;
+  wrapper.innerHTML = `
+    <textarea id="ref-urls-${wid}" rows="2" placeholder="URL1, URL2, ..."
+      class="w-full border border-[#14cbb5] rounded px-1 py-1 text-[10px] bg-[#f0fdfb]">${urlsActuales}</textarea>
+    <div class="flex items-center gap-1 mt-1">
+      <label class="text-[10px] text-neutral-500">Subir imagen:</label>
+      <input type="file" id="ref-file-${wid}" accept="image/*" multiple
+        class="text-[10px] text-neutral-400 file:mr-1 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-neutral-200 file:text-neutral-700">
+    </div>
+    <div class="flex gap-1 mt-1">
+      <button class="save-btn" style="font-size:10px;padding:2px 6px" onclick="guardarRef(${pdrId},${shotlistId},'${wid}')">✓ Guardar</button>
+      <button class="save-btn" style="background:#9ca3af;font-size:10px;padding:2px 6px" onclick="cancelarRef(${pdrId},${shotlistId},'${urlsActuales.replace(/'/g,"\\'")}','${wid}')">✕ Cancelar</button>
+    </div>`;
+}
+
+async function guardarRef(pdrId, shotlistId, wid) {
+  const textarea = document.getElementById(`ref-urls-${wid}`);
+  const fileInput = document.getElementById(`ref-file-${wid}`);
+  if (!textarea) return;
+  try {
+    let urls = textarea.value.split(',').map(u=>u.trim()).filter(Boolean);
+    // Subir archivos nuevos
+    for (const file of (fileInput?.files || [])) {
+      showToast('Subiendo imagen...', true);
+      const url = await sbUpload(file);
+      urls.push(url);
+    }
+    const urlsStr = urls.join(', ');
+    // El campo referencia_urls vive en shotlist
+    await sbPatch('shotlist', shotlistId, { referencia_urls: urlsStr });
+    // Re-renderizar
+    const wrapper = document.getElementById(`ref-display-${wid}`);
+    if (wrapper) wrapper.outerHTML = refEditable(pdrId, shotlistId, urlsStr, wid);
+    showToast('Referencias guardadas ✓');
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+function cancelarRef(pdrId, shotlistId, urlsOriginal, wid) {
+  const wrapper = document.getElementById(`ref-display-${wid}`);
+  if (wrapper) wrapper.outerHTML = refEditable(pdrId, shotlistId, urlsOriginal, wid);
 }
 
 // ═══════════════════════════════════════════════════
-//  LLAMADO — header
+//  LLAMADO — header editable
 // ═══════════════════════════════════════════════════
 async function loadLlamado() {
-  const url = `${SUPABASE_URL}/rest/v1/llamados?id=eq.${LLAMADO_ID}&select=*,proyectos(*)`;
-  const res  = await fetch(url, { headers: SB_HEADERS });
-  const data = await res.json();
-  if (!data.length) { console.warn('Llamado no encontrado:', LLAMADO_ID); return; }
+  const url  = `${SUPABASE_URL}/rest/v1/llamados?id=eq.${LLAMADO_ID}&select=*,proyectos(*)`;
+  const data = await (await fetch(url, { headers: getHeaders() })).json();
+  if (!data.length) return;
+  const l = data[0], p = l.proyectos || {};
 
-  const l = data[0];
-  const p = l.proyectos || {};
+  // Campos editables del header — tabla llamados
+  const campos = [
+    ['hdr-dia',      'dia_numero', l.dia_numero ? `Día ${l.dia_numero} de ${l.dia_total}` : '—', false],
+    ['hdr-fecha',    'fecha',      formatFecha(l.fecha), true],
+    ['hdr-llamado',  'llamado_hora', formatHora(l.llamado_hora), true],
+    ['hdr-desayuno', 'desayuno',   formatHora(l.desayuno), true],
+    ['hdr-almuerzo', 'almuerzo',   formatHora(l.almuerzo), true],
+    ['hdr-cena',     'cena',       formatHora(l.cena), true],
+    ['hdr-notas',    'notas',      l.notas || '', false],
+  ];
 
-  set('hdr-dia',      l.dia_numero && l.dia_total ? `Día ${l.dia_numero} de ${l.dia_total}` : '');
-  set('hdr-fecha',    formatFecha(l.fecha));
-  set('hdr-llamado',  formatHora(l.llamado_hora));
-  set('hdr-desayuno', formatHora(l.desayuno));
-  set('hdr-almuerzo', formatHora(l.almuerzo));
-  set('hdr-cena',     formatHora(l.cena));
-  set('hdr-notas',    l.notas);
+  campos.forEach(([elId, campo, display, esHora]) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const rawVal = campo === 'fecha' ? (l.fecha||'') :
+                   esHora           ? (l[campo]||'') :
+                                      (l[campo]||'');
+    if (esHora) {
+      // horas usan el patrón botón ✎
+      el.innerHTML = horaEditable('llamados', l.id, campo, rawVal, `hdr-${campo}`);
+    } else {
+      // texto: click-to-edit
+      el.innerHTML = editableSpan('llamados', l.id, campo, rawVal, `hdr-${campo}`);
+    }
+  });
 
+  // Proyectos (solo lectura en el llamado)
   set('hdr-productora',     p.productora);
   set('hdr-campana',        p.campana);
   set('hdr-dir-productora', p.direccion_productora);
 
-  if (p.logo_productora) {
-    const el = document.getElementById('hdr-logo-prod');
-    if (el) el.src = p.logo_productora;
-  }
-  if (p.cliente) {
-    const el = document.getElementById('hdr-logo-cliente');
-    if (el) el.src = p.cliente;
-  }
-  if (p.color_cliente) {
-    const el = document.getElementById('hdr-bg-cliente');
-    if (el) el.style.backgroundColor = p.color_cliente;
-  }
-  if (p.color_campana) {
-    const el = document.getElementById('hdr-bg-campana');
-    if (el) el.style.backgroundColor = p.color_campana;
-  }
+  if (p.logo_productora) { const e=document.getElementById('hdr-logo-prod');     if(e) e.src=p.logo_productora; }
+  if (p.cliente)         { const e=document.getElementById('hdr-logo-cliente');  if(e) e.src=p.cliente; }
+  if (p.color_cliente)   { const e=document.getElementById('hdr-bg-cliente');    if(e) e.style.backgroundColor=p.color_cliente; }
+  if (p.color_campana)   { const e=document.getElementById('hdr-bg-campana');    if(e) e.style.backgroundColor=p.color_campana; }
 
-  document.title = `Llamado - ${p.campana || ''}`;
+  document.title = `Llamado - ${p.campana||''}`;
   if (l.ciudad && l.fecha) loadClima(l.ciudad, l.fecha);
 }
 
 // ═══════════════════════════════════════════════════
-//  CLIMA — Open-Meteo
+//  CLIMA
 // ═══════════════════════════════════════════════════
 async function loadClima(ciudad, fechaStr) {
   try {
-    const partes   = fechaStr.split('-');
-    const fechaISO = `${partes[0]}-${partes[1]}-${partes[2]}`;
-    const resGeo   = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(ciudad)}&count=1&language=es&format=json`);
-    const dataGeo  = await resGeo.json();
+    const p = fechaStr.toString().split('-');
+    const fechaISO = `${p[0]}-${p[1]}-${p[2].slice(0,2)}`;
+    const resGeo  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(ciudad)}&count=1&language=es&format=json`);
+    const dataGeo = await resGeo.json();
     if (!dataGeo.results?.length) return;
     const { latitude, longitude, timezone } = dataGeo.results[0];
     const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 7,
       daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' });
-    const resFc  = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-    const dataFc = await resFc.json();
-    const idx    = dataFc.daily.time.findIndex(t => t === fechaISO);
+    const dataFc = await (await fetch(`https://api.open-meteo.com/v1/forecast?${params}`)).json();
+    const idx = dataFc.daily.time.findIndex(t => t === fechaISO);
     if (idx === -1) return;
-    const wmoDesc = { 0:'Despejado',1:'Mayormente despejado',2:'Parcialmente nublado',3:'Nublado',45:'Neblina',48:'Neblina con escarcha',51:'Llovizna ligera',53:'Llovizna moderada',55:'Llovizna densa',61:'Lluvia ligera',63:'Lluvia moderada',65:'Lluvia intensa',71:'Nieve ligera',73:'Nieve moderada',75:'Nieve intensa',77:'Granizo',80:'Chubascos ligeros',81:'Chubascos moderados',82:'Chubascos violentos',85:'Chubascos de nieve',86:'Chubascos de nieve intensos',95:'Tormenta eléctrica',96:'Tormenta con granizo',99:'Tormenta con granizo intenso' };
-    const wmoIcon = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
+    const wmoDesc = {0:'Despejado',1:'Mayormente despejado',2:'Parcialmente nublado',3:'Nublado',45:'Neblina',48:'Neblina con escarcha',51:'Llovizna ligera',53:'Llovizna moderada',55:'Llovizna densa',61:'Lluvia ligera',63:'Lluvia moderada',65:'Lluvia intensa',80:'Chubascos ligeros',81:'Chubascos moderados',82:'Chubascos violentos',95:'Tormenta eléctrica',96:'Tormenta con granizo'};
+    const wmoIcon = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️'};
     const wmo = dataFc.daily.weathercode[idx];
-    set('hdr-clima',    wmoDesc[wmo] || `Código ${wmo}`);
-    set('hdr-tmax',     Math.round(dataFc.daily.temperature_2m_max[idx]) + '°');
-    set('hdr-tmin',     Math.round(dataFc.daily.temperature_2m_min[idx]) + '°');
-    set('hdr-lluvia',   (dataFc.daily.precipitation_probability_max[idx] ?? 0) + '%');
+    set('hdr-clima',    wmoDesc[wmo]||`Código ${wmo}`);
+    set('hdr-tmax',     Math.round(dataFc.daily.temperature_2m_max[idx])+'°');
+    set('hdr-tmin',     Math.round(dataFc.daily.temperature_2m_min[idx])+'°');
+    set('hdr-lluvia',   (dataFc.daily.precipitation_probability_max[idx]??0)+'%');
     set('hdr-amanecer', dataFc.daily.sunrise[idx].split('T')[1].slice(0,5));
     set('hdr-atardecer',dataFc.daily.sunset[idx].split('T')[1].slice(0,5));
-    const imgIcono = document.getElementById('hdr-clima-icono');
-    if (imgIcono) imgIcono.outerHTML = `<span id="hdr-clima-icono" class="text-sm leading-none inline-block mr-1 ml-1">${wmoIcon[wmo]||'🌡️'}</span>`;
-  } catch(e) { console.warn('Open-Meteo error:', e); }
+    const ic = document.getElementById('hdr-clima-icono');
+    if (ic) ic.outerHTML = `<span id="hdr-clima-icono" class="text-sm leading-none inline-block mr-1 ml-1">${wmoIcon[wmo]||'🌡️'}</span>`;
+  } catch(e) { console.warn('Clima error:', e); }
 }
 
 // ═══════════════════════════════════════════════════
-//  CRONOGRAMA
-//  escenas → join locaciones via locacion_id
+//  CRONOGRAMA — escenas + locaciones editables
 // ═══════════════════════════════════════════════════
 async function loadCronograma() {
-  // Supabase PostgREST permite hacer join embebido con la notación tabla!fk(cols)
-  const rows  = await fetchSupabase(
-    'escenas',
-    { llamado_id: LLAMADO_ID },
-    'orden',
-    '*, locaciones(locacion, direccion_loc, url_loc, centro_medico, direccion_med, url_med)'
-  );
+  const rows  = await fetchSupabase('escenas', { llamado_id: LLAMADO_ID }, 'orden',
+    '*, locaciones(id, locacion, direccion_loc, url_loc, centro_medico, direccion_med, url_med)');
   const tbody = document.getElementById('tbody-cronograma');
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
 
   tbody.innerHTML = rows.map((r, i) => {
-    const loc = r.locaciones || {};
-    // wrapperId único para cada celda de hora editable
-    const wId = `cron-${r.id}`;
+    const loc  = r.locaciones || {};
+    const locId = loc.id || 0;
+    const wId  = `cron-${r.id}`;
     return `
     <tr class="align-top border-neutral-400 ${rowBg(i)}">
       <td class="border px-1 py-1 content-center">
-        <span class="font-condensed font-semibold text-[11px] block leading-none">${r.escena||''}</span>
+        <span class="font-condensed font-semibold text-[11px] block leading-none">
+          ${editableSpan('escenas', r.id, 'escena', r.escena||'', `esc-escena-${r.id}`)}
+        </span>
       </td>
       <td class="border px-1 py-1 text-center content-center">
         ${horaEditable('escenas', r.id, 'hora', r.hora, wId)}
       </td>
-      <td class="border px-1 py-1 leading-none content-center">${r.descripcion||''}</td>
-      <td class="border px-1 py-1 text-center content-center">${r.cast_nombres||''}</td>
+      <td class="border px-1 py-1 leading-none content-center">
+        ${editableSpan('escenas', r.id, 'descripcion', r.descripcion||'', `esc-desc-${r.id}`)}
+      </td>
+      <td class="border px-1 py-1 text-center content-center">
+        ${editableSpan('escenas', r.id, 'cast_nombres', r.cast_nombres||'', `esc-cast-${r.id}`)}
+      </td>
       <td class="border px-1 py-1 text-center content-center">${badgeIntExt(r.int_ext)}</td>
       <td class="border px-1 py-1 text-center content-center">${badgeDN(r.d_n)}</td>
       <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
-        <div>${loc.locacion||''}</div>
-        <div class="text-[10px] text-gray-500">${loc.direccion_loc||''}</div>
-        ${locationBtn(loc.url_loc)}
+        <div>${editableSpan('locaciones', locId, 'locacion', loc.locacion||'', `loc-nom-${r.id}`)}</div>
+        <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_loc', loc.direccion_loc||'', `loc-dir-${r.id}`)}</div>
+        ${urlEditable('locaciones', locId, 'url_loc', loc.url_loc||'', 'Locación', `loc-url-${r.id}`)}
       </td>
       <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
-        <div>${loc.centro_medico||''}</div>
-        <div class="text-[10px] text-gray-500">${loc.direccion_med||''}</div>
-        ${locationBtn(loc.url_med)}
+        <div>${editableSpan('locaciones', locId, 'centro_medico', loc.centro_medico||'', `loc-med-${r.id}`)}</div>
+        <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_med', loc.direccion_med||'', `loc-dmed-${r.id}`)}</div>
+        ${urlEditable('locaciones', locId, 'url_med', loc.url_med||'', 'Centro Médico', `loc-umed-${r.id}`)}
       </td>
     </tr>`;
   }).join('');
 }
 
 // ═══════════════════════════════════════════════════
-//  CLIENTE / AGENCIA — con hora editable
+//  CLIENTE / AGENCIA
 // ═══════════════════════════════════════════════════
 function renderListaContactos(rows, containerId) {
   const container = document.getElementById(containerId);
   if (!rows.length) { container.innerHTML = `<div class="text-center text-neutral-400 italic py-2 text-[11px]">Sin datos</div>`; return; }
-  container.innerHTML = rows.map((r, i) => {
-    const wId = `ca-${r.id}`;
-    return `
+  container.innerHTML = rows.map((r, i) => `
     <div class="flex grid grid-cols-3 px-2 py-[1px] ${rowBg(i)} text-[11px] border-b border-neutral-100 items-center">
-      <span class="font-semibold">${r.nombre||''}</span>
-      <span class="text-neutral-500">${r.empresa||''}</span>
-      <span class="text-right">${horaEditable('cliente_agencia', r.id, 'horario_loc', r.horario_loc, wId)}</span>
-    </div>`;
-  }).join('');
+      <span class="font-semibold">${editableSpan('cliente_agencia', r.id, 'nombre', r.nombre||'', `ca-nom-${r.id}`)}</span>
+      <span class="text-neutral-500">${editableSpan('cliente_agencia', r.id, 'empresa', r.empresa||'', `ca-emp-${r.id}`)}</span>
+      <span class="text-right">${horaEditable('cliente_agencia', r.id, 'horario_loc', r.horario_loc, `ca-${r.id}`)}</span>
+    </div>`).join('');
 }
 
 async function loadAgenciaCliente() {
   const rows = await fetchSupabase('cliente_agencia', { llamado_id: LLAMADO_ID });
-  renderListaContactos(rows.filter(r => r.tipo==='cliente'), 'lista-cliente');
-  renderListaContactos(rows.filter(r => r.tipo==='agencia'), 'lista-agencia');
+  renderListaContactos(rows.filter(r=>r.tipo==='cliente'), 'lista-cliente');
+  renderListaContactos(rows.filter(r=>r.tipo==='agencia'), 'lista-agencia');
 }
 
 // ═══════════════════════════════════════════════════
-//  TALENTO — locacion_id → locaciones, con hora editable
+//  TALENTO — todos los campos editables
 // ═══════════════════════════════════════════════════
 async function loadTalento() {
-  const rows  = await fetchSupabase(
-    'talento',
-    { llamado_id: LLAMADO_ID },
-    'orden',
-    '*, locaciones(locacion)'
-  );
+  const rows  = await fetchSupabase('talento', { llamado_id: LLAMADO_ID }, 'orden',
+    '*, locaciones(locacion)');
   const tbody = document.getElementById('tbody-talento');
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
 
   tbody.innerHTML = rows.map((r, i) => {
     const loc  = r.locaciones || {};
-    const wId  = `tal-${r.id}`;
-    const wSet = `talset-${r.id}`;
     return `
     <tr class="${rowBg(i)} text-[11px]">
-      <td class="border border-neutral-300 px-1 py-[2px] text-center">${r.orden||i+1}</td>
-      <td class="border border-neutral-300 px-1 py-[2px]">${r.nombre||''}</td>
-      <td class="border border-neutral-300 px-1 py-[2px]">${r.rol||''}</td>
       <td class="border border-neutral-300 px-1 py-[2px] text-center">
-        ${horaEditable('talento', r.id, 'llamado_hora', r.llamado_hora, wId)}
+        ${editableSpan('talento', r.id, 'orden', (r.orden||'').toString(), `tal-ord-${r.id}`)}
+      </td>
+      <td class="border border-neutral-300 px-1 py-[2px]">
+        ${editableSpan('talento', r.id, 'nombre', r.nombre||'', `tal-nom-${r.id}`)}
+      </td>
+      <td class="border border-neutral-300 px-1 py-[2px]">
+        ${editableSpan('talento', r.id, 'rol', r.rol||'', `tal-rol-${r.id}`)}
+      </td>
+      <td class="border border-neutral-300 px-1 py-[2px] text-center">
+        ${horaEditable('talento', r.id, 'llamado_hora', r.llamado_hora, `tal-${r.id}`)}
       </td>
       <td class="border border-gray-200 px-1 py-[2px]">${loc.locacion||''}</td>
       <td class="border border-gray-200 px-1 py-[2px] text-center">
-        ${horaEditable('talento', r.id, 'en_set', r.en_set, wSet)}
+        ${horaEditable('talento', r.id, 'en_set', r.en_set, `talset-${r.id}`)}
       </td>
-      <td class="border border-gray-200 px-1 py-[2px]">${r.notas||''}</td>
-      <td class="border border-gray-200 px-1 py-[2px] text-center">${badgeStatus(r.w_status)}</td>
+      <td class="border border-gray-200 px-1 py-[2px]">
+        ${editableSpan('talento', r.id, 'notas', r.notas||'', `tal-not-${r.id}`)}
+      </td>
+      <td class="border border-gray-200 px-1 py-[2px] text-center">
+        ${badgeWStatus(r.w_status, r.id, r.id)}
+      </td>
     </tr>`;
   }).join('');
 }
 
 // ═══════════════════════════════════════════════════
-//  CREW — crew_llamado → crew (join embebido)
-//  llamado_hora viene de crew directamente
-//  Hora editable actualiza tabla crew (campo llamado_hora)
+//  CREW — orden canónico por dept, nombre y notas editables
 // ═══════════════════════════════════════════════════
 async function loadCrew() {
-  // Join: crew_llamado trae crew_id y hace embedding de crew(*)
-  const rows = await fetchSupabase(
-    'crew_llamado',
-    { llamado_id: LLAMADO_ID },
-    'orden',
-    'id, llamado_id, crew_id, orden, crew(id, departamento, cargo, nombre, notas, celular, llamado_hora)'
-  );
-
-  // Aplanar: cada fila es la data de crew + el id de crew_llamado para referencia
-  const flatRows = rows.map(r => ({
-    _cl_id: r.id,         // id de crew_llamado (no se usa para PATCH de hora)
-    ...(r.crew || {}),    // spread de todos los campos de crew
-  }));
-
+  const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, 'orden',
+    'id, crew_id, orden, crew(id, departamento, cargo, nombre, notas, celular, llamado_hora)');
+  const flatRows = rows.map(r => ({ _cl_id: r.id, ...(r.crew||{}) }));
   crewRows = flatRows;
 
   const container = document.getElementById('crew-container');
   if (!flatRows.length) { container.innerHTML = `<div class="col-span-2 text-center text-neutral-400 italic py-3">Sin datos</div>`; return; }
 
+  // Agrupar por departamento
   const depts = {}, order = [];
   flatRows.forEach(r => {
     const dept = (r.departamento||'Otros').trim();
@@ -659,43 +853,44 @@ async function loadCrew() {
     depts[dept].push(r);
   });
 
+  // Ordenar departamentos según DEPT_ORDER; los no listados van al final
+  const sorted = [
+    ...DEPT_ORDER.filter(d => order.some(o => o.toLowerCase() === d.toLowerCase()))
+                 .map(d => order.find(o => o.toLowerCase() === d.toLowerCase())),
+    ...order.filter(o => !DEPT_ORDER.some(d => d.toLowerCase() === o.toLowerCase())),
+  ];
+
   const mitad = Math.ceil(flatRows.length / 2);
   let cuenta = 0, corte = 0;
-  for (let i = 0; i < order.length; i++) {
-    cuenta += depts[order[i]].length;
+  for (let i = 0; i < sorted.length; i++) {
+    cuenta += depts[sorted[i]].length;
     if (cuenta >= mitad) { corte = i + 1; break; }
   }
-  const cols = [order.slice(0, corte), order.slice(corte)];
+  const cols = [sorted.slice(0, corte), sorted.slice(corte)];
 
   function renderDept(deptName) {
-    return `
-      <div class="mb-0">
-        <div class="grid grid-cols-2 bg-neutral-300 font-condensed font-bold uppercase tracking-wide px-2 py-[2px] items-center">
-          <span class="text-[12px]">${deptName}</span>
-          <span class="font-normal text-right">Llamado</span>
-        </div>
-        ${depts[deptName].map((r, i) => {
-          const wId = `crew-${r.id}`;
-          return `
-          <div class="grid grid-cols-4 px-2 ${rowBg(i)} border-b border-gray-100 items-center">
-            <span class="text-neutral-500">${r.cargo ? r.cargo+':' : ''}</span>
-            <span class="font-semibold">${r.nombre||''}</span>
-            <span class="italic text-neutral-500">${r.notas||''}</span>
-            <span class="text-right">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, wId)}</span>
-          </div>`;
-        }).join('')}
-      </div>`;
+    return `<div class="mb-0">
+      <div class="grid grid-cols-2 bg-neutral-300 font-condensed font-bold uppercase tracking-wide px-2 py-[2px] items-center">
+        <span class="text-[12px]">${deptName}</span>
+        <span class="font-normal text-right">Llamado</span>
+      </div>
+      ${depts[deptName].map((r, i) => `
+        <div class="grid grid-cols-4 px-2 ${rowBg(i)} border-b border-gray-100 items-center">
+          <span class="text-neutral-500">${r.cargo ? r.cargo+':' : ''}</span>
+          <span class="font-semibold">${editableSpan('crew', r.id, 'nombre', r.nombre||'', `crew-nom-${r.id}`)}</span>
+          <span class="italic text-neutral-500">${editableSpan('crew', r.id, 'notas', r.notas||'', `crew-not-${r.id}`)}</span>
+          <span class="text-right">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
+        </div>`).join('')}
+    </div>`;
   }
 
   container.innerHTML = `
     <div class="flex flex-col gap-0 text-[10px] pr-1.25 border-r border-neutral-300">${cols[0].map(renderDept).join('')}</div>
-    <div class="flex flex-col gap-0 text-[10px]">${cols[1].map(renderDept).join('')}</div>
-  `;
+    <div class="flex flex-col gap-0 text-[10px]">${cols[1].map(renderDept).join('')}</div>`;
 
   loadMainCrew();
 }
 
-// ── Main crew header ─────────────────────────────
 function loadMainCrew() {
   const find = (term) => crewRows.find(r => (r.cargo||'').toLowerCase().includes(term.toLowerCase()));
   const cargos = [
@@ -714,70 +909,149 @@ function loadMainCrew() {
 }
 
 // ═══════════════════════════════════════════════════
-//  PDR — pdr → shotlist → locaciones
-//  pdr: llamado_id, shotlist_id, orden, duracion_min
-//  shotlist: plano, descripcion, cast_nombres, locacion_id, notas, referencia_urls
-//  locaciones: locacion (nombre a mostrar)
+//  PDR — drag-and-drop reorder + edición inline + refs
 // ═══════════════════════════════════════════════════
+let pdrRowsCache = []; // cache para re-renderizar y guardar orden
+
 async function loadPDR() {
   const [pdrRows, llamadoData] = await Promise.all([
-    fetchSupabase(
-      'pdr',
-      { llamado_id: LLAMADO_ID },
-      'orden',
-      'id, orden, duracion_min, shotlist(plano, descripcion, cast_nombres, notas, referencia_urls, locaciones(locacion))'
-    ),
+    fetchSupabase('pdr', { llamado_id: LLAMADO_ID }, 'orden',
+      'id, orden, duracion_min, shotlist(id, plano, descripcion, cast_nombres, notas, referencia_urls, locaciones(locacion))'),
     fetchSupabase('llamados', { id: LLAMADO_ID }),
   ]);
 
+  pdrRowsCache = pdrRows;
+  renderPDR(pdrRows, llamadoData[0]?.llamado_hora || '00:00');
+}
+
+function renderPDR(pdrRows, llamadoHora) {
   const tbody = document.getElementById('tbody-pdr');
   if (!pdrRows.length) { tbody.innerHTML = `<tr><td colspan="7" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
 
-  // Calcular hora de inicio acumulando duracion_min desde llamado_hora
-  const llamadoHora = llamadoData[0]?.llamado_hora || '00:00';
   const [hBase, mBase] = llamadoHora.split(':').map(Number);
-  let minutosTotales = hBase * 60 + mBase;
-
-  // Códigos especiales: filas de separación (desayuno, almuerzo, etc.)
-  // En shotlist se identifican por plano con valor en esta lista
+  let minutos = hBase * 60 + mBase;
   const planosEspeciales = ['DE','AL','AR','CD','CC','CE','CM','ED'];
 
   tbody.innerHTML = pdrRows.map((r, i) => {
     const s   = r.shotlist || {};
-    const loc = s.locaciones || {}; // locacion resuelta desde tabla locaciones
-
-    const inicioMin = minutosTotales;
-    minutosTotales += (r.duracion_min || 0);
-    const hI = Math.floor(inicioMin/60)%24;
-    const mI = inicioMin%60;
+    const loc = s.locaciones || {};
+    const inicioMin = minutos;
+    minutos += (r.duracion_min || 0);
+    const hI = Math.floor(inicioMin/60)%24, mI = inicioMin%60;
     const inicioStr = `${String(hI).padStart(2,'0')}:${String(mI).padStart(2,'0')}`;
-
-    const imagenesHTML = (s.referencia_urls||'')
-      .split(',').map(u=>u.trim()).filter(Boolean)
-      .map(src=>`<img src="${src}" class="max-w-full h-auto object-cover inline-block">`)
-      .join('');
-
     const plano = (s.plano||'').toUpperCase();
+    const wid   = `pdr-${r.id}`;
+
+    // Drag handle — solo con sesión, no se imprime
+    const dragHandle = userSession
+      ? `<span class="drag-handle no-print cursor-grab text-neutral-300 hover:text-neutral-500 select-none mr-1" draggable="false">⠿</span>`
+      : '';
 
     if (planosEspeciales.includes(plano)) {
-      return `
-        <tr class="${rowBg(i)}">
-          <td colspan="2" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-condensed font-bold text-[14px] tracking-wide text-center">${inicioStr}</td>
-          <td colspan="5" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-bold text-[14px] tracking-wide uppercase text-center">${s.descripcion||'Sin descripción'}</td>
-        </tr>`;
+      return `<tr class="${rowBg(i)}" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
+        <td colspan="2" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-condensed font-bold text-[14px] tracking-wide text-center">
+          ${dragHandle}${inicioStr}
+        </td>
+        <td colspan="5" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-bold text-[14px] tracking-wide uppercase text-center">
+          ${editableSpan('shotlist', s.id, 'descripcion', s.descripcion||'', `pdr-sdesc-${r.id}`)}
+        </td>
+      </tr>`;
     }
 
-    return `
-      <tr class="${rowBg(i)} align-middle text-[11px]">
-        <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${s.plano||''}</td>
-        <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${inicioStr}</td>
-        <td class="border border-neutral-600 px-1 py-1">${s.descripcion||''}</td>
-        <td class="border border-neutral-600 px-1 py-1 text-center">${s.cast_nombres||''}</td>
-        <td class="border border-neutral-600 px-1 py-1">${loc.locacion||''}</td>
-        <td class="border border-neutral-600 px-1 py-1">${s.notas||''}</td>
-        <td class="border border-neutral-600">${imagenesHTML}</td>
-      </tr>`;
+    return `<tr class="${rowBg(i)} align-middle text-[11px]" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
+      <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">
+        ${dragHandle}${editableSpan('shotlist', s.id, 'plano', s.plano||'', `pdr-plano-${r.id}`)}
+      </td>
+      <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${inicioStr}</td>
+      <td class="border border-neutral-600 px-1 py-1">
+        ${editableSpan('shotlist', s.id, 'descripcion', s.descripcion||'', `pdr-desc-${r.id}`)}
+      </td>
+      <td class="border border-neutral-600 px-1 py-1 text-center">
+        ${editableSpan('shotlist', s.id, 'cast_nombres', s.cast_nombres||'', `pdr-cast-${r.id}`)}
+      </td>
+      <td class="border border-neutral-600 px-1 py-1">${loc.locacion||''}</td>
+      <td class="border border-neutral-600 px-1 py-1">
+        ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`)}
+      </td>
+      <td class="border border-neutral-600 p-1">
+        ${refEditable(r.id, s.id, s.referencia_urls||'', wid)}
+      </td>
+    </tr>`;
   }).join('');
+
+  if (userSession) initDragDrop();
+}
+
+// ── Drag & Drop reorder ──────────────────────────
+function initDragDrop() {
+  const tbody = document.getElementById('tbody-pdr');
+  let dragEl = null;
+
+  tbody.querySelectorAll('tr[data-pdr-id]').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragEl = row;
+      row.classList.add('opacity-50');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('opacity-50');
+      dragEl = null;
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragEl || dragEl === row) return;
+      const rect = row.getBoundingClientRect();
+      const mid  = rect.top + rect.height / 2;
+      if (e.clientY < mid) tbody.insertBefore(dragEl, row);
+      else                  tbody.insertBefore(dragEl, row.nextSibling);
+    });
+  });
+
+  tbody.addEventListener('drop', async e => {
+    e.preventDefault();
+    // Guardar nuevo orden: recorrer las filas en el DOM y hacer PATCH de cada orden
+    const filas = [...tbody.querySelectorAll('tr[data-pdr-id]')];
+    const updates = filas.map((tr, idx) => ({ id: parseInt(tr.dataset.pdrId), orden: idx + 1 }));
+    try {
+      await Promise.all(updates.map(u => sbPatch('pdr', u.id, { orden: u.orden })));
+      showToast('Orden guardado ✓');
+    } catch(e) { showToast('Error al guardar orden: ' + e.message, false); }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  SESIÓN
+// ═══════════════════════════════════════════════════
+function actualizarBarraSesion() {
+  const bar   = document.getElementById('session-bar');
+  const dot   = document.getElementById('session-dot');
+  const label = document.getElementById('session-label');
+  const btn   = document.getElementById('session-btn');
+  if (!bar) return;
+  bar.classList.remove('hidden');
+  if (userSession) {
+    dot.className     = 'w-2 h-2 rounded-full bg-[#14cbb5]';
+    label.textContent = userSession.user.email;
+    label.className   = 'text-neutral-700 font-medium max-w-[160px] truncate';
+    btn.textContent   = 'Cerrar sesión';
+  } else {
+    dot.className     = 'w-2 h-2 rounded-full bg-neutral-300';
+    label.textContent = 'Sin sesión — solo lectura';
+    label.className   = 'text-neutral-400';
+    btn.textContent   = 'Iniciar sesión';
+  }
+}
+
+async function toggleSesion() {
+  if (userSession) {
+    await sb.auth.signOut();
+    userSession = null;
+    actualizarBarraSesion();
+    showToast('Sesión cerrada');
+    window.location.reload();
+  } else {
+    window.location.href = `auth.html?next=${encodeURIComponent(window.location.href)}`;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -786,27 +1060,29 @@ async function loadPDR() {
 async function init() {
   if (!LLAMADO_ID) {
     document.getElementById('loading').classList.add('hidden');
-    document.body.innerHTML = `
-      <div class="flex items-center justify-center h-screen">
-        <div class="text-center">
-          <div class="text-2xl font-bold text-neutral-600 mb-2">No se especificó un llamado</div>
-          <div class="text-neutral-400">Usa la URL: llamado.html?id=ID_DEL_LLAMADO</div>
-        </div>
-      </div>`;
+    document.body.innerHTML = `<div class="flex items-center justify-center h-screen text-center">
+      <div><div class="text-2xl font-bold text-neutral-600 mb-2">No se especificó un llamado</div>
+      <div class="text-neutral-400">Usa la URL: llamado.html?id=ID</div></div></div>`;
     return;
   }
+
+  const { data: { session } } = await sb.auth.getSession();
+  userSession = session;
+  actualizarBarraSesion();
+
+  sb.auth.onAuthStateChange((_event, newSession) => {
+    userSession = newSession;
+    actualizarBarraSesion();
+  });
+
   try {
     await Promise.all([
-      loadLlamado(),
-      loadCronograma(),
-      loadAgenciaCliente(),
-      loadTalento(),
-      loadCrew(),
-      loadPDR(),
+      loadLlamado(), loadCronograma(), loadAgenciaCliente(),
+      loadTalento(), loadCrew(), loadPDR(),
     ]);
   } catch(err) {
-    console.error('Error cargando datos:', err);
-    alert('⚠️ Error al cargar los datos.\n\nError: ' + err.message);
+    console.error(err);
+    alert('⚠️ Error al cargar: ' + err.message);
   } finally {
     document.getElementById('loading').classList.add('hidden');
   }
