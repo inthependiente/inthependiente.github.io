@@ -468,7 +468,7 @@ function activarEdit(tabla, id, campo, valorActual, wid) {
   el.outerHTML = `
     <span id="ed-${wid}" class="inline-flex items-center gap-0.5">
       <input id="ei-${wid}" value="${valorParaInput.replace(/"/g,'&quot;')}"
-        class="border border-[#14cbb5] rounded px-1 py-0 text-[11px] bg-[#f0fdfb] min-w-[60px] max-w-[160px]"
+        class="border border-neutral-600 rounded px-1 py-1 text-[11px] bg-neutral-200 flex"
         onblur="confirmarEdit('${tabla}',${id},'${campo}','${wid}')"
         onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarEdit('${tabla}',${id},'${campo}','${wid}')}if(event.key==='Escape'){cancelarEdit('${tabla}',${id},'${campo}','${valorActual.replace(/'/g,"\\'")}','${wid}')}">
     </span>`;
