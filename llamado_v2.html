@@ -965,7 +965,7 @@ function renderPDR(pdrRows, llamadoHora) {
 
   const [hBase, mBase] = llamadoHora.split(':').map(Number);
   let minutos = hBase * 60 + mBase;
-  const planosEspeciales = ['ES'];
+  const planosEspeciales = ['ES','ED'];
 
   tbody.innerHTML = pdrRows.map((r, i) => {
     const s   = r.shotlist || {};
