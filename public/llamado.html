@@ -233,8 +233,8 @@
     </div>
 
     <!-- ══════════ PLAN DE RODAJE ══════════ -->
-    <div class="mb-1.5">
-      <div class="bg-neutral-600 font-bold text-white text-[14px] tracking-wide uppercase text-center py-[3px]">
+    <div class="mb-1.5" id="plan-de-rodaje-completo-section">
+      <div class="bg-neutral-600 font-bold text-white text-[14px] tracking-wide uppercase text-center py-[2px]">
         Plan de Rodaje Completo
       </div>
       <table class="w-full border-collapse">
@@ -306,11 +306,12 @@
       const storagePath = `llamados/${filename}`;
       
       const opt = {
-        margin:       [4, 4, 4, 4], // in mm
+        margin:       5, // 5mm is exactly 0.5 cm margin
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'] }
       };
       
       showToast('Generando archivo PDF...', true);
@@ -374,14 +375,36 @@
         });
       };
       
+      // Check if we need to force a page break before Plan de Rodaje Completo
+      const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
+      let pageBreakAdded = false;
+      if (pdrSection) {
+        const rectPage = element.getBoundingClientRect();
+        const rectPdr = pdrSection.getBoundingClientRect();
+        const offsetTop = rectPdr.top - rectPage.top;
+        const pagePixelWidth = rectPage.width;
+        // Aspect ratio of USA Letter is 8.5 x 11 inches (215.9mm x 279.4mm)
+        // With 5mm margins (top and bottom), safe printable area height is 279.4 - 10 = 269.4mm
+        const printablePixelHeight = pagePixelWidth * (269.4 / 215.9);
+        
+        if (offsetTop < printablePixelHeight) {
+          // If it starts on page 1, force a page break to push to page 2
+          pdrSection.style.pageBreakBefore = 'always';
+          pageBreakAdded = true;
+        }
+      }
+      
       try {
         // Generate and download locally
         const worker = html2pdf().set(opt).from(element).toPdf();
         const blob = await worker.output('blob');
         await worker.save();
         
-        // Restore computed styles
+        // Restore computed styles & dynamic page break
         window.getComputedStyle = originalGetComputedStyle;
+        if (pageBreakAdded && pdrSection) {
+          pdrSection.style.pageBreakBefore = 'auto';
+        }
         
         // Handle upload session checking
         let token = null;
@@ -399,7 +422,15 @@
           return;
         }
         
-        showToast('Cancelando subida anterior y subiendo copia al bucket "referencias"...', true);
+        // Authenticate the sb client using active token to bypass anonymous RLS failures
+        if (typeof sb !== 'undefined') {
+          await sb.auth.setSession({
+            access_token: token,
+            refresh_token: ''
+          });
+        }
+        
+        showToast('Subiendo copia al bucket "referencias" (carpeta "llamados")...', true);
         
         // Upload/overwrite to Supabase references storage bucket
         const { data, error } = await sb.storage
@@ -416,6 +447,9 @@
         showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
       } catch (err) {
         window.getComputedStyle = originalGetComputedStyle;
+        if (pdrSection) {
+          pdrSection.style.pageBreakBefore = 'auto';
+        }
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
       }

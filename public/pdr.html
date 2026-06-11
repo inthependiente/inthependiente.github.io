@@ -298,11 +298,12 @@
       const storagePath = `llamados/${filename}`;
       
       const opt = {
-        margin:       [4, 4, 4, 4], // in mm
+        margin:       5, // 5mm is exactly 0.5 cm margin
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak:    { mode: ['css', 'legacy'] }
       };
       
       showToast('Generando archivo PDF...', true);
@@ -383,7 +384,15 @@
           return;
         }
         
-        showToast('Cancelando subida anterior y subiendo copia al bucket "referencias"...', true);
+        // Authenticate the sb client using active token to bypass anonymous RLS failures
+        if (typeof sb !== 'undefined') {
+          await sb.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: ''
+          });
+        }
+        
+        showToast('Subiendo copia al bucket "referencias" (carpeta "llamados")...', true);
         
         // Upload/overwrite to Supabase references storage bucket
         const { data, error } = await sb.storage
