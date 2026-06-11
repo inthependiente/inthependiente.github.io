@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plan de Rodaje</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            condensed: ['Barlow Condensed', 'sans-serif'],
+            body: ['Barlow', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Barlow', sans-serif; }
+    .font-condensed { font-family: 'Barlow Condensed', sans-serif; }
+    @media print {
+      body { print-color-adjust: exact !important; }
+      .page { box-shadow: none !important; margin: 0 !important; }
+      #loading { display: none !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-300 py-4 text-[10px]">
+
+  <!-- ── LOADING OVERLAY ── -->
+  <div id="loading" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl px-10 py-8 text-center shadow-2xl">
+      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">Gecko Films</div>
+      <div class="text-gray-500 text-sm mt-2">Cargando Plan de Rodaje...</div>
+      <div class="mt-4 w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mx-auto">
+        <div class="h-full bg-[#14cbb5] rounded-full animate-pulse w-3/4"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page w-[216mm] mx-auto bg-white shadow-xl p-[4mm] rounded-sm">
+    <!-- ══════════ SIMPLE HEADER ══════════ -->
+    <div class="border-b border-neutral-300 pb-3 mb-4 flex items-center justify-between">
+      <!-- Left side: logo and film company -->
+      <div class="flex items-center gap-3">
+        <div class="h-14 flex items-center">
+          <img id="hdr-logo-prod" src="" class="h-12 max-w-[120px] object-contain hidden" alt="Logo Productora">
+        </div>
+        <div>
+          <div class="font-condensed font-bold text-lg text-neutral-800 leading-tight uppercase" id="hdr-productora">—</div>
+          <div class="text-[10px] text-gray-500 font-medium" id="hdr-director-container">Director: <span id="hdr-director" class="font-semibold text-neutral-700">Cargando...</span></div>
+        </div>
+      </div>
+
+      <!-- Right side: shoot day details -->
+      <div class="text-right flex flex-col items-end">
+        <div class="bg-neutral-800 text-white font-condensed font-bold text-[14px] px-3 py-1 rounded-sm tracking-wider uppercase mb-1" id="hdr-dod">
+          —
+        </div>
+        <div class="font-bold text-[12px] text-rose-600" id="hdr-fecha">
+          —
+        </div>
+        <div class="text-[10px] text-gray-500 tracking-wide font-semibold mt-0.5 uppercase" id="hdr-campana">
+          Campaña: —
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PLAN DE RODAJE ══════════ -->
+    <div class="mb-1.5">
+      <div class="bg-neutral-600 font-bold text-white text-[13px] tracking-wide uppercase text-center py-[4px] mb-1">
+        Plan de Rodaje
+      </div>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-neutral-400 font-condensed font-bold text-[11px] uppercase">
+            <th class="border border-neutral-600 px-1 py-[3px] text-center w-[25px]">Esc</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-center w-[30px]">Plano</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-center w-[36px]">Inicio</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-left">Descripción</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-left w-[110px]">Locación</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-left w-[140px]">Notas</th>
+            <th class="border border-neutral-600 px-1 py-[3px] text-center w-[140px]">Referencia</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-pdr">
+          <tr><td colspan="7" class="text-center text-neutral-400 italic py-3 border">Cargando para ti...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Foot page -->
+    <div class="text-center text-[8px] text-gray-300 italic mt-4 border-t border-gray-100 pt-2">
+      PDR Export v1.0 by Gabriel Arauco
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL  = 'https://mvmlwelmilhitoetessx.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12bWx3ZWxtaWxoaXRvZXRlc3N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTYxOTksImV4cCI6MjA5NjUzMjE5OX0.1MIsmOLAZM31b1BsysxII88U6JzOQWMp5kNDRiFmCnc';
+    const LLAMADO_ID    = parseInt(new URLSearchParams(window.location.search).get('id'), 10);
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    function formatFecha(v) {
+      if (!v) return '—';
+      const p = v.toString().split('-');
+      return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
+    }
+
+    function rowBg(i) { return i % 2 === 0 ? 'bg-white' : 'bg-neutral-100'; }
+
+    async function fetchSupabase(tabla, filtros = {}, orden = null, select = '*') {
+      const params = new URLSearchParams({ select });
+      Object.entries(filtros).forEach(([col, val]) => params.append(col, `eq.${val}`));
+      if (orden) params.append('order', `${orden}.asc`);
+      const headers = { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${params}`, { headers });
+      if (!res.ok) throw new Error(`Error ${res.status} en ${tabla}: ${await res.text()}`);
+      return res.json();
+    }
+
+    async function loadLlamado() {
+      if (!LLAMADO_ID) return;
+      const data = await fetchSupabase('llamados', { id: LLAMADO_ID }, null, '*, proyectos(*)');
+      if (!data.length) return;
+      const l = data[0], p = l.proyectos || {};
+
+      document.getElementById('hdr-productora').textContent = p.productora || 'Gecko Films';
+      document.getElementById('hdr-dod').textContent = l.d_o_d || 'Día único';
+      document.getElementById('hdr-fecha').textContent = formatFecha(l.fecha);
+      document.getElementById('hdr-campana').textContent = `Campaña: ${p.campana || '—'}`;
+      
+      const logoImg = document.getElementById('hdr-logo-prod');
+      if (p.logo_productora) {
+        logoImg.src = p.logo_productora;
+        logoImg.classList.remove('hidden');
+      }
+
+      document.title = `PDR - ${p.campana || ''}`;
+      return l.llamado_hora || '00:00';
+    }
+
+    async function loadDirector() {
+      try {
+        const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, null, 'crew(cargo, nombre)');
+        const flatCrew = rows.map(r => r.crew || {}).filter(Boolean);
+        const directorObj = flatCrew.find(r => (r.cargo||'').toLowerCase().includes('director'));
+        document.getElementById('hdr-director').textContent = directorObj ? (directorObj.nombre || '—') : '—';
+      } catch (e) {
+        console.warn('Error loading director:', e);
+        document.getElementById('hdr-director').textContent = '—';
+      }
+    }
+
+    async function loadPDR(llamadoHora) {
+      const pdrRows = await fetchSupabase('pdr', { llamado_id: LLAMADO_ID }, 'orden',
+        'id, orden, duracion_min, shotlist(id, esc, plano, descripcion, cast_nombres, notas, referencia_urls, locaciones(locacion))');
+
+      const tbody = document.getElementById('tbody-pdr');
+      if (!pdrRows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`;
+        return;
+      }
+
+      let hBase = 0, mBase = 0;
+      const hhmmMatch = (llamadoHora || '00:00').match(/^(\d{1,2}):(\d{2})/);
+      if (hhmmMatch) {
+         hBase = parseInt(hhmmMatch[1], 10);
+         mBase = parseInt(hhmmMatch[2], 10);
+         if (/pm/i.test(llamadoHora) && hBase < 12) hBase += 12;
+         if (/am/i.test(llamadoHora) && hBase === 12) hBase = 0;
+      }
+      let minutos = hBase * 60 + mBase;
+      const planosEspeciales = ['ES','ED'];
+
+      tbody.innerHTML = pdrRows.map((r, i) => {
+        const s = r.shotlist || {};
+        const loc = s.locaciones || {};
+        const inicioMin = minutos;
+        minutos += (r.duracion_min || 0);
+        const hI = Math.floor(inicioMin/60)%24, mI = inicioMin%60;
+        const inicioStr = `${String(hI).padStart(2,'0')}:${String(mI).padStart(2,'0')}`;
+        const plano = (s.plano||'').toUpperCase();
+
+        if (planosEspeciales.includes(plano)) {
+          return `<tr class="${rowBg(i)}">
+            <td colspan="3" class="border border-neutral-600 px-2 py-[4px] bg-neutral-300 font-condensed font-bold text-[14px] tracking-wide text-center">
+              ${inicioStr}
+            </td>
+            <td colspan="4" class="border border-neutral-600 px-2 py-[4px] bg-[#dfdfdf] font-bold text-[12px] tracking-wide uppercase text-center text-neutral-800">
+              ${s.descripcion||''}
+            </td>
+          </tr>`;
+        }
+
+        const urls = s.referencia_urls ? s.referencia_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
+        const imgsHtml = urls.map(u => `<img src="${u}" class="max-w-full h-auto object-cover inline-block rounded border border-neutral-200 shadow-xs mb-1 last:mb-0 max-h-24">`).join('');
+        const refsHtml = imgsHtml || '<span class="text-neutral-300 italic text-[10px]">sin imágenes</span>';
+
+        return `<tr class="${rowBg(i)} align-middle text-[11px]">
+          <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${s.esc||''}</td>
+          <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${s.plano||''}</td>
+          <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${inicioStr}</td>
+          <td class="border border-neutral-600 px-1 py-1 text-left whitespace-pre-wrap leading-relaxed">${s.descripcion||''}</td>
+          <td class="border border-neutral-600 px-1 py-1 text-left">${loc.locacion||''}</td>
+          <td class="border border-neutral-600 px-1 py-1 text-left whitespace-pre-wrap leading-relaxed">${s.notas||''}</td>
+          <td class="border border-neutral-600 p-1 text-center">
+            <div class="flex flex-col gap-1 items-center justify-center">${refsHtml}</div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function init() {
+      if (!LLAMADO_ID) {
+        document.getElementById('loading').classList.add('hidden');
+        document.body.innerHTML = `<div class="flex items-center justify-center h-screen text-center">
+          <div><div class="text-2xl font-bold text-neutral-600 mb-2">No se especificó un ID de llamado</div>
+          <div class="text-neutral-400">Usa la URL: pdr.html?id=ID</div></div></div>`;
+        return;
+      }
+      try {
+        const llamadoHora = await loadLlamado();
+        await Promise.all([
+          loadDirector(),
+          loadPDR(llamadoHora)
+        ]);
+      } catch (err) {
+        console.error(err);
+        alert('Error al cargar datos del Plan de Rodaje: ' + err.message);
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

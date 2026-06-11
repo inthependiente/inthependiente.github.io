@@ -698,14 +698,14 @@ export default function FormModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Nº Escena</label>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Escena</label>
                   <input
                     type="text"
                     name="escena"
                     value={formValues.escena || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Escena 24"
+                    placeholder="Nombre de la escena"
                   />
                 </div>
                 <div>
