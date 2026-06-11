@@ -630,6 +630,7 @@ export default function TableEditor({
                           title="Crear fila rápida"
                         >
                           <Plus className="w-3.5 h-3.5" />
+                          <span>FILA</span>
                         </button>
                       </th>
                       {visibleColumns.proyecto_id && (
