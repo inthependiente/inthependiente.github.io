@@ -931,12 +931,13 @@ async function loadCrew() {
         <span class="font-normal text-right">Llamado</span>
       </div>
       ${depts[deptName].map((r, i) => `
-        <div class="grid grid-cols-4 px-2 ${rowBg(i)} border-b border-gray-100 items-center">
-          <span class="text-neutral-500">${r.cargo ? r.cargo+':' : ''}</span>
-          <span class="font-semibold">${editableSpan('crew', r.id, 'nombre', r.nombre||'', `crew-nom-${r.id}`)}</span>
-          <span class="italic text-neutral-500">${editableSpan('crew', r.id, 'notas', r.notas||'', `crew-not-${r.id}`)}</span>
-          <span class="font-condensed font-bold text-[12px] text-right">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
+        <div class="grid grid-cols-14 px-2 ${rowBg(i)} border-b border-gray-100 items-center">
+          <span class="text-neutral-500 col-span-4">${r.cargo ? r.cargo+':' : ''}</span>
+          <span class="font-semibold col-span-4">${editableSpan('crew', r.id, 'nombre', r.nombre||'', `crew-nom-${r.id}`)}</span>
+          <span class="italic text-neutral-500 col-span-4 text-red-500">${editableSpan('crew', r.id, 'notas', r.notas||'', `crew-not-${r.id}`)}</span>
+          <span class="font-condensed font-bold text-[12px] text-right col-span-2">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
         </div>`).join('')}
+          
     </div>`;
   }
 
