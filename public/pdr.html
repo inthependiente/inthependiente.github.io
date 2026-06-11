@@ -29,6 +29,15 @@
       #loading { display: none !important; }
       .no-print { display: none !important; }
     }
+    .html2pdf__page-break {
+      height: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
   </style>
 </head>
 <body class="bg-gray-300 py-4 text-[10px]">
@@ -295,7 +304,14 @@
       const docTitle = document.title || 'Plan de Rodaje';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
       const filename = `${safeTitle}.pdf`;
-      const storagePath = `llamados/${filename}`;
+      
+      // Sanitize the storage path specifically for Supabase compatible keys (letters, digits, dashes, underscores)
+      const cleanStorageName = filename
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9.\-_]/g, "_")
+        .replace(/_+/g, "_");
+      const storagePath = `llamados/${cleanStorageName}`;
       
       const opt = {
         margin:       5, // 5mm is exactly 0.5 cm margin
@@ -307,6 +323,12 @@
       };
       
       showToast('Generando archivo PDF...', true);
+      
+      // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
+      const originalWidth = element.style.width;
+      const originalMaxWidth = element.style.maxWidth;
+      element.style.width = '205.9mm';
+      element.style.maxWidth = '205.9mm';
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
       const originalGetComputedStyle = window.getComputedStyle;
@@ -373,7 +395,9 @@
         const blob = await worker.output('blob');
         await worker.save();
         
-        // Restore computed styles
+        // Restore elements width & computed styles
+        element.style.width = originalWidth;
+        element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
         
         showToast('Buscando sesión activa para respaldar...', true);
@@ -408,6 +432,8 @@
         
         showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
       } catch (err) {
+        element.style.width = originalWidth;
+        element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
