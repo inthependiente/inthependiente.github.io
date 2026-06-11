@@ -17,7 +17,7 @@ export interface Llamados {
   d_o_d?: string;
   fecha: string;
   llamado_hora?: string;
-  ciudad?: string;
+  ciudad_id?: number | null;
   desayuno?: string;
   almuerzo?: string;
   cena?: string;
