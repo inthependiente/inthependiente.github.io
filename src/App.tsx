@@ -189,7 +189,7 @@ export default function App() {
     }
   };
 
-  // Fetch count indicators for all 10 tables to show as badges in the sidebar
+  // Fetch count indicators for all 10 tables filtered by working contexts
   const loadAllTableCounts = async () => {
     const list: DbTable[] = [
       "proyectos",
@@ -204,13 +204,22 @@ export default function App() {
       "shotlist",
     ];
     
-    // We can run these calls in parallel for optimal responsiveness
     try {
       const promises = list.map(async (table) => {
-        const { count, error } = await supabase
-          .from(table)
-          .select("*", { count: "exact", head: true });
+        let baseQuery = supabase.from(table).select("*", { count: "exact", head: true });
         
+        // Dynamic filters depending on table relationships
+        if (table === "llamados" && selectedProjectId !== null) {
+          baseQuery = baseQuery.eq("proyecto_id", selectedProjectId);
+        } else if (table === "shotlist" && selectedProjectId !== null) {
+          baseQuery = baseQuery.eq("proyecto_id", selectedProjectId);
+        } else if (["escenas", "crew_llamado", "cliente_agencia", "talento", "pdr"].includes(table)) {
+          if (selectedLlamadoId !== null) {
+            baseQuery = baseQuery.eq("llamado_id", selectedLlamadoId);
+          }
+        }
+
+        const { count, error } = await baseQuery;
         return { table, count: error ? 0 : (count || 0) };
       });
 
@@ -224,6 +233,13 @@ export default function App() {
       console.warn("Could not load table metadata counts", err);
     }
   };
+
+  // 4. Update sidebar count badges dynamically when working contexts change
+  useEffect(() => {
+    if (sessionUser) {
+      loadAllTableCounts();
+    }
+  }, [selectedProjectId, selectedLlamadoId, sessionUser]);
 
   // Fetch values for dropdown select lookups (Proyectos, Llamados, Locaciones, Crew, Shotlist, Ciudades)
   const loadLookupCaches = async () => {

@@ -554,13 +554,29 @@ export default function TableEditor({
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold">Proyecto de Trabajo</div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold mb-0.5">Proyecto de Trabajo</div>
               <div className="text-xs font-semibold">
-                {selectedProjectId ? (
-                  <span className="text-orange-400 font-bold">{resolveProject(selectedProjectId)}</span>
-                ) : (
-                  <span className="text-neutral-505 font-medium italic">Ninguno (Mostrando todos)</span>
-                )}
+                <select
+                  value={selectedProjectId || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      setSelectedProjectId(Number(val));
+                      setSelectedLlamadoId(null);
+                    } else {
+                      setSelectedProjectId(null);
+                      setSelectedLlamadoId(null);
+                    }
+                  }}
+                  className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-orange-500 cursor-pointer min-w-[140px] max-w-[200px]"
+                >
+                  <option value="" className="text-neutral-400 bg-neutral-900">-- Mostrar Todos --</option>
+                  {lookups.proyectos?.map(p => (
+                    <option key={p.id} value={p.id} className="text-white bg-neutral-900">
+                      {p.campana || `Proyecto #${p.id}`}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {selectedProjectId && (
@@ -586,13 +602,40 @@ export default function TableEditor({
               <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold">Llamado Activo</div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold mb-0.5">Llamado Activo</div>
               <div className="text-xs font-semibold">
-                {selectedLlamadoId ? (
-                  <span className="text-teal-400 font-bold">{resolveLlamado(selectedLlamadoId)}</span>
-                ) : (
-                  <span className="text-neutral-505 font-medium italic">Ninguno (Selecciona en llamados)</span>
-                )}
+                <select
+                  value={selectedLlamadoId || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const id = Number(val);
+                      setSelectedLlamadoId(id);
+                      // Match parent project
+                      const matchingLlamado = lookups.llamados?.find(l => l.id === id);
+                      if (matchingLlamado && matchingLlamado.proyecto_id) {
+                        setSelectedProjectId(matchingLlamado.proyecto_id);
+                      }
+                    } else {
+                      setSelectedLlamadoId(null);
+                    }
+                  }}
+                  className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-teal-500 cursor-pointer min-w-[140px] max-w-[240px]"
+                >
+                  <option value="" className="text-neutral-400 bg-neutral-900">-- Seleccionar --</option>
+                  {(lookups.llamados || [])
+                    .filter(l => !selectedProjectId || l.proyecto_id === selectedProjectId)
+                    .map(l => {
+                      const proj = lookups.proyectos?.find(p => p.id === l.proyecto_id);
+                      const projLabel = proj ? proj.campana : `Proy #${l.proyecto_id}`;
+                      return (
+                        <option key={l.id} value={l.id} className="text-white bg-neutral-900">
+                          {l.fecha} ({l.d_o_d || "Día único"}) [{projLabel}]
+                        </option>
+                      );
+                    })
+                  }
+                </select>
               </div>
             </div>
             {selectedLlamadoId && (
