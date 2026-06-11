@@ -307,11 +307,73 @@
       
       showToast('Generando archivo PDF...', true);
       
+      // Patch getComputedStyle to bypass the oklch parse error of html2canvas
+      const originalGetComputedStyle = window.getComputedStyle;
+      
+      function oklchToRgb(l, c, h, a = 1) {
+        const hRad = (h * Math.PI) / 180;
+        const L = l + 0.3963377774 * c * Math.cos(hRad) + 0.2158037573 * c * Math.sin(hRad);
+        const M = l - 0.1055613458 * c * Math.cos(hRad) - 0.0638541728 * c * Math.sin(hRad);
+        const S = l - 0.0894841775 * c * Math.cos(hRad) - 1.2914855480 * c * Math.sin(hRad);
+        
+        const l_ = L * L * L;
+        const m_ = M * M * M;
+        const s_ = S * S * S;
+        
+        let r = +4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_;
+        let g = -1.2684380046 * l_ + 2.5090391104 * m_ - 0.2406011058 * s_;
+        let b = -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076186100 * s_;
+        
+        const fn = (x) => x > 0.0031308 ? 1.055 * Math.pow(x, 1/2.4) - 0.055 : 12.92 * x;
+        
+        r = Math.round(Math.max(0, Math.min(1, fn(r))) * 255);
+        g = Math.round(Math.max(0, Math.min(1, fn(g))) * 255);
+        b = Math.round(Math.max(0, Math.min(1, fn(b))) * 255);
+        
+        return a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
+      }
+
+      function replaceOklchWithRgb(str) {
+        if (typeof str !== 'string' || !str.includes('oklch')) return str;
+        return str.replace(/oklch\(([-+\d.%]+)\s+([-+\d.%]+)\s+([-+\d.%]+)(?:\s*\/\s*([-+\d.%]+))?\)/g, (match, lStr, cStr, hStr, aStr) => {
+          const l = lStr.endsWith('%') ? parseFloat(lStr) / 100 : parseFloat(lStr);
+          const c = cStr.endsWith('%') ? parseFloat(cStr) / 100 : parseFloat(cStr);
+          const h = hStr.endsWith('%') ? (parseFloat(hStr) * 3.6) : parseFloat(hStr);
+          let a = 1;
+          if (aStr) {
+            a = aStr.endsWith('%') ? parseFloat(aStr) / 100 : parseFloat(aStr);
+          }
+          return oklchToRgb(l, c, h, a);
+        });
+      }
+
+      window.getComputedStyle = function(el, pseudoElt) {
+        const style = originalGetComputedStyle(el, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop) {
+            const val = target[prop];
+            if (typeof val === 'function') {
+              if (prop === 'getPropertyValue') {
+                return function(key) {
+                  const raw = target.getPropertyValue(key);
+                  return replaceOklchWithRgb(raw);
+                }
+              }
+              return val.bind(target);
+            }
+            return replaceOklchWithRgb(val);
+          }
+        });
+      };
+      
       try {
         // Generate and download locally
         const worker = html2pdf().set(opt).from(element).toPdf();
         const blob = await worker.output('blob');
         await worker.save();
+        
+        // Restore computed styles
+        window.getComputedStyle = originalGetComputedStyle;
         
         showToast('Buscando sesión activa para respaldar...', true);
         const { data: { session } } = await sb.auth.getSession();
@@ -337,6 +399,7 @@
         
         showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
       } catch (err) {
+        window.getComputedStyle = originalGetComputedStyle;
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
       }
