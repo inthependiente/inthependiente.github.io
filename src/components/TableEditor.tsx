@@ -856,14 +856,14 @@ export default function TableEditor({
                             {row.fecha}
                           </div>
                           <div className="text-xs text-orange-600 font-bold uppercase">{row.d_o_d || "Día único"}</div>
-                          <a
+                          {/* <a
                             href={`./llamado.html?id=${row.id}`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline mt-1.5 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 transition-colors"
                           >
                             <ExternalLink className="w-3 h-3" /> Ver Hoja de Llamado
-                          </a>
+                          </a> */}
                         </td>
                         <td className="p-3.5 text-xs">
                           <div className="font-bold text-neutral-700">{row.llamado_hora || "-- : --"}</div>
@@ -926,8 +926,8 @@ export default function TableEditor({
                           <span className="text-neutral-600 font-medium">{row.cargo || "Asistente"}</span>
                         </td>
                         <td className="p-3.5 text-xs font-mono font-semibold text-neutral-600">{row.celular || "Sin celular"}</td>
-                        <td className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">
-                          {row.llamado_hora || "Sin definir"}
+                        <td>
+                          <div className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">{row.llamado_hora || "Sin definir"}</div>
                         </td>
                       </>
                     )}
@@ -1005,8 +1005,8 @@ export default function TableEditor({
                           <span className="font-bold text-neutral-900">{row.nombre}</span>
                         </td>
                         <td className="p-3.5 text-xs font-semibold text-neutral-600">{row.empresa || "Sin empresa"}</td>
-                        <td className="p-3.5 text-xs font-mono font-bold text-orange-650 bg-neutral-50 px-2 py-1 rounded inline-block">
-                          {row.horario_loc || "Sin definir"}
+                        <td>
+                          <div className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">{row.horario_loc || "Sin definir"}</div>
                         </td>
                       </>
                     )}
