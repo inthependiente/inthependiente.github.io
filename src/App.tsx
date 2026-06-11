@@ -47,12 +47,14 @@ export default function App() {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    ciudades: any[];
   }>({
     proyectos: [],
     llamados: [],
     locaciones: [],
     crew: [],
     shotlist: [],
+    ciudades: [],
   });
 
   // Form Modal controls
@@ -122,22 +124,28 @@ export default function App() {
     }
   }, [notification]);
 
-  // Trigger Google Sign In using Supabase OAuth
-  // This redirect flow exactly matches auth.html logic but provides a state-of-the-art fallback
-  const handleGoogleLogin = async () => {
+  const [emailInput, setEmailInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Trigger login using email and password
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
     try {
-      const currentUrl = window.location.origin + window.location.pathname;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: currentUrl,
-        },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailInput,
+        password: passwordInput,
       });
       if (error) {
-        setNotification({ text: `OAuth Error: ${error.message}`, mode: "error" });
+        setNotification({ text: `Error de login: ${error.message}`, mode: "error" });
+      } else {
+        setNotification({ text: `Sesión iniciada con éxito`, mode: "success" });
       }
     } catch (err: any) {
-      setNotification({ text: `Login exception: ${err.message}`, mode: "error" });
+      setNotification({ text: `Excepción de login: ${err.message}`, mode: "error" });
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -203,6 +211,9 @@ export default function App() {
       // 5. Llamados (has some references we want to display - fetch directly, then we decorate with project titles locally)
       const { data: calls } = await supabase.from("llamados").select("id, fecha, d_o_d, proyecto_id").order("fecha", { ascending: false });
       
+      // 6. Ciudades
+      const { data: cities } = await supabase.from("ciudades").select("id, Nombre, lat, long").order("Nombre", { ascending: true });
+      
       // Decorate llamados with their project campana name for high usability
       const decoratedCalls = (calls || []).map((c: any) => {
         const matchingProj = (projs || []).find((p: any) => p.id === c.proyecto_id);
@@ -218,6 +229,7 @@ export default function App() {
         crew: crewList || [],
         shotlist: shotlistList || [],
         llamados: decoratedCalls,
+        ciudades: cities || [],
       });
     } catch (err) {
       console.error("Error warming relationship lookup filters", err);
@@ -423,18 +435,39 @@ export default function App() {
               </p>
             </div>
 
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-bold py-3.5 rounded-xl transition-all text-sm shadow-md hover:shadow-lg cursor-pointer"
-            >
-              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12 5.04c1.64 0 3.12.56 4.28 1.67l3.2-3.2C17.52 1.58 14.98 1 12 1 7.24 1 3.2 3.74 1.25 7.72l3.85 3C6.02 7.62 8.77 5.04 12 5.04z" />
-                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.43h6.44c-.28 1.47-1.11 2.71-2.36 3.55l3.66 2.84c2.14-1.97 3.39-4.87 3.39-8.48z" />
-                <path fill="#FBBC05" d="M5.1 14.28A7.12 7.12 0 0 1 4.5 12c0-.81.21-1.58.58-2.28L1.23 6.72A11.94 11.94 0 0 0 0 12c0 1.93.46 3.75 1.27 5.38l3.83-3.1z" />
-                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.66-2.84c-1.01.68-2.31 1.09-4.3 1.09-3.23 0-5.98-2.58-6.95-5.68l-3.86 3C3.2 20.26 7.24 23 12 23z" />
-              </svg>
-              Iniciar sesión con Google
-            </button>
+            <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Correo Electrónico</label>
+                <input
+                  type="email"
+                  required
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="admin@ejemplo.com"
+                  className="w-full border border-neutral-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Contraseña</label>
+                <input
+                  type="password"
+                  required
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full border border-neutral-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-bold py-3.5 rounded-xl transition-all text-sm shadow-md hover:shadow-lg cursor-pointer"
+              >
+                {isLoggingIn ? "Iniciando sesión..." : "Iniciar Sesión"}
+              </button>
+            </form>
             
             {notification.text && (
               <div className="p-3.5 bg-red-50 text-red-600 rounded-lg text-xs break-words text-center border border-red-200">

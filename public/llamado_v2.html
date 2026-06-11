@@ -80,7 +80,7 @@
   <!-- ── LOADING OVERLAY ── -->
   <div id="loading" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl px-10 py-8 text-center shadow-2xl">
-      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">LlamadoAPP v1</div>
+      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">Gecko Films</div>
       <div class="text-gray-500 text-sm mt-2">Cargando llamado de rodaje...</div>
       <div class="mt-4 w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mx-auto">
         <div class="h-full bg-[#14cbb5] rounded-full animate-pulse w-3/4"></div>
@@ -133,6 +133,7 @@
           <div id="hdr-dia">—</div>
           <div class="font-semibold text-rose-600" id="hdr-fecha">—</div>
         </div>
+        <div><span class="font-bold">Ciudad:</span> <span id="hdr-ciudad">—</span></div>
         <div><span class="font-bold">Clima:</span><span id="hdr-clima-icono"></span><span id="hdr-clima">—</span></div>
         <div><span class="font-bold">Mínima:</span> <span id="hdr-tmin">—</span></div>
         <div><span class="font-bold">Máxima:</span> <span id="hdr-tmax">—</span></div>
@@ -682,10 +683,10 @@ function cancelarRef(pdrId, shotlistId, urlsOriginal, wid) {
 //  LLAMADO — header editable
 // ═══════════════════════════════════════════════════
 async function loadLlamado() {
-  const url  = `${SUPABASE_URL}/rest/v1/llamados?id=eq.${LLAMADO_ID}&select=*,proyectos(*)`;
+  const url  = `${SUPABASE_URL}/rest/v1/llamados?id=eq.${LLAMADO_ID}&select=*,proyectos(*),ciudades(*)`;
   const data = await (await fetch(url, { headers: getHeaders() })).json();
   if (!data.length) return;
-  const l = data[0], p = l.proyectos || {};
+  const l = data[0], p = l.proyectos || {}, c = l.ciudades || {};
 
   // Campos editables del header — tabla llamados
   const campos = [
@@ -726,21 +727,27 @@ async function loadLlamado() {
   if (p.color_cliente)   { const e=document.getElementById('hdr-bg-cliente');    if(e) e.style.backgroundColor=p.color_cliente; }
   if (p.color_campana)   { const e=document.getElementById('hdr-bg-campana');    if(e) e.style.backgroundColor=p.color_campana; }
 
+  // Set city name in header if available
+  const city_name = c?.Nombre || c?.nombre || 'Santiago';
+  set('hdr-ciudad', city_name);
+
   document.title = `Llamado - ${p.campana||''}`;
-  if (l.ciudad && l.fecha) loadClima(l.ciudad, l.fecha);
+  if (l.fecha) loadClima(c.lat, c.long, l.fecha);
 }
 
 // ═══════════════════════════════════════════════════
 //  CLIMA
 // ═══════════════════════════════════════════════════
-async function loadClima(ciudad, fechaStr) {
+async function loadClima(lat, lng, fechaStr) {
   try {
     const p = fechaStr.toString().split('-');
     const fechaISO = `${p[0]}-${p[1]}-${p[2].slice(0,2)}`;
-    const resGeo  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(ciudad)}&count=1&language=es&format=json`);
-    const dataGeo = await resGeo.json();
-    if (!dataGeo.results?.length) return;
-    const { latitude, longitude, timezone } = dataGeo.results[0];
+    
+    // Fallback to Santiago coordinates if not provided
+    const latitude = (lat !== undefined && lat !== null) ? lat : -33.4489;
+    const longitude = (lng !== undefined && lng !== null) ? lng : -70.6693;
+    const timezone = 'auto';
+
     const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 7,
       daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' });
     const dataFc = await (await fetch(`https://api.open-meteo.com/v1/forecast?${params}`)).json();

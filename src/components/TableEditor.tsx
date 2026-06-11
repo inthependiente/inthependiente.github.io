@@ -30,6 +30,7 @@ interface TableEditorProps {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    ciudades: any[];
   };
 }
 
@@ -132,6 +133,12 @@ export default function TableEditor({
   const resolveShotlistSnippet = (id: number) => {
     const parent = lookups.shotlist.find((s) => s.id === id);
     return parent ? `Esc: ${parent.esc || "S/E"} | Plano: ${parent.plano || "S/P"} (${parent.descripcion?.substring(0, 30)}...)` : `Plano #${id}`;
+  };
+
+  const resolveCiudad = (id: number | null | undefined) => {
+    if (!id) return "Santiago";
+    const parent = lookups.ciudades?.find((c) => c.id === id);
+    return parent ? (parent.Nombre || parent.nombre || `Ciudad #${id}`) : `Ciudad #${id}`;
   };
 
   // Perform a case-insensitive search across ALL keys of a row to filter local records easily
@@ -322,8 +329,8 @@ export default function TableEditor({
 
                   {table === "talento" && (
                     <>
-                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Nombre</th>
+                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Llamado / En Set / Status</th>
                       <th className="p-3.5">Notas</th>
                     </>
@@ -340,8 +347,8 @@ export default function TableEditor({
 
                   {table === "shotlist" && (
                     <>
-                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5 font-condensed">Proyecto / Escena</th>
+                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Plano / Prep Nº</th>
                       <th className="p-3.5">Descripción de Toma</th>
                       <th className="p-3.5">Imagen Storyboard</th>
@@ -425,7 +432,7 @@ export default function TableEditor({
                         </td>
                         <td className="p-3.5 text-xs">
                           <div className="font-bold text-neutral-700">{row.llamado_hora || "-- : --"}</div>
-                          <div className="text-neutral-500 font-medium">{row.ciudad || "Santiago"}</div>
+                          <div className="text-neutral-500 font-medium">{resolveCiudad(row.ciudad_id)}</div>
                         </td>
                         <td className="p-3.5 text-xs text-neutral-500">
                           <div>☕ Desayuno: <span className="font-bold">{row.desayuno || "No especifica"}</span></div>

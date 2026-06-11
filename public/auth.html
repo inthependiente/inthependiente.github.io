@@ -22,30 +22,36 @@
       <div class="text-neutral-400 text-sm mt-1">Panel de administración</div>
     </div>
 
-    <div id="view-form">
-      <p class="text-neutral-500 text-sm text-center mb-6">
-        Accede instantáneamente con tu cuenta de Google autorizada.
+    <form id="view-form" onsubmit="loginConEmailPassword(event)" class="space-y-4">
+      <p class="text-neutral-550 text-sm text-center mb-4">
+        Ingresa con tu correo y contraseña registrados.
       </p>
-      
-      <button onclick="loginConGoogle()" id="btn-send"
-        class="w-full flex items-center justify-center gap-3 bg-white border border-neutral-300 hover:bg-neutral-50 text-neutral-700 font-semibold py-3 rounded-lg transition-colors text-sm shadow-sm">
-        <svg class="w-5 h-5" viewBox="0 0 24 24">
-          <path fill="#EA4335" d="M12 5.04c1.64 0 3.12.56 4.28 1.67l3.2-3.2C17.52 1.58 14.98 1 12 1 7.24 1 3.2 3.74 1.25 7.72l3.85 3C6.02 7.62 8.77 5.04 12 5.04z"/>
-          <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.43h6.44c-.28 1.47-1.11 2.71-2.36 3.55l3.66 2.84c2.14-1.97 3.39-4.87 3.39-8.48z"/>
-          <path fill="#FBBC05" d="M5.1 14.28A7.12 7.12 0 0 1 4.5 12c0-.81.21-1.58.58-2.28L1.23 6.72A11.94 11.94 0 0 0 0 12c0 1.93.46 3.75 1.27 5.38l3.83-3.1z"/>
-          <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.66-2.84c-1.01.68-2.31 1.09-4.3 1.09-3.23 0-5.98-2.58-6.95-5.68l-3.86 3C3.2 20.26 7.24 23 12 23z"/>
-        </svg>
-        Iniciar sesión con Google
+
+      <div>
+        <label class="block text-xs font-semibold text-neutral-500 uppercase mb-1">Correo Electrónico</label>
+        <input type="email" id="input-email" required placeholder="ejemplo@correo.com"
+          class="w-full border border-neutral-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-neutral-500 uppercase mb-1">Contraseña</label>
+        <input type="password" id="input-password" required placeholder="••••••••"
+          class="w-full border border-neutral-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50" />
+      </div>
+
+      <button type="submit" id="btn-send"
+        class="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-semibold py-3 rounded-lg transition-colors text-sm shadow-sm cursor-pointer mt-4">
+        Iniciar Sesión
       </button>
       
-      <div id="error-msg" class="hidden mt-3 text-red-500 text-xs text-center"></div>
-    </div>
+      <div id="error-msg" class="hidden mt-3 text-red-500 text-xs text-center font-medium"></div>
+    </form>
 
     <div id="view-session" class="hidden text-center">
       <div class="text-4xl mb-4">✅</div>
       <div class="font-semibold text-neutral-700 mb-1">Sesión activa</div>
       <p class="text-neutral-400 text-sm mb-1">Conectado como</p>
-      <p class="font-semibold text-neutral-600 text-sm mb-6" id="session-email"></p>
+      <p class="font-semibold text-neutral-600 text-sm mb-6 pb-2 border-b border-neutral-100" id="session-email"></p>
       <a id="btn-goto" href="admin.html"
         class="block w-full bg-neutral-800 hover:bg-neutral-700 text-white font-semibold py-3 rounded-lg transition-colors text-sm text-center mb-3">
         Ir al admin
@@ -79,67 +85,62 @@ window.addEventListener('load', async () => {
   }
 });
 
-// Escuchar cuando Supabase procesa el token del magic link
-// (ocurre automáticamente cuando el usuario llega desde el email)
+// Escuchar cambios de sesión
 window.addEventListener('load', () => {
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
       // Redirigir automáticamente a la página original después de 1s
-      document.getElementById('view-form').classList.add('hidden');
-      document.getElementById('view-sent').classList.add('hidden');
-      document.getElementById('view-session').classList.remove('hidden');
-      document.getElementById('session-email').textContent = session.user.email;
-      document.getElementById('btn-goto').href = nextUrl;
+      const formEl = document.getElementById('view-form');
+      if (formEl) formEl.classList.add('hidden');
+      const sentEl = document.getElementById('view-sent');
+      if (sentEl) sentEl.classList.add('hidden');
+      
+      const sessionEl = document.getElementById('view-session');
+      if (sessionEl) sessionEl.classList.remove('hidden');
+      
+      const emailEl = document.getElementById('session-email');
+      if (emailEl) emailEl.textContent = session.user.email;
+      
+      const gotoEl = document.getElementById('btn-goto');
+      if (gotoEl) gotoEl.href = nextUrl;
       setTimeout(() => { window.location.href = nextUrl; }, 1200);
     }
   });
 });
 
-// ── Enviar magic link ────────────────────────────
-// ── Enviar magic link ────────────────────────────
-// ── Iniciar sesión con Google ────────────────────
-async function loginConGoogle() {
+// ── Iniciar sesión con Email y Contraseña ────────
+async function loginConEmailPassword(event) {
+  event.preventDefault();
   const btn = document.getElementById('btn-send');
   if (btn) {
     btn.disabled = true;
-    btn.innerText = 'Redirigiendo a Google...';
+    btn.innerText = 'Iniciando sesión...';
   }
 
   const errorEl = document.getElementById('error-msg');
-  errorEl.classList.add('hidden');
+  if (errorEl) errorEl.classList.add('hidden');
 
-  // Detectar el parámetro ?next= para saber a qué llamado regresar
-  const urlParams = new URLSearchParams(window.location.search);
-  const nextParam = urlParams.get('next');
-  
-  let redirectTo;
-  if (nextParam) {
-    redirectTo = decodeURIComponent(nextParam);
-  } else {
-    // Si no hay parámetro, vuelve a la raíz o al admin por defecto
-    redirectTo = window.location.origin + window.location.pathname;
-  }
+  const email = document.getElementById('input-email').value.trim();
+  const password = document.getElementById('input-password').value.trim();
 
   try {
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectTo // Supabase redirigirá automáticamente aquí tras el login
-      }
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
     });
 
     if (error) {
-      mostrarError(error.message);
+      mostrarError("Error: " + error.message);
       if (btn) {
         btn.disabled = false;
-        btn.innerText = 'Iniciar sesión con Google';
+        btn.innerText = 'Iniciar Sesión';
       }
     }
   } catch (err) {
     mostrarError("Excepción: " + err.message);
     if (btn) {
       btn.disabled = false;
-      btn.innerText = 'Iniciar sesión con Google';
+      btn.innerText = 'Iniciar Sesión';
     }
   }
 }
@@ -151,16 +152,23 @@ function mostrarError(msg) {
 }
 
 function volverForm() {
-  document.getElementById('view-sent').classList.add('hidden');
-  document.getElementById('view-form').classList.remove('hidden');
-  document.getElementById('input-email').value = '';
+  const sentEl = document.getElementById('view-sent');
+  if (sentEl) sentEl.classList.add('hidden');
+  const formEl = document.getElementById('view-form');
+  if (formEl) formEl.classList.remove('hidden');
+  const inputEmail = document.getElementById('input-email');
+  if (inputEmail) inputEmail.value = '';
 }
 
 function mostrarSesion(email) {
-  document.getElementById('view-form').classList.add('hidden');
-  document.getElementById('view-sent').classList.add('hidden');
-  document.getElementById('view-session').classList.remove('hidden');
-  document.getElementById('session-email').textContent = email;
+  const formEl = document.getElementById('view-form');
+  if (formEl) formEl.classList.add('hidden');
+  const sentEl = document.getElementById('view-sent');
+  if (sentEl) sentEl.classList.add('hidden');
+  const sessionEl = document.getElementById('view-session');
+  if (sessionEl) sessionEl.classList.remove('hidden');
+  const emailEl = document.getElementById('session-email');
+  if (emailEl) emailEl.textContent = email;
 }
 
 async function cerrarSesion() {
