@@ -630,7 +630,7 @@ export default function TableEditor({
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Proyecto</th>
                       )}
                       {visibleColumns.esc && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Esc (Escena)</th>
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Esc</th>
                       )}
                       {visibleColumns.plano && (
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Plano</th>
