@@ -946,7 +946,7 @@ async function loadLlamado() {
   const city_name = c?.Nombre || c?.nombre || 'Santiago';
   set('hdr-ciudad', city_name);
 
-  document.title = `Llamado - ${p.campana||''}`;
+  document.title = `Llamado ${p.campana||''}`;
   if (l.fecha) loadClima(c.lat, c.long, l.fecha);
 }
 
