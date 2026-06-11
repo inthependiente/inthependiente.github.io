@@ -34,6 +34,10 @@ interface TableEditorProps {
     shotlist: any[];
     ciudades: any[];
   };
+  selectedProjectId: number | null;
+  setSelectedProjectId: (id: number | null) => void;
+  selectedLlamadoId: number | null;
+  setSelectedLlamadoId: (id: number | null) => void;
 }
 
 export default function TableEditor({
@@ -44,6 +48,10 @@ export default function TableEditor({
   onDeleteClick,
   onRefresh,
   lookups,
+  selectedProjectId,
+  setSelectedProjectId,
+  selectedLlamadoId,
+  setSelectedLlamadoId,
 }: TableEditorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -67,12 +75,12 @@ export default function TableEditor({
   const handleQuickAddShotlist = async () => {
     setIsProcessing(true);
     try {
-      const defaultProjId = lookups.proyectos && lookups.proyectos.length > 0
+      const defaultProjId = selectedProjectId || (lookups.proyectos && lookups.proyectos.length > 0
         ? lookups.proyectos[0].id
-        : null;
+        : null);
 
       if (!defaultProjId) {
-        alert("Primero crea un Proyecto para registrar renglones en el Shotlist.");
+        alert("Primero crea o selecciona un Proyecto para registrar renglones en el Shotlist.");
         return;
       }
 
@@ -112,12 +120,12 @@ export default function TableEditor({
   const handleQuickAddPdr = async () => {
     setIsProcessing(true);
     try {
-      const defaultLlamadoId = lookups.llamados && lookups.llamados.length > 0
+      const defaultLlamadoId = selectedLlamadoId || (lookups.llamados && lookups.llamados.length > 0
         ? lookups.llamados[0].id
-        : null;
+        : null);
 
       if (!defaultLlamadoId) {
-        alert("Primero crea un Llamado para registrar renglones en el PDR.");
+        alert("Primero selecciona un Llamado para registrar renglones en el PDR.");
         return;
       }
 
@@ -160,12 +168,12 @@ export default function TableEditor({
   const handleQuickAddCrewLlamado = async () => {
     setIsProcessing(true);
     try {
-      const defaultLlamadoId = lookups.llamados && lookups.llamados.length > 0
+      const defaultLlamadoId = selectedLlamadoId || (lookups.llamados && lookups.llamados.length > 0
         ? lookups.llamados[0].id
-        : null;
+        : null);
 
       if (!defaultLlamadoId) {
-        alert("Primero crea un Llamado para asignar Crew.");
+        alert("Primero selecciona un Llamado para asignar Crew.");
         return;
       }
 
@@ -414,8 +422,28 @@ export default function TableEditor({
     return parent ? (parent.Nombre || parent.nombre || `Ciudad #${id}`) : `Ciudad #${id}`;
   };
 
-  // Perform a case-insensitive search across ALL keys of a row to filter local records easily
-  const filteredData = data.filter((row) => {
+  // 1. Filter dynamically by Active Project / Active Called working context
+  const relationallyFilteredData = data.filter((row) => {
+    // If called is active, filter llamados by project if selected
+    if (table === "llamados" && selectedProjectId !== null) {
+      return row.proyecto_id === selectedProjectId;
+    }
+    // If shotlist is active, filter by project if selected
+    if (table === "shotlist" && selectedProjectId !== null) {
+      return row.proyecto_id === selectedProjectId;
+    }
+    // If llamado child collections are active, filter by the selected llamado ID
+    if (["escenas", "crew_llamado", "cliente_agencia", "talento", "pdr"].includes(table)) {
+      if (selectedLlamadoId !== null) {
+        return row.llamado_id === selectedLlamadoId;
+      }
+    }
+    // No match or other tables (e.g. proyectos, crew, locaciones) have no filters
+    return true;
+  });
+
+  // 2. Perform a case-insensitive search across ALL keys of a row to filter local records easily
+  const filteredData = relationallyFilteredData.filter((row) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     
@@ -515,7 +543,80 @@ export default function TableEditor({
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-hidden flex flex-col bg-neutral-50/50">
+    <div className="flex-1 p-6 space-y-6 overflow-hidden flex flex-col bg-neutral-50/50 animate-fade-in">
+      
+      {/* Active working context panel */}
+      <div className="bg-neutral-900 border border-neutral-800 text-white rounded-2xl p-4 shrink-0 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-6">
+          {/* Working Project Context */}
+          <div className="flex items-center gap-2.5">
+            <div className={`p-1.5 rounded-lg border ${selectedProjectId ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold' : 'bg-neutral-800 border-neutral-700 text-neutral-400'}`}>
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold">Proyecto de Trabajo</div>
+              <div className="text-xs font-semibold">
+                {selectedProjectId ? (
+                  <span className="text-orange-400 font-bold">{resolveProject(selectedProjectId)}</span>
+                ) : (
+                  <span className="text-neutral-505 font-medium italic">Ninguno (Mostrando todos)</span>
+                )}
+              </div>
+            </div>
+            {selectedProjectId && (
+              <button
+                onClick={() => {
+                  setSelectedProjectId(null);
+                  setSelectedLlamadoId(null);
+                }}
+                className="ml-2 text-neutral-400 hover:text-rose-400 font-bold text-[9px] uppercase tracking-wider bg-neutral-800/80 hover:bg-neutral-800 px-2 py-1 rounded transition-colors cursor-pointer"
+                title="Quitar filtro de proyecto"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          {/* Vertical divider */}
+          <div className="hidden md:block w-px h-8 bg-neutral-800" />
+
+          {/* Working Call Sheet Context */}
+          <div className="flex items-center gap-2.5">
+            <div className={`p-1.5 rounded-lg border ${selectedLlamadoId ? 'bg-teal-500/10 border-teal-500/40 text-teal-400 font-bold' : 'bg-neutral-800 border-neutral-700 text-neutral-400'}`}>
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold">Llamado Activo</div>
+              <div className="text-xs font-semibold">
+                {selectedLlamadoId ? (
+                  <span className="text-teal-400 font-bold">{resolveLlamado(selectedLlamadoId)}</span>
+                ) : (
+                  <span className="text-neutral-505 font-medium italic">Ninguno (Selecciona en llamados)</span>
+                )}
+              </div>
+            </div>
+            {selectedLlamadoId && (
+              <button
+                onClick={() => setSelectedLlamadoId(null)}
+                className="ml-2 text-neutral-400 hover:text-rose-400 font-bold text-[9px] uppercase tracking-wider bg-neutral-800/80 hover:bg-neutral-800 px-2 py-1 rounded transition-colors cursor-pointer"
+                title="Quitar filtro de llamado"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Warning Badge if no active filter */}
+        <div className="text-right flex items-center gap-2">
+          {(!selectedProjectId || !selectedLlamadoId) && (
+            <span className="text-xs text-orange-400 font-medium inline-flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>Para filtrar sub-tablas, activa un proyecto/llamado en sus secciones.</span>
+            </span>
+          )}
+        </div>
+      </div>
       
       {/* Header section with buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
@@ -652,7 +753,62 @@ export default function TableEditor({
 
       {/* Main Database Table Display */}
       <div className="flex-1 bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-0">
-        {filteredData.length === 0 ? (
+        {["escenas", "crew_llamado", "cliente_agencia", "talento", "pdr"].includes(table) && !selectedLlamadoId ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto my-auto animate-fade-in shadow-xs">
+            <div className="p-3.5 bg-teal-50 border border-teal-100 rounded-full text-teal-600 mb-4 animate-bounce">
+              <Calendar className="w-8 h-8" />
+            </div>
+            <h4 className="font-condensed font-extrabold text-xl text-neutral-800 uppercase tracking-tight">Debes seleccionar un Llamado</h4>
+            <p className="text-neutral-500 text-sm mt-1.5 max-w-md mb-6 font-sans">
+              Para ver, agregar o editar <strong>{getTableTitle()}</strong>, primero debes seleccionar sobre cuál Hoja de Llamado de Rodaje vas a trabajar.
+            </p>
+            
+            <div className="w-full max-w-md space-y-3 bg-neutral-50 p-6 rounded-2xl border border-neutral-200 shadow-xs text-left font-sans">
+              <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                Elegir un llamado rápido:
+              </label>
+              <select
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    const id = Number(val);
+                    setSelectedLlamadoId(id);
+                    const matchingLlamado = lookups.llamados.find(l => l.id === id);
+                    if (matchingLlamado && matchingLlamado.proyecto_id) {
+                      setSelectedProjectId(matchingLlamado.proyecto_id);
+                    }
+                  }
+                }}
+                className="w-full pl-3 pr-10 py-3 bg-white border border-neutral-350 rounded-xl text-sm font-semibold text-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 transition-all cursor-pointer shadow-xs"
+                defaultValue=""
+              >
+                <option value="">-- Selecciona un llamado de la lista --</option>
+                {lookups.llamados
+                  .filter(l => !selectedProjectId || l.proyecto_id === selectedProjectId)
+                  .map(l => {
+                    const proj = lookups.proyectos.find(p => p.id === l.proyecto_id);
+                    const nameStr = proj ? proj.campana : `Proyecto #${l.proyecto_id}`;
+                    return (
+                      <option key={l.id} value={l.id}>
+                        {l.fecha} ({l.d_o_d || "Día único"}) [Proy: {nameStr}]
+                      </option>
+                    );
+                  })
+                }
+              </select>
+              
+              {selectedProjectId ? (
+                <div className="text-xs text-neutral-450 mt-2">
+                  Filtrando llamados del proyecto <span className="font-bold text-orange-500">{resolveProject(selectedProjectId)}</span>.
+                </div>
+              ) : (
+                <div className="text-xs text-neutral-450 mt-2">
+                  Mostrando todos los llamados disponibles de todos los proyectos.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : filteredData.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
             <HelpCircle className="w-12 h-12 text-neutral-300 mb-3" />
             <h4 className="font-bold text-lg text-neutral-700">No se encontraron registros</h4>
@@ -680,6 +836,7 @@ export default function TableEditor({
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
                     <>
+                      <th className="p-3.5 w-32 text-orange-400">Trabajar</th>
                       <th className="p-3.5">Campaña</th>
                       <th className="p-3.5">Productora</th>
                       <th className="p-3.5">Colores de Marca</th>
@@ -688,6 +845,7 @@ export default function TableEditor({
 
                   {table === "llamados" && (
                     <>
+                      <th className="p-3.5 w-36 text-teal-400">Trabajar</th>
                       <th className="p-3.5">Proyecto Relacionado</th>
                       <th className="p-3.5">Fecha / D.O.D</th>
                       <th className="p-3.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Hora / Ciudad</th>
@@ -821,6 +979,27 @@ export default function TableEditor({
                     {table === "proyectos" && (
                       <>
                         <td className="p-3.5">
+                          <button
+                            onClick={() => {
+                              if (selectedProjectId === row.id) {
+                                setSelectedProjectId(null);
+                                setSelectedLlamadoId(null);
+                              } else {
+                                setSelectedProjectId(row.id);
+                                setSelectedLlamadoId(null);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                              selectedProjectId === row.id
+                                ? "bg-orange-500 border-orange-500 text-white shadow-xs hover:bg-orange-600"
+                                : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>{selectedProjectId === row.id ? "Activo" : "Seleccionar"}</span>
+                          </button>
+                        </td>
+                        <td className="p-3.5">
                           <div className="font-bold text-neutral-900">{row.campana}</div>
                         </td>
                         <td className="p-3.5 text-xs">
@@ -847,6 +1026,28 @@ export default function TableEditor({
                     {/* ───── TABLA: LLAMADOS ───── */}
                     {table === "llamados" && (
                       <>
+                        <td className="p-3.5">
+                          <button
+                            onClick={() => {
+                              if (selectedLlamadoId === row.id) {
+                                setSelectedLlamadoId(null);
+                              } else {
+                                setSelectedLlamadoId(row.id);
+                                if (row.proyecto_id && selectedProjectId !== row.proyecto_id) {
+                                  setSelectedProjectId(row.proyecto_id);
+                                }
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                              selectedLlamadoId === row.id
+                                ? "bg-teal-600 border-teal-600 text-white shadow-xs hover:bg-teal-700"
+                                : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+                            }`}
+                          >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{selectedLlamadoId === row.id ? "Activo" : "Seleccionar"}</span>
+                          </button>
+                        </td>
                         <td className="p-3.5 font-semibold text-neutral-800">
                           {resolveProject(row.proyecto_id)}
                         </td>

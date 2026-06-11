@@ -27,6 +27,33 @@ export default function App() {
   // Active collection and records state
   const [activeTable, setActiveTable] = useState<DbTable>("proyectos");
   const [tableData, setTableData] = useState<any[]>([]);
+
+  // Selected project/llamado working contexts persistable via localStorage
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
+    const cached = localStorage.getItem("selected_project_id");
+    return cached ? Number(cached) : null;
+  });
+  const [selectedLlamadoId, setSelectedLlamadoId] = useState<number | null>(() => {
+    const cached = localStorage.getItem("selected_llamado_id");
+    return cached ? Number(cached) : null;
+  });
+
+  // Sync working contexts back to local storage
+  useEffect(() => {
+    if (selectedProjectId !== null) {
+      localStorage.setItem("selected_project_id", String(selectedProjectId));
+    } else {
+      localStorage.removeItem("selected_project_id");
+    }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (selectedLlamadoId !== null) {
+      localStorage.setItem("selected_llamado_id", String(selectedLlamadoId));
+    } else {
+      localStorage.removeItem("selected_llamado_id");
+    }
+  }, [selectedLlamadoId]);
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [tableCounts, setTableCounts] = useState<Record<DbTable, number>>({
     proyectos: 0,
@@ -457,7 +484,18 @@ export default function App() {
 
   // Modal actions triggered from subcomponent list buttons
   const openAddFlow = () => {
-    setSelectedRow(null);
+    const defaultData: Record<string, any> = {};
+    if (selectedProjectId !== null) {
+      if (activeTable === "llamados" || activeTable === "shotlist") {
+        defaultData.proyecto_id = selectedProjectId;
+      }
+    }
+    if (selectedLlamadoId !== null) {
+      if (["escenas", "crew_llamado", "cliente_agencia", "talento", "pdr"].includes(activeTable)) {
+        defaultData.llamado_id = selectedLlamadoId;
+      }
+    }
+    setSelectedRow(Object.keys(defaultData).length > 0 ? defaultData : null);
     setIsModalOpen(true);
   };
 
@@ -654,6 +692,10 @@ export default function App() {
             onDeleteClick={handleDeleteRow}
             onRefresh={fetchCurrentTableData}
             lookups={lookups}
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
+            selectedLlamadoId={selectedLlamadoId}
+            setSelectedLlamadoId={setSelectedLlamadoId}
           />
         )}
 
