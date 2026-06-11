@@ -322,7 +322,7 @@ export default function FormModal({
                     value={formValues.campana || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Lanzamiento Verano 2026"
+                    placeholder=""
                   />
                 </div>
                 <div className="col-span-1 flex flex-col gap-1">
@@ -335,7 +335,7 @@ export default function FormModal({
                       value={formValues.cliente || ""}
                       onChange={handleChange}
                       className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                      placeholder="Ej: Pepsi Co."
+                      placeholder=""
                     />
                     <label className="flex items-center justify-center p-2.5 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-lg border border-neutral-300 text-neutral-600 transition-colors shrink-0" title="Subir Logo Cliente">
                       <Upload className="w-5 h-5" />
@@ -824,7 +824,7 @@ export default function FormModal({
                     value={formValues.departamento || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Cámara, Grip, Luces, Vestuario"
+                    placeholder="Ej: Producción, Cámara, Vestuario"
                   />
                 </div>
                 <div>
@@ -1002,7 +1002,7 @@ export default function FormModal({
                     value={formValues.empresa || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Pepsi Latinoamérica"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -1013,7 +1013,7 @@ export default function FormModal({
                     value={formValues.horario_loc || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: 10:00 AM o Todo el Día"
+                    placeholder="Ej: 10:00 AM"
                   />
                 </div>
               </>
@@ -1048,7 +1048,7 @@ export default function FormModal({
                     value={formValues.nombre || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Sofía Vergara (O Doble de Acción)"
+                    placeholder="Ej: Sofía Vergara"
                   />
                 </div>
                 <div>
@@ -1097,7 +1097,7 @@ export default function FormModal({
                     value={formValues.en_set || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: En Camerin / Maquillaje"
+                    placeholder="Ej: 09:30"
                   />
                 </div>
                 <div>
@@ -1108,7 +1108,7 @@ export default function FormModal({
                     value={formValues.w_status || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: W1 - Listo Vestuario"
+                    placeholder="Ej: SW, W, WF, SWF"
                   />
                 </div>
                 <div>
@@ -1131,7 +1131,7 @@ export default function FormModal({
                     value={formValues.notas || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Alérgica a las almendras, movilidad especial"
+                    placeholder="Ej: Alérgias, condiciones especiales"
                   />
                 </div>
               </>
@@ -1245,7 +1245,7 @@ export default function FormModal({
                     value={formValues.plano || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: PP - Plano Pecho"
+                    placeholder="Ej: Número de plano"
                   />
                 </div>
                 <div>
@@ -1284,7 +1284,7 @@ export default function FormModal({
                     value={formValues.prep || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Gimbal, Drone, Steady, Cámara lenta 120fps"
+                    placeholder="Ej: Número correspondiente en Shotlister"
                   />
                 </div>
                 <div className="col-span-2">
