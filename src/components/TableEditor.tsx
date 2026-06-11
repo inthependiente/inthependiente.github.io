@@ -62,6 +62,7 @@ export default function TableEditor({
     referencia_urls: true,
   });
   const [isUploadingRowId, setIsUploadingRowId] = useState<number | null>(null);
+  const [newlyCreatedId, setNewlyCreatedId] = useState<number | null>(null);
 
   const handleQuickAddShotlist = async () => {
     setIsProcessing(true);
@@ -92,8 +93,12 @@ export default function TableEditor({
         referencia_urls: ""
       };
 
-      const { error } = await supabase.from("shotlist").insert([newRow]);
+      const { data: insertedData, error } = await supabase.from("shotlist").insert([newRow]).select();
       if (error) throw error;
+
+      if (insertedData && insertedData.length > 0) {
+        setNewlyCreatedId(insertedData[0].id);
+      }
 
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -626,11 +631,10 @@ export default function TableEditor({
                         <button
                           type="button"
                           onClick={handleQuickAddShotlist}
-                          className="p-1 px-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center gap-1 transition-colors"
+                          className="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center transition-colors animate-pulse"
                           title="Crear fila rápida"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          {/* <span>FILA</span> */}
                         </button>
                       </th>
                       {visibleColumns.proyecto_id && (
@@ -930,16 +934,11 @@ export default function TableEditor({
                     {/* ───── TABLA: SHOTLIST (STORIES) ───── */}
                     {table === "shotlist" && (
                       <>
-                        {/* Far Left Cell showing Order / ID and a quick edit/delete indicator */}
+                        {/* Far Left Cell showing Sequence Number (no Database ID shown) */}
                         <td className="p-2 border border-neutral-200 text-center bg-neutral-50/50 font-mono font-bold text-xs text-neutral-500">
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            {/* <span className="font-extrabold text-neutral-850">#{row.orden || "—"}</span> */}
-                            <span className="text-[9px] text-neutral-400 font-normal">Id: {row.id}</span>
-                          </div>
+                          <span className="font-extrabold text-neutral-850">#{index + 1}</span>
                         </td>
-                        <td className="p-1 border border-neutral-200 bg-white">
-                          <span>-</span>
-                        </td>
+
 
                         {/* 1. Proyecto ID */}
                         {visibleColumns.proyecto_id && (
@@ -965,7 +964,16 @@ export default function TableEditor({
                             <input
                               type="text"
                               defaultValue={row.esc || ""}
+                              autoFocus={row.id === newlyCreatedId}
+                              onFocus={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  e.currentTarget.select();
+                                }
+                              }}
                               onBlur={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  setNewlyCreatedId(null);
+                                }
                                 if (e.target.value !== (row.esc || "")) {
                                   handleInlineUpdate(row.id, "esc", e.target.value);
                                 }
@@ -973,7 +981,7 @@ export default function TableEditor({
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-extrabold text-neutral-850 p-1 text-center rounded"
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-extrabold text-neutral-850 p-1 text-center rounded text-neutral-850"
                               placeholder="—"
                             />
                           </td>
@@ -1244,6 +1252,53 @@ export default function TableEditor({
                     </td>
                   </tr>
                 ))}
+                {table === "shotlist" && (
+                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200">
+                    {/* Far Left Cell showing a clean Plus button */}
+                    <td className="p-2.5 border border-neutral-200 text-center bg-neutral-50/10 font-bold">
+                      <button
+                        type="button"
+                        onClick={handleQuickAddShotlist}
+                        className="p-1 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center transition-transform hover:scale-105"
+                        title="Crear nueva fila"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+
+                    {/* All active columns with placeholder / clear style */}
+                    {visibleColumns.proyecto_id && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.esc && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.plano && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.prep && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.descripcion && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.cast_nombres && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.locacion_id && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.notas && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    {visibleColumns.referencia_urls && (
+                      <td className="p-1 border border-neutral-200 bg-white" />
+                    )}
+                    
+                    {/* Actions column empty placeholder */}
+                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
