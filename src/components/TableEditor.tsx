@@ -323,6 +323,7 @@ export default function TableEditor({
                   {table === "talento" && (
                     <>
                       <th className="p-3.5">Nombre</th>
+                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Llamado / En Set / Status</th>
                       <th className="p-3.5">Notas</th>
                     </>
@@ -340,6 +341,7 @@ export default function TableEditor({
                   {table === "shotlist" && (
                     <>
                       <th className="p-3.5 font-condensed">Proyecto / Escena</th>
+                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Plano / Prep Nº</th>
                       <th className="p-3.5">Descripción de Toma</th>
                       <th className="p-3.5">Imagen Storyboard</th>
