@@ -410,8 +410,11 @@
         const printablePixelHeight = pagePixelWidth * (269.4 / 215.9);
         
         if (offsetTop < printablePixelHeight) {
-          // If it starts on page 1, force a page break to push to page 2
-          pdrSection.style.pageBreakBefore = 'always';
+          // If it starts on page 1, force a page break to push to page 2 by inserting a helper div
+          const pb = document.createElement('div');
+          pb.className = 'html2pdf__page-break';
+          pb.id = 'dynamic-page-break-pdr';
+          pdrSection.parentNode.insertBefore(pb, pdrSection);
           pageBreakAdded = true;
         }
       }
@@ -426,8 +429,11 @@
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
-        if (pageBreakAdded && pdrSection) {
-          pdrSection.style.pageBreakBefore = 'auto';
+        if (pageBreakAdded) {
+          const activePb = document.getElementById('dynamic-page-break-pdr');
+          if (activePb) {
+            activePb.remove();
+          }
         }
         
         // Handle upload session checking
@@ -473,8 +479,9 @@
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
-        if (pdrSection) {
-          pdrSection.style.pageBreakBefore = 'auto';
+        const activePb = document.getElementById('dynamic-page-break-pdr');
+        if (activePb) {
+          activePb.remove();
         }
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
