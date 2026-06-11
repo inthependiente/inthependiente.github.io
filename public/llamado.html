@@ -7,6 +7,7 @@
   <title>-</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
@@ -272,13 +273,18 @@
     </button>
   </div>
 
-  <!-- Botón Ver PDR — visible solo en pantalla, no al imprimir -->
-  <div class="no-print fixed bottom-4 left-4 z-50">
+  <!-- Botones de Acción — visible solo en pantalla, no al imprimir -->
+  <div class="no-print fixed bottom-4 left-4 z-50 flex items-center gap-2">
     <a id="btn-ver-pdr" href="#"
        class="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-900 text-white text-[12px] font-bold px-4 py-2.5 rounded-full shadow-lg transition-all duration-150 transform hover:scale-105 decoration-none no-underline">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7h4"/><path d="M3 12h18"/><path d="M3 17h4"/><path d="M17 12h4"/><path d="M17 17h4"/><path d="M17 7h4"/></svg>
       Ver PDR
     </a>
+    <button onclick="exportToPDF()"
+       class="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white text-[12px] font-bold px-4 py-2.5 rounded-full shadow-lg transition-all duration-150 transform hover:scale-105 cursor-pointer border-none shrink-0">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      Exportar PDF
+    </button>
   </div>
 
   <script>
@@ -289,6 +295,67 @@
       document.getElementById('btn-ver-pdr').href = `pdr.html?id=${pdrLlamadoId}`;
     } else {
       document.getElementById('btn-ver-pdr').style.display = 'none';
+    }
+
+    // Export PDF dynamic function
+    async function exportToPDF() {
+      const element = document.querySelector('.page');
+      const docTitle = document.title || 'Llamado';
+      const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
+      const filename = `${safeTitle}.pdf`;
+      const storagePath = `llamados/${filename}`;
+      
+      const opt = {
+        margin:       [4, 4, 4, 4], // in mm
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+      
+      showToast('Generando archivo PDF...', true);
+      
+      try {
+        // Generate and download locally
+        const worker = html2pdf().set(opt).from(element).toPdf();
+        const blob = await worker.output('blob');
+        await worker.save();
+        
+        // Handle upload session checking
+        let token = null;
+        if (typeof userSession !== 'undefined' && userSession) {
+          token = userSession.access_token;
+        } else if (typeof sb !== 'undefined') {
+          const { data: { session } } = await sb.auth.getSession();
+          if (session) {
+            token = session.access_token;
+          }
+        }
+        
+        if (!token) {
+          showToast('Descargado localmente. Inicia sesión si deseas respaldarlo en la nube.', false);
+          return;
+        }
+        
+        showToast('Cancelando subida anterior y subiendo copia al bucket "referencias"...', true);
+        
+        // Upload/overwrite to Supabase references storage bucket
+        const { data, error } = await sb.storage
+          .from("referencias")
+          .upload(storagePath, blob, {
+            contentType: 'application/pdf',
+            upsert: true
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
+      }
     }
   </script>
 

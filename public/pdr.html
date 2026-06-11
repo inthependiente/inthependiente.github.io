@@ -6,6 +6,7 @@
   <title>Plan de Rodaje</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
@@ -45,7 +46,7 @@
 
   <div class="page w-[216mm] mx-auto bg-white shadow-xl p-[4mm] rounded-sm">
     <!-- ══════════ SIMPLE HEADER ══════════ -->
-    <div class="border-b border-neutral-300 pb-3 mb-4 flex items-center justify-between h-[50px]">
+    <div class="border-b border-neutral-300 pb-3 mb-4 flex items-center justify-between">
       <!-- Left side: logo and film company -->
       <div class="flex items-center gap-3">
         <div class="h-14 flex items-center">
@@ -59,14 +60,14 @@
 
       <!-- Right side: shoot day details -->
       <div class="text-right flex flex-col items-end">
-        <div class="font-condensed text-[14px] tracking-wider uppercase" id="hdr-dod">
+        <div class="bg-neutral-800 text-white font-condensed font-bold text-[14px] px-3 py-1 rounded-sm tracking-wider uppercase mb-1" id="hdr-dod">
           —
         </div>
         <div class="font-bold text-[12px]" id="hdr-fecha">
           —
         </div>
-        <div class="text-[12px] text-gray-500 tracking-wide font-condensed mt-0 uppercase" id="hdr-campana">
-          —
+        <div class="text-[10px] text-gray-500 tracking-wide font-semibold mt-0.5 uppercase" id="hdr-campana">
+          Campaña: —
         </div>
       </div>
     </div>
@@ -240,6 +241,106 @@
     }
 
     init();
+  </script>
+
+  <!-- Botones de Acción — visible solo en pantalla, no al imprimir -->
+  <div class="no-print fixed bottom-4 left-4 z-50 flex items-center gap-2">
+    <a id="btn-ver-llamado" href="#"
+       class="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-900 text-white text-[12px] font-bold px-4 py-2.5 rounded-full shadow-lg transition-all duration-150 transform hover:scale-105 decoration-none no-underline">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Llamado General
+    </a>
+    <button onclick="exportToPDF()"
+       class="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white text-[12px] font-bold px-4 py-2.5 rounded-full shadow-lg transition-all duration-150 transform hover:scale-105 cursor-pointer border-none shrink-0">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      Exportar PDF
+    </button>
+  </div>
+
+  <script>
+    // Set dynamic link for Llamado General button
+    const urlParamsForLlamado = new URLSearchParams(window.location.search);
+    const llamadoIdParam = urlParamsForLlamado.get('id');
+    if (llamadoIdParam) {
+      document.getElementById('btn-ver-llamado').href = `llamado.html?id=${llamadoIdParam}`;
+    } else {
+      document.getElementById('btn-ver-llamado').style.display = 'none';
+    }
+
+    // Elegant toast notification system for pdr.html
+    function showToast(msg, ok = true) {
+      let bin = document.getElementById('toast-bin');
+      if (!bin) {
+        bin = document.createElement('div');
+        bin.id = 'toast-bin';
+        bin.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none';
+        document.body.appendChild(bin);
+      }
+      const el = document.createElement('div');
+      el.className = `px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg pointer-events-auto transition-all transform translate-y-2 opacity-0 duration-200 ${ok ? 'bg-emerald-600' : 'bg-rose-600'}`;
+      el.textContent = msg;
+      bin.appendChild(el);
+      setTimeout(() => {
+        el.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+      setTimeout(() => {
+        el.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => el.remove(), 250);
+      }, 4000);
+    }
+
+    // Export PDF dynamic function for pdr.html
+    async function exportToPDF() {
+      const element = document.querySelector('.page');
+      const docTitle = document.title || 'Plan de Rodaje';
+      const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
+      const filename = `${safeTitle}.pdf`;
+      const storagePath = `llamados/${filename}`;
+      
+      const opt = {
+        margin:       [4, 4, 4, 4], // in mm
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+      
+      showToast('Generando archivo PDF...', true);
+      
+      try {
+        // Generate and download locally
+        const worker = html2pdf().set(opt).from(element).toPdf();
+        const blob = await worker.output('blob');
+        await worker.save();
+        
+        showToast('Buscando sesión activa para respaldar...', true);
+        const { data: { session } } = await sb.auth.getSession();
+        
+        if (!session) {
+          showToast('Descargado localmente. Inicia sesión si deseas respaldarlo en la nube.', false);
+          return;
+        }
+        
+        showToast('Cancelando subida anterior y subiendo copia al bucket "referencias"...', true);
+        
+        // Upload/overwrite to Supabase references storage bucket
+        const { data, error } = await sb.storage
+          .from("referencias")
+          .upload(storagePath, blob, {
+            contentType: 'application/pdf',
+            upsert: true
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
+      }
+    }
   </script>
 </body>
 </html>
