@@ -196,44 +196,94 @@ export default function App() {
     }
   };
 
-  // Fetch values for dropdown select lookups (Proyectos, Llamados, Locaciones, Crew, Shotlist)
+  // Fetch values for dropdown select lookups (Proyectos, Llamados, Locaciones, Crew, Shotlist, Ciudades)
   const loadLookupCaches = async () => {
+    // 1. Proyectos
+    let projs: any[] = [];
     try {
-      // 1. Proyectos
-      const { data: projs } = await supabase.from("proyectos").select("id, campana, cliente").order("id", { ascending: false });
-      // 2. Locaciones
-      const { data: locs } = await supabase.from("locaciones").select("id, locacion").order("locacion", { ascending: true });
-      // 3. Crew members
-      const { data: crewList } = await supabase.from("crew").select("id, nombre, cargo, departamento").order("nombre", { ascending: true });
-      // 4. Shotlists
-      const { data: shotlistList } = await supabase.from("shotlist").select("id, esc, plano, descripcion, proyecto_id").order("id", { ascending: false });
-      
-      // 5. Llamados (has some references we want to display - fetch directly, then we decorate with project titles locally)
-      const { data: calls } = await supabase.from("llamados").select("id, fecha, d_o_d, proyecto_id").order("fecha", { ascending: false });
-      
-      // 6. Ciudades
-      const { data: cities } = await supabase.from("ciudades").select("id, Nombre, lat, long").order("Nombre", { ascending: true });
-      
-      // Decorate llamados with their project campana name for high usability
-      const decoratedCalls = (calls || []).map((c: any) => {
-        const matchingProj = (projs || []).find((p: any) => p.id === c.proyecto_id);
-        return {
-          ...c,
-          proyecto_id_campana: matchingProj ? matchingProj.campana : `Proyecto #${c.proyecto_id}`,
-        };
-      });
-
-      setLookups({
-        proyectos: projs || [],
-        locaciones: locs || [],
-        crew: crewList || [],
-        shotlist: shotlistList || [],
-        llamados: decoratedCalls,
-        ciudades: cities || [],
-      });
-    } catch (err) {
-      console.error("Error warming relationship lookup filters", err);
+      const { data, error } = await supabase.from("proyectos").select("id, campana, cliente").order("id", { ascending: false });
+      if (error) console.error("Error fetching proyectos database lookup:", error);
+      else projs = data || [];
+    } catch (e) {
+      console.error("Exception fetching proyectos lookup:", e);
     }
+
+    // 2. Locaciones
+    let locs: any[] = [];
+    try {
+      const { data, error } = await supabase.from("locaciones").select("id, locacion").order("locacion", { ascending: true });
+      if (error) console.error("Error fetching locaciones database lookup:", error);
+      else locs = data || [];
+    } catch (e) {
+      console.error("Exception fetching locaciones lookup:", e);
+    }
+
+    // 3. Crew members
+    let crewList: any[] = [];
+    try {
+      const { data, error } = await supabase.from("crew").select("id, nombre, cargo, departamento").order("nombre", { ascending: true });
+      if (error) console.error("Error fetching crew database lookup:", error);
+      else crewList = data || [];
+    } catch (e) {
+      console.error("Exception fetching crew lookup:", e);
+    }
+
+    // 4. Shotlists
+    let shotlistList: any[] = [];
+    try {
+      const { data, error } = await supabase.from("shotlist").select("id, esc, plano, descripcion, proyecto_id").order("id", { ascending: false });
+      if (error) console.error("Error fetching shotlist database lookup:", error);
+      else shotlistList = data || [];
+    } catch (e) {
+      console.error("Exception fetching shotlist lookup:", e);
+    }
+
+    // 5. Llamados (combines with decorated project campana names)
+    let decoratedCalls: any[] = [];
+    try {
+      const { data: calls, error } = await supabase.from("llamados").select("id, fecha, d_o_d, proyecto_id").order("fecha", { ascending: false });
+      if (error) {
+        console.error("Error fetching llamados database lookup:", error);
+      } else if (calls) {
+        decoratedCalls = calls.map((c: any) => {
+          const matchingProj = projs.find((p: any) => p.id === c.proyecto_id);
+          return {
+            ...c,
+            proyecto_id_campana: matchingProj ? matchingProj.campana : `Proyecto #${c.proyecto_id}`,
+          };
+        });
+      }
+    } catch (e) {
+      console.error("Exception fetching llamados lookup:", e);
+    }
+
+    // 6. Ciudades
+    let cities: any[] = [];
+    try {
+      const { data, error } = await supabase.from("ciudades").select("*");
+      if (error) {
+        console.error("Error fetching ciudades database lookup (verify if RLS policy allows read/select access):", error);
+      } else if (data) {
+        cities = [...data];
+        // Sort alphabetically by Name, safely handling mixed casing columns 'Nombre' or 'nombre'
+        cities.sort((a, b) => {
+          const nameA = String(a.Nombre || a.nombre || "").toLowerCase();
+          const nameB = String(b.Nombre || b.nombre || "").toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      }
+    } catch (e) {
+      console.error("Exception fetching ciudades lookup:", e);
+    }
+
+    setLookups({
+      proyectos: projs,
+      locaciones: locs,
+      crew: crewList,
+      shotlist: shotlistList,
+      llamados: decoratedCalls,
+      ciudades: cities,
+    });
   };
 
   // Fetch complete rows from database for current selected activeTable state
