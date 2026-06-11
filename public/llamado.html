@@ -21,7 +21,7 @@
       }
     }
   </script>
-  <!-- Se actualizó 2 -->
+  <!-- Se actualizó 3-->
   <style>
     body { font-family: 'Barlow', sans-serif; }
     .font-condensed { font-family: 'Barlow Condensed', sans-serif; }
@@ -335,24 +335,15 @@
       // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
       element.offsetHeight;
       
-      // Check if we need to force a page break before Plan de Rodaje Completo
+      // Force page break before Plan de Rodaje Completo
       const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
-      let pageBreakAdded = false;
+      let pbDiv = null;
       if (pdrSection) {
-        const rectPage = element.getBoundingClientRect();
-        const rectPdr = pdrSection.getBoundingClientRect();
-        const offsetTop = rectPdr.top - rectPage.top;
-        const pagePixelWidth = rectPage.width;
-        // Aspect ratio of USA Letter is 8.5 x 11 inches (215.9mm x 279.4mm)
-        // With 5mm margins (top and bottom), safe printable area height is 279.4 - 10 = 269.4mm
-        const printablePixelHeight = pagePixelWidth * (269.4 / 215.9);
-        
-        if (offsetTop < printablePixelHeight) {
-          pageBreakAdded = true;
-          // Apply explicit page break before the section
-          pdrSection.style.setProperty('page-break-before', 'always', 'important');
-          pdrSection.style.setProperty('break-before', 'page', 'important');
-        }
+        pbDiv = document.createElement('div');
+        pbDiv.className = 'html2pdf__page-break';
+        pbDiv.style.setProperty('page-break-before', 'always', 'important');
+        pbDiv.style.setProperty('break-before', 'page', 'important');
+        pdrSection.parentNode.insertBefore(pbDiv, pdrSection);
       }
 
       const opt = {
@@ -361,9 +352,7 @@
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    pageBreakAdded 
-                        ? { mode: ['specify', 'css', 'legacy'], before: '#plan-de-rodaje-completo-section' }
-                        : { mode: ['css', 'legacy'] }
+        pagebreak:    { mode: ['css', 'legacy'] }
       };
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
@@ -436,9 +425,8 @@
         element.style.maxWidth = originalMaxWidth;
         element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
-        if (pageBreakAdded && pdrSection) {
-          pdrSection.style.removeProperty('page-break-before');
-          pdrSection.style.removeProperty('break-before');
+        if (pbDiv) {
+          pbDiv.remove();
         }
         
         // Handle upload session checking
@@ -485,9 +473,8 @@
         element.style.maxWidth = originalMaxWidth;
         element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
-        if (pdrSection) {
-          pdrSection.style.removeProperty('page-break-before');
-          pdrSection.style.removeProperty('break-before');
+        if (pbDiv) {
+          pbDiv.remove();
         }
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
@@ -664,7 +651,7 @@ function fechaToISO(v) {
 // ═══════════════════════════════════════════════════
 function editableSpan(tabla, id, campo, valor, wid, opts = {}) {
   // Si nos pasan un displayFn (como el de la fecha o día), lo usamos, si no, el valor por defecto
-  const fallback = opts.allowEmpty ? '' : '—';
+  const fallback = opts.allowEmpty ? '' : '<span class="no-print select-none text-neutral-300">—</span>';
   const display = opts.displayFn ? opts.displayFn() : (valor || fallback);
   const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded px-0.5';
   
@@ -723,7 +710,7 @@ async function confirmarEdit(tabla, id, campo, wid) {
       el.outerHTML = `<span id="ed-${wid}"
         class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
         onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginalParaBD.replace(/'/g,"\\'")}','${wid}')"
-        title="Click para editar">${display || '—'}</span>`;
+        title="Click para editar">${display || '<span class="no-print select-none text-neutral-300">—</span>'}</span>`;
     }
     showToast('Guardado ✓');
     
@@ -740,7 +727,7 @@ function cancelarEdit(tabla, id, campo, valorOriginal, wid) {
     el.outerHTML = `<span id="ed-${wid}"
       class="cursor-pointer hover:bg-neutral-100 rounded px-0.5"
       onclick="activarEdit('${tabla}',${id},'${campo}','${valorOriginal.replace(/'/g,"\\'")}','${wid}')"
-      title="Click para editar">${display || '—'}</span>`;
+      title="Click para editar">${display || '<span class="no-print select-none text-neutral-300">—</span>'}</span>`;
   }
 }
 
@@ -1277,7 +1264,7 @@ function renderPDR(pdrRows, llamadoHora) {
       
       <td class="border border-neutral-600 px-1 py-1">${loc.locacion||''}</td>
       <td class="border border-neutral-600 px-1 py-1">
-        ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`, { allowEmpty: true })}
+        ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`)}
       </td>
       <td class="border border-neutral-600 p-0">
         ${refEditable(r.id, s.id, s.referencia_urls||'', wid)}
