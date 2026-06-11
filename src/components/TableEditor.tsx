@@ -352,7 +352,7 @@ export default function TableEditor({
               <tbody className="divide-y divide-neutral-100 font-sans text-neutral-700 text-sm">
                 {filteredData.map((row, index) => (
                   <tr 
-                    key={row.id} 
+                    key={`${table}_${row.id}`} 
                     className={`hover:bg-neutral-50/70 transition-colors ${
                       table === "pdr" ? "cursor-grab active:cursor-grabbing bg-white border-l-2 border-transparent hover:border-orange-500" : ""
                     } ${
@@ -482,24 +482,8 @@ export default function TableEditor({
                           <span className="text-neutral-600 font-medium">{row.cargo || "Asistente"}</span>
                         </td>
                         <td className="p-3.5 text-xs font-mono font-semibold text-neutral-600">{row.celular || "Sin celular"}</td>
-                        <td className="p-3.5 text-xs">
-                          <input
-                            type="text"
-                            defaultValue={row.llamado_hora || ""}
-                            placeholder="Ej: 07:00 AM"
-                            onBlur={(e) => {
-                              const val = e.target.value.trim();
-                              if (val !== (row.llamado_hora || "")) {
-                                handleInlineUpdate(row.id, "llamado_hora", val || null);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                (e.target as HTMLInputElement).blur();
-                              }
-                            }}
-                            className="w-28 px-2 py-1 font-mono text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
-                          />
+                        <td className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">
+                          {row.llamado_hora || "Sin definir"}
                         </td>
                       </>
                     )}
@@ -532,24 +516,8 @@ export default function TableEditor({
                           <span className="font-bold text-neutral-900">{row.nombre}</span>
                         </td>
                         <td className="p-3.5 text-xs font-semibold text-neutral-600">{row.empresa || "Sin empresa"}</td>
-                        <td className="p-3.5 text-xs">
-                          <input
-                            type="text"
-                            defaultValue={row.horario_loc || ""}
-                            placeholder="Ej: 10:00 AM"
-                            onBlur={(e) => {
-                              const val = e.target.value.trim();
-                              if (val !== (row.horario_loc || "")) {
-                                handleInlineUpdate(row.id, "horario_loc", val || null);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                (e.target as HTMLInputElement).blur();
-                              }
-                            }}
-                            className="w-28 px-2 py-1 font-mono text-center font-bold text-orange-650 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
-                          />
+                        <td className="p-3.5 text-xs font-mono font-bold text-orange-650 bg-neutral-50 px-2 py-1 rounded inline-block">
+                          {row.horario_loc || "Sin definir"}
                         </td>
                       </>
                     )}
@@ -564,25 +532,9 @@ export default function TableEditor({
                         </td>
                         <td className="p-3.5 text-xs">
                           <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold">
                               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider shrink-0">Llamado:</span>
-                              <input
-                                type="text"
-                                defaultValue={row.llamado_hora || ""}
-                                placeholder="Ej: 07:00"
-                                onBlur={(e) => {
-                                  const val = e.target.value.trim();
-                                  if (val !== (row.llamado_hora || "")) {
-                                    handleInlineUpdate(row.id, "llamado_hora", val || null);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    (e.target as HTMLInputElement).blur();
-                                  }
-                                }}
-                                className="w-24 px-1.5 py-0.5 font-mono text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
-                              />
+                              <span className="font-mono font-bold text-neutral-800 bg-neutral-50 px-1.5 py-0.5 rounded">{row.llamado_hora || "Sin definir"}</span>
                             </div>
                             <div>🎬 En Set: <span className="font-bold text-violet-600">{row.en_set || "No especifica"}</span></div>
                             <div>📋 Status: <span className="bg-amber-100 text-amber-800 px-1 py-0.5 rounded-sm font-mono font-extrabold text-[10px] ml-1">{row.w_status || "S/W"}</span></div>
@@ -611,6 +563,7 @@ export default function TableEditor({
                         <td className="p-3.5 font-mono text-xs">
                           <div className="flex items-center gap-1">
                             <input
+                              key={`${row.id}_${row.duracion_min || 0}`}
                               type="number"
                               defaultValue={row.duracion_min || 0}
                               onBlur={(e) => {

@@ -959,7 +959,16 @@ function renderPDR(pdrRows, llamadoHora) {
   const tbody = document.getElementById('tbody-pdr');
   if (!pdrRows.length) { tbody.innerHTML = `<tr><td colspan="7" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
 
-  const [hBase, mBase] = llamadoHora.split(':').map(Number);
+  let hBase = 0, mBase = 0;
+  const hhmmMatch = (llamadoHora || '00:00').match(/^(\d{1,2}):(\d{2})/);
+  if (hhmmMatch) {
+    hBase = parseInt(hhmmMatch[1], 10);
+    mBase = parseInt(hhmmMatch[2], 10);
+    const isPm = /pm/i.test(llamadoHora);
+    const isAm = /am/i.test(llamadoHora);
+    if (isPm && hBase < 12) hBase += 12;
+    if (isAm && hBase === 12) hBase = 0;
+  }
   let minutos = hBase * 60 + mBase;
   const planosEspeciales = ['ES','ED'];
 
