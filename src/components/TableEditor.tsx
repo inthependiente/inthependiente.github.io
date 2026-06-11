@@ -603,8 +603,8 @@ export default function TableEditor({
 
                   {table === "talento" && (
                     <>
-                      <th className="p-3.5">Nombre</th>
                       <th className="p-3.5">Orden</th>
+                      <th className="p-3.5">Nombre</th>
                       <th className="p-3.5">Llamado / En Set / Status</th>
                       <th className="p-3.5">Notas</th>
                     </>
@@ -630,7 +630,7 @@ export default function TableEditor({
                           title="Crear fila rápida"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>FILA</span>
+                          {/* <span>FILA</span> */}
                         </button>
                       </th>
                       {visibleColumns.proyecto_id && (
@@ -933,9 +933,12 @@ export default function TableEditor({
                         {/* Far Left Cell showing Order / ID and a quick edit/delete indicator */}
                         <td className="p-2 border border-neutral-200 text-center bg-neutral-50/50 font-mono font-bold text-xs text-neutral-500">
                           <div className="flex flex-col items-center justify-center gap-1">
-                            <span className="font-extrabold text-neutral-850">#{row.orden || "—"}</span>
+                            {/* <span className="font-extrabold text-neutral-850">#{row.orden || "—"}</span> */}
                             <span className="text-[9px] text-neutral-400 font-normal">Id: {row.id}</span>
                           </div>
+                        </td>
+                        <td className="p-1 border border-neutral-200 bg-white">
+                          <span>-</span>
                         </td>
 
                         {/* 1. Proyecto ID */}
