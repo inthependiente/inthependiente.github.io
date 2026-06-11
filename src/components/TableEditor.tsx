@@ -931,8 +931,21 @@ export default function TableEditor({
                         <td className="p-3.5 text-xs">
                           <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
-                        <td className="p-3.5 font-semibold text-neutral-800">
-                          {resolveCrewName(row.crew_id)}
+                        <td className="p-1">
+                          <select
+                            value={row.crew_id || ""}
+                            onChange={(e) => handleInlineUpdate(row.id, "crew_id", e.target.value ? Number(e.target.value) : null)}
+                            className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer animate-fade-in"
+                          >
+                            <option value="">-- Seleccionar Crew --</option>
+                            {[...lookups.crew]
+                              .sort((a, b) => a.id - b.id)
+                              .map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.nombre} [{c.cargo || "S/C"}] (ID: {c.id})
+                                </option>
+                              ))}
+                          </select>
                         </td>
                         <td className="p-3.5">
                           <span className="font-bold text-neutral-700 uppercase bg-neutral-100 px-2 py-1 rounded-sm tracking-wide text-xs">
@@ -999,10 +1012,21 @@ export default function TableEditor({
                         <td className="p-3.5 text-xs">
                           <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
-                        <td className="p-3.5 text-xs">
-                          <div className="font-bold text-neutral-800 flex items-center gap-1">
-                            <CornerDownRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                            {resolveShotlistSnippet(row.shotlist_id)}
+                        <td className="p-1 text-xs">
+                          <div className="flex items-center gap-1">
+                            <CornerDownRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-1.5" />
+                            <select
+                              value={row.shotlist_id || ""}
+                              onChange={(e) => handleInlineUpdate(row.id, "shotlist_id", e.target.value ? Number(e.target.value) : null)}
+                              className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer max-w-md"
+                            >
+                              <option value="">-- Seleccionar Toma/Plano --</option>
+                              {lookups.shotlist.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </td>
                         <td className="p-3.5 font-mono text-xs">
