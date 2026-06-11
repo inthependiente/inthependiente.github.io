@@ -478,6 +478,7 @@ export default function TableEditor({
 
                   {table === "crew_llamado" && (
                     <>
+                      <th className="p-3.5">Orden</th>
                       <th className="p-3.5">Llamado</th>
                       <th className="p-3.5">Personal del Crew</th>
                       <th className="p-3.5">Departamento</th>
@@ -667,6 +668,26 @@ export default function TableEditor({
                     {/* ───── TABLA: CREW_LLAMADO ───── */}
                     {table === "crew_llamado" && (
                       <>
+                        <td className="p-3.5 font-mono text-xs">
+                          <input
+                            key={`${row.id}_${row.orden ?? ""}`}
+                            type="number"
+                            defaultValue={row.orden === undefined || row.orden === null ? "" : row.orden}
+                            onBlur={(e) => {
+                              const val = e.target.value === "" ? null : Number(e.target.value);
+                              if (val !== row.orden) {
+                                handleInlineUpdate(row.id, "orden", val);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-16 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            placeholder="—"
+                          />
+                        </td>
                         <td className="p-3.5 text-xs">
                           <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>

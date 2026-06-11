@@ -915,9 +915,9 @@ export default function FormModal({
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                   >
                     <option value="">-- Seleccionar Personal --</option>
-                    {lookups.crew.map((cr) => (
+                    {[...lookups.crew].sort((a, b) => (a.id || 0) - (b.id || 0)).map((cr) => (
                       <option key={cr.id} value={cr.id}>
-                        {cr.nombre} [{cr.cargo || cr.departamento || "Sin Cargo"}]
+                        (#{cr.id}) {cr.nombre} [{cr.cargo || cr.departamento || "Sin Cargo"}]
                       </option>
                     ))}
                   </select>
