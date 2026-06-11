@@ -292,7 +292,19 @@ export default function App() {
     try {
       let query = supabase.from(activeTable).select("*");
       
-      if (activeTable === "pdr") {
+      const tablesSortedByIdAsc: DbTable[] = [
+        "locaciones",
+        "escenas",
+        "crew",
+        "crew_llamado",
+        "cliente_agencia",
+        "talento",
+        "shotlist"
+      ];
+
+      if (tablesSortedByIdAsc.includes(activeTable)) {
+        query = query.order("id", { ascending: true });
+      } else if (activeTable === "pdr") {
         query = query.order("orden", { ascending: true });
       } else {
         query = query.order("id", { ascending: false });

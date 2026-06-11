@@ -14,7 +14,8 @@ import {
   Camera,
   AlertTriangle,
   ExternalLink,
-  GripVertical
+  GripVertical,
+  RefreshCcw
 } from "lucide-react";
 
 interface TableEditorProps {
@@ -46,6 +47,84 @@ export default function TableEditor({
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [crewSortMode, setCrewSortMode] = useState<"id" | "dept">("id");
+
+  const [confirmModal, setConfirmModal] = useState<{
+    type: "deleteAll" | "resetIds" | "sqlExplanation";
+    isOpen: boolean;
+  } | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [modalFeedback, setModalFeedback] = useState<{
+    success: boolean;
+    title: string;
+    message: string;
+    sqlStatement?: string;
+  } | null>(null);
+
+  const handleDeleteAll = async () => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from(table).delete().gt("id", -1);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (onRefresh) {
+        onRefresh();
+      }
+
+      setModalFeedback({
+        success: true,
+        title: "¡Éxito!",
+        message: `Se han eliminado todas las filas de la tabla '${table}' de forma segura.`,
+      });
+      setConfirmModal({ type: "sqlExplanation", isOpen: true });
+    } catch (err: any) {
+      console.error("Error deleting all rows:", err);
+      setModalFeedback({
+        success: false,
+        title: "Error al borrar todo",
+        message: err.message || "Ocurrió un error inesperado al intentar borrar los registros.",
+      });
+      setConfirmModal({ type: "sqlExplanation", isOpen: true });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleResetIds = async () => {
+    setIsProcessing(true);
+    const sql = `ALTER TABLE ${table} ALTER COLUMN id RESTART WITH 1;`;
+    try {
+      const { error } = await supabase.rpc("execute_sql", { sql_text: sql });
+      
+      if (error) {
+        throw error;
+      }
+
+      setModalFeedback({
+        success: true,
+        title: "¡IDs Reiniciados!",
+        message: `Se reinició el contador secuencial de IDs para la tabla '${table}' a 1 de forma exitosa usando Postgres SQL.`,
+      });
+      setConfirmModal({ type: "sqlExplanation", isOpen: true });
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (err: any) {
+      console.warn("RPC SQL Reset fallback scenario active:", err);
+      setModalFeedback({
+        success: false,
+        title: "Instrucciones de SQL requeridas",
+        message: `El backend cliente en iFrame utiliza una clave 'anon'. Para reiniciar de forma segura el contador auto-numérico de IDs (secuencia AUTOINCREMENT) de la tabla '${table}', debes ejecutar la consulta SQL directamente en la consola de tu base de datos:`,
+        sqlStatement: sql,
+      });
+      setConfirmModal({ type: "sqlExplanation", isOpen: true });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleDragStart = (idx: number) => {
     setDraggedIndex(idx);
@@ -174,6 +253,37 @@ export default function TableEditor({
     });
   });
 
+  // Secondary sort for tables crew and crew_llamado based on user choice
+  const sortedAndFilteredData = React.useMemo(() => {
+    let sortedList = [...filteredData];
+    if (table === "crew") {
+      if (crewSortMode === "id") {
+        sortedList.sort((a, b) => a.id - b.id);
+      } else {
+        sortedList.sort((a, b) => {
+          const deptA = String(a.departamento || "").toLowerCase();
+          const deptB = String(b.departamento || "").toLowerCase();
+          if (deptA !== deptB) return deptA.localeCompare(deptB);
+          return a.id - b.id;
+        });
+      }
+    } else if (table === "crew_llamado") {
+      if (crewSortMode === "id") {
+        sortedList.sort((a, b) => a.id - b.id);
+      } else {
+        sortedList.sort((a, b) => {
+          const cA = lookups.crew.find((c) => c.id === a.crew_id);
+          const cB = lookups.crew.find((c) => c.id === b.crew_id);
+          const deptA = String(cA?.departamento || "").toLowerCase();
+          const deptB = String(cB?.departamento || "").toLowerCase();
+          if (deptA !== deptB) return deptA.localeCompare(deptB);
+          return a.id - b.id;
+        });
+      }
+    }
+    return sortedList;
+  }, [filteredData, table, crewSortMode, lookups.crew]);
+
   const getTableTitle = () => {
     const titles: Record<DbTable, string> = {
       proyectos: "Proyecto / Campaña",
@@ -215,27 +325,83 @@ export default function TableEditor({
           </p>
         </div>
         
-        <button
-          onClick={onAddClick}
-          className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-          id={`btn-add-${table}`}
-        >
-          <Plus className="w-5 h-5 text-orange-500" />
-          Nueva Entrada ({table})
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {["escenas", "talento", "pdr", "shotlist"].includes(table) && (
+            <>
+              <button
+                onClick={() => setConfirmModal({ type: "deleteAll", isOpen: true })}
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                title="Borrar todas las filas de esta tabla"
+              >
+                <Trash2 className="w-4 h-4 text-rose-500" />
+                Borrar todo
+              </button>
+              
+              <button
+                onClick={() => setConfirmModal({ type: "resetIds", isOpen: true })}
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                title="Resetear valor de auto-incremento de ID de esta tabla a 1"
+              >
+                <RefreshCcw className="w-4 h-4 text-amber-500 animate-spin-hover" />
+                Resetear IDs
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={onAddClick}
+            className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+            id={`btn-add-${table}`}
+          >
+            <Plus className="w-5 h-5 text-orange-500" />
+            Nueva Entrada ({table})
+          </button>
+        </div>
       </div>
 
       {/* Search Input Card */}
       <div className="bg-white rounded-xl shadow-xs border border-neutral-200 p-4 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-neutral-400" />
-          <input
-            type="text"
-            placeholder={`Buscar por ID, nombre, campaña o cualquier campo en la tabla ${table}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
-          />
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder={`Buscar por ID, nombre, campaña o cualquier campo en la tabla ${table}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+            />
+          </div>
+
+          {(table === "crew" || table === "crew_llamado") && (
+            <div className="flex items-center gap-2.5 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-neutral-200">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider shrink-0">Ordenar por:</span>
+              <div className="inline-flex rounded-lg bg-neutral-100 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setCrewSortMode("id")}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    crewSortMode === "id"
+                      ? "bg-white text-neutral-900 shadow-xs"
+                      : "text-neutral-500 hover:text-neutral-900"
+                  }`}
+                >
+                  ID (Asc)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCrewSortMode("dept")}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    crewSortMode === "dept"
+                      ? "bg-white text-neutral-900 shadow-xs"
+                      : "text-neutral-500 hover:text-neutral-900"
+                  }`}
+                >
+                  Departamento
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -360,7 +526,7 @@ export default function TableEditor({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 font-sans text-neutral-700 text-sm">
-                {filteredData.map((row, index) => (
+                {sortedAndFilteredData.map((row, index) => (
                   <tr 
                     key={`${table}_${row.id}`} 
                     className={`hover:bg-neutral-50/70 transition-colors ${
@@ -695,6 +861,139 @@ export default function TableEditor({
           </div>
         )}
       </div>
+
+      {/* Dynamic Action & Maintenance Modal for Bulk DB Reset Operations */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            {confirmModal.type === "deleteAll" && (
+              <div className="space-y-4 animate-scale-up">
+                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-rose-600">
+                  <Trash2 className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">¿Borrar todos los registros?</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    Se borrarán todos los campos de la tabla <span className="font-bold text-neutral-800">'{table}'</span>. Esta acción no se puede deshacer.
+                  </p>
+                </div>
+                <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-750 font-medium">
+                  ⚠️ Advertencia: Todos los datos vinculados a esta tabla se perderán permanentemente.
+                </div>
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => setConfirmModal(null)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={handleDeleteAll}
+                    className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isProcessing ? "Borrando..." : "Sí, borrar todo"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {confirmModal.type === "resetIds" && (
+              <div className="space-y-4 animate-scale-up">
+                <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
+                  <RefreshCcw className="w-6 h-6 animate-spin" style={{ animationDuration: "3s" }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">¿Proceder Reset de ID?</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    Se intentará reiniciar la secuencia auto-numérica de la tabla <span className="font-bold text-neutral-800">'{table}'</span> para que los nuevos registros comiencen desde el ID 1.
+                  </p>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5 text-xs text-amber-700 font-medium">
+                  💡 Consejo: Es ideal hacerlo inmediatamente después de borrar todos los datos para evitar conflictos de clave primaria duplicada.
+                </div>
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => setConfirmModal(null)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={handleResetIds}
+                    className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                  >
+                    {isProcessing ? "Procesando..." : "Reiniciar ID a 1"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {confirmModal.type === "sqlExplanation" && modalFeedback && (
+              <div className="space-y-4 animate-scale-up">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  modalFeedback.success ? "bg-teal-50 text-teal-600" : "bg-neutral-100 text-indigo-600"
+                }`}>
+                  {modalFeedback.success ? (
+                    <RefreshCcw className="w-6 h-6" />
+                  ) : (
+                    <HelpCircle className="w-6 h-6 text-indigo-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">
+                    {modalFeedback.title}
+                  </h3>
+                  <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+                    {modalFeedback.message}
+                  </p>
+                </div>
+
+                {modalFeedback.sqlStatement && (
+                  <div className="space-y-2 pt-1">
+                    <div className="bg-neutral-900 text-teal-400 font-mono text-xs p-4 rounded-xl border border-neutral-800 overflow-x-auto relative group">
+                      <div className="text-[9px] text-neutral-500 uppercase tracking-widest mb-1 select-none">Comando de SQL:</div>
+                      <code>{modalFeedback.sqlStatement}</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(modalFeedback.sqlStatement || "");
+                        }}
+                        className="absolute right-2 top-2 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-300 text-[10px] px-2.5 py-1 rounded-md border border-neutral-700 transition-all font-sans cursor-pointer no-print font-bold"
+                        title="Copiar comando SQL"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 leading-normal">
+                      Pega esta instrucción en la consola <span className="font-semibold text-neutral-800">"SQL Editor"</span> de Supabase para forzar manualmente el reinicio de la secuencia del contador autoincrementable.
+                    </p>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmModal(null);
+                      setModalFeedback(null);
+                    }}
+                    className="w-full px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-sm font-bold transition-all shadow-md focus:outline-hidden cursor-pointer"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
