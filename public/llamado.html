@@ -21,7 +21,7 @@
       }
     }
   </script>
-  <!-- Se actualizó -->
+  <!-- Se actualizó 2 -->
   <style>
     body { font-family: 'Barlow', sans-serif; }
     .font-condensed { font-family: 'Barlow Condensed', sans-serif; }
@@ -327,8 +327,13 @@
       // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
       const originalWidth = element.style.width;
       const originalMaxWidth = element.style.maxWidth;
+      const originalBoxSizing = element.style.boxSizing;
       element.style.width = '205.9mm';
       element.style.maxWidth = '205.9mm';
+      element.style.boxSizing = 'border-box';
+      
+      // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
+      element.offsetHeight;
       
       // Check if we need to force a page break before Plan de Rodaje Completo
       const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
@@ -344,6 +349,9 @@
         
         if (offsetTop < printablePixelHeight) {
           pageBreakAdded = true;
+          // Apply explicit page break before the section
+          pdrSection.style.setProperty('page-break-before', 'always', 'important');
+          pdrSection.style.setProperty('break-before', 'page', 'important');
         }
       }
 
@@ -354,7 +362,7 @@
         html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
         pagebreak:    pageBreakAdded 
-                        ? { mode: ['css', 'legacy'], before: '#plan-de-rodaje-completo-section' }
+                        ? { mode: ['specify', 'css', 'legacy'], before: '#plan-de-rodaje-completo-section' }
                         : { mode: ['css', 'legacy'] }
       };
       
@@ -426,7 +434,12 @@
         // Restore elements width & computed styles
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
+        element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        if (pageBreakAdded && pdrSection) {
+          pdrSection.style.removeProperty('page-break-before');
+          pdrSection.style.removeProperty('break-before');
+        }
         
         // Handle upload session checking
         let token = null;
@@ -470,7 +483,12 @@
       } catch (err) {
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
+        element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        if (pdrSection) {
+          pdrSection.style.removeProperty('page-break-before');
+          pdrSection.style.removeProperty('break-before');
+        }
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
       }
@@ -646,7 +664,8 @@ function fechaToISO(v) {
 // ═══════════════════════════════════════════════════
 function editableSpan(tabla, id, campo, valor, wid, opts = {}) {
   // Si nos pasan un displayFn (como el de la fecha o día), lo usamos, si no, el valor por defecto
-  const display = opts.displayFn ? opts.displayFn() : (valor || '—');
+  const fallback = opts.allowEmpty ? '' : '—';
+  const display = opts.displayFn ? opts.displayFn() : (valor || fallback);
   const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded px-0.5';
   
   return `<span id="ed-${wid}" class="${cls}"
@@ -1258,7 +1277,7 @@ function renderPDR(pdrRows, llamadoHora) {
       
       <td class="border border-neutral-600 px-1 py-1">${loc.locacion||''}</td>
       <td class="border border-neutral-600 px-1 py-1">
-        ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`)}
+        ${editableSpan('shotlist', s.id, 'notas', s.notas||'', `pdr-notas-${r.id}`, { allowEmpty: true })}
       </td>
       <td class="border border-neutral-600 p-0">
         ${refEditable(r.id, s.id, s.referencia_urls||'', wid)}
