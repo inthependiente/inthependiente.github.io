@@ -422,7 +422,7 @@ export default function TableEditor({
                           </div>
                           <div className="text-xs text-orange-600 font-bold uppercase">{row.d_o_d || "Día único"}</div>
                           <a
-                            href={`./llamado_v2.html?id=${row.id}`}
+                            href={`./llamado.html?id=${row.id}`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline mt-1.5 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 transition-colors"
@@ -647,7 +647,7 @@ export default function TableEditor({
                         {/* Ver Hoja de Llamado */}
                         {table === "llamados" && (
                           <a
-                            href={`./llamado_v2.html?id=${row.id}`}
+                            href={`./llamado.html?id=${row.id}`}
                             target="_blank"
                             rel="noreferrer"
                             className="p-2 text-indigo-600 hover:bg-white rounded-lg transition-colors cursor-pointer flex items-center justify-center"
