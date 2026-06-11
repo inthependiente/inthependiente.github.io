@@ -109,6 +109,105 @@ export default function TableEditor({
     }
   };
 
+  const handleQuickAddPdr = async () => {
+    setIsProcessing(true);
+    try {
+      const defaultLlamadoId = lookups.llamados && lookups.llamados.length > 0
+        ? lookups.llamados[0].id
+        : null;
+
+      if (!defaultLlamadoId) {
+        alert("Primero crea un Llamado para registrar renglones en el PDR.");
+        return;
+      }
+
+      const defaultShotlistId = lookups.shotlist && lookups.shotlist.length > 0
+        ? lookups.shotlist[0].id
+        : null;
+
+      if (!defaultShotlistId) {
+        alert("Primero crea un registro en el Shotlist para vincularlo en el PDR.");
+        return;
+      }
+
+      const maxOrden = data && data.length > 0 
+        ? Math.max(...data.map(d => Number(d.orden || 0))) 
+        : 0;
+
+      const newRow = {
+        llamado_id: defaultLlamadoId,
+        shotlist_id: defaultShotlistId,
+        orden: maxOrden + 1,
+        duracion_min: 0
+      };
+
+      const { data: insertedData, error } = await supabase.from("pdr").insert([newRow]).select();
+      if (error) throw error;
+
+      if (insertedData && insertedData.length > 0) {
+        setNewlyCreatedId(insertedData[0].id);
+      }
+
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al añadir fila de PDR: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleQuickAddCrewLlamado = async () => {
+    setIsProcessing(true);
+    try {
+      const defaultLlamadoId = lookups.llamados && lookups.llamados.length > 0
+        ? lookups.llamados[0].id
+        : null;
+
+      if (!defaultLlamadoId) {
+        alert("Primero crea un Llamado para asignar Crew.");
+        return;
+      }
+
+      const defaultCrewId = lookups.crew && lookups.crew.length > 0
+        ? lookups.crew[0].id
+        : null;
+
+      if (!defaultCrewId) {
+        alert("Primero crea Personal de Crew para asignarlo al Llamado.");
+        return;
+      }
+
+      const maxOrden = data && data.length > 0 
+        ? Math.max(...data.map(d => Number(d.orden || 0))) 
+        : 0;
+      const maxPrioridad = data && data.length > 0 
+        ? Math.max(...data.map(d => Number(d.prioridad || 0))) 
+        : 0;
+
+      const newRow = {
+        llamado_id: defaultLlamadoId,
+        crew_id: defaultCrewId,
+        orden: maxOrden + 1,
+        prioridad: maxPrioridad + 1
+      };
+
+      const { data: insertedData, error } = await supabase.from("crew_llamado").insert([newRow]).select();
+      if (error) throw error;
+
+      if (insertedData && insertedData.length > 0) {
+        setNewlyCreatedId(insertedData[0].id);
+      }
+
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al asignar Crew: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const [confirmModal, setConfirmModal] = useState<{
     type: "deleteAll" | "resetIds" | "sqlExplanation";
     isOpen: boolean;
@@ -541,7 +640,7 @@ export default function TableEditor({
             <table className="w-full text-left border-collapse relative">
               <thead>
                 <tr className="bg-neutral-900 text-white font-condensed font-bold text-sm tracking-wide sticky top-0 uppercase z-10">
-                  {table !== "crew_llamado" && table !== "shotlist" && <th className="p-3.5 pl-6 w-20">ID</th>}
+                  {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && <th className="p-3.5 pl-6 w-20">ID</th>}
                   
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
@@ -674,12 +773,9 @@ export default function TableEditor({
                     onDrop={table === "pdr" ? () => handleDrop(index) : undefined}
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
-                    {table !== "crew_llamado" && table !== "shotlist" && (
+                    {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && (
                       <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
                         <div className="flex items-center gap-1.5">
-                          {table === "pdr" && (
-                            <GripVertical className="w-3.5 h-3.5 text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing" />
-                          )}
                           #{row.id}
                         </div>
                       </td>
@@ -808,7 +904,16 @@ export default function TableEditor({
                             key={`${row.id}_${row.orden ?? ""}`}
                             type="number"
                             defaultValue={row.orden === undefined || row.orden === null ? "" : row.orden}
+                            autoFocus={row.id === newlyCreatedId}
+                            onFocus={(e) => {
+                              if (row.id === newlyCreatedId) {
+                                e.currentTarget.select();
+                              }
+                            }}
                             onBlur={(e) => {
+                              if (row.id === newlyCreatedId) {
+                                setNewlyCreatedId(null);
+                              }
                               const val = e.target.value === "" ? null : Number(e.target.value);
                               if (val !== row.orden) {
                                 handleInlineUpdate(row.id, "orden", val);
@@ -885,7 +990,12 @@ export default function TableEditor({
                     {/* ───── TABLA: PDR (RODAJE) ───── */}
                     {table === "pdr" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">{row.orden}º</td>
+                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">
+                          <div className="flex items-center gap-1.5">
+                            <GripVertical className="w-3.5 h-3.5 text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                            <span>{row.orden}º</span>
+                          </div>
+                        </td>
                         <td className="p-3.5 text-xs">
                           <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
@@ -901,7 +1011,16 @@ export default function TableEditor({
                               key={`${row.id}_${row.duracion_min || 0}`}
                               type="number"
                               defaultValue={row.duracion_min || 0}
+                              autoFocus={row.id === newlyCreatedId}
+                              onFocus={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  e.currentTarget.select();
+                                }
+                              }}
                               onBlur={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  setNewlyCreatedId(null);
+                                }
                                 const val = Number(e.target.value);
                                 if (val !== row.duracion_min) {
                                   handleInlineUpdate(row.id, "duracion_min", val);
@@ -1276,6 +1395,53 @@ export default function TableEditor({
                     {visibleColumns.referencia_urls && (
                       <td className="p-1 border border-neutral-200 bg-white" />
                     )}
+                    
+                    {/* Actions column empty placeholder */}
+                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                  </tr>
+                )}
+                {table === "pdr" && (
+                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                    {/* 1. Orden column showing a clean green Plus button in the first position as per reference */}
+                    <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                      <button
+                        type="button"
+                        onClick={handleQuickAddPdr}
+                        className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95 mx-auto"
+                        title="Añadir nueva fila"
+                      >
+                        <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                      </button>
+                    </td>
+
+                    {/* All other columns with plain empty white cells */}
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    
+                    {/* Actions column empty placeholder */}
+                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                  </tr>
+                )}
+                {table === "crew_llamado" && (
+                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                    {/* 1. Orden column showing a clean green Plus button in the first position as per reference */}
+                    <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                      <button
+                        type="button"
+                        onClick={handleQuickAddCrewLlamado}
+                        className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95 mx-auto"
+                        title="Añadir nueva fila"
+                      >
+                        <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                      </button>
+                    </td>
+
+                    {/* All other columns with plain empty white cells */}
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-neutral-200 bg-white" />
                     
                     {/* Actions column empty placeholder */}
                     <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
