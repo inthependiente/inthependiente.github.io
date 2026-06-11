@@ -626,17 +626,6 @@ export default function TableEditor({
 
                   {table === "shotlist" && (
                     <>
-                      <th className="p-2 border border-neutral-200 text-center bg-neutral-900 text-white w-20 sticky top-0 z-10 font-bold">
-                        {/* Big Plus button on the far left column header for quick add */}
-                        <button
-                          type="button"
-                          onClick={handleQuickAddShotlist}
-                          className="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center transition-colors animate-pulse"
-                          title="Crear fila rápida"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </th>
                       {visibleColumns.proyecto_id && (
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Proyecto</th>
                       )}
@@ -931,15 +920,9 @@ export default function TableEditor({
                       </>
                     )}
 
-                    {/* ───── TABLA: SHOTLIST (STORIES) ───── */}
+                     {/* ───── TABLA: SHOTLIST (STORIES) ───── */}
                     {table === "shotlist" && (
                       <>
-                        {/* Far Left Cell showing Sequence Number (no Database ID shown) */}
-                        <td className="p-2 border border-neutral-200 text-center bg-neutral-50/50 font-mono font-bold text-xs text-neutral-500">
-                          <span className="font-extrabold text-neutral-850">#{index + 1}</span>
-                        </td>
-
-
                         {/* 1. Proyecto ID */}
                         {visibleColumns.proyecto_id && (
                           <td className="p-1 border border-neutral-200 bg-white">
@@ -1253,23 +1236,22 @@ export default function TableEditor({
                   </tr>
                 ))}
                 {table === "shotlist" && (
-                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200">
-                    {/* Far Left Cell showing a clean Plus button */}
-                    <td className="p-2.5 border border-neutral-200 text-center bg-neutral-50/10 font-bold">
-                      <button
-                        type="button"
-                        onClick={handleQuickAddShotlist}
-                        className="p-1 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center transition-transform hover:scale-105"
-                        title="Crear nueva fila"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-
-                    {/* All active columns with placeholder / clear style */}
+                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                    {/* 1. Proyecto column showing a clean green Plus button in the first position as per reference */}
                     {visibleColumns.proyecto_id && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                        <button
+                          type="button"
+                          onClick={handleQuickAddShotlist}
+                          className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95"
+                          title="Añadir nueva fila"
+                        >
+                          <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                        </button>
+                      </td>
                     )}
+
+                    {/* All other columns with plain empty white cells */}
                     {visibleColumns.esc && (
                       <td className="p-1 border border-neutral-200 bg-white" />
                     )}
