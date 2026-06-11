@@ -541,7 +541,7 @@ export default function TableEditor({
             <table className="w-full text-left border-collapse relative">
               <thead>
                 <tr className="bg-neutral-900 text-white font-condensed font-bold text-sm tracking-wide sticky top-0 uppercase z-10">
-                  {table !== "crew_llamado" && <th className="p-3.5 pl-6 w-20">ID</th>}
+                  {table !== "crew_llamado" && table !== "shotlist" && <th className="p-3.5 pl-6 w-20">ID</th>}
                   
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
