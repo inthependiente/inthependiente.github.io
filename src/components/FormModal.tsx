@@ -15,6 +15,7 @@ interface FormModalProps {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    ciudades: any[];
   };
 }
 
@@ -66,7 +67,7 @@ export default function FormModal({
     let parsedValue: any = value;
     if (type === "number") {
       parsedValue = value === "" ? "" : Number(value);
-    } else if (name === "proyecto_id" || name === "llamado_id" || name === "locacion_id" || name === "crew_id" || name === "shotlist_id") {
+    } else if (name === "proyecto_id" || name === "llamado_id" || name === "locacion_id" || name === "crew_id" || name === "shotlist_id" || name === "ciudad_id") {
       parsedValue = value === "" ? null : Number(value);
     }
 
@@ -541,14 +542,19 @@ export default function FormModal({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Ciudad</label>
-                  <input
-                    type="text"
-                    name="ciudad"
-                    value={formValues.ciudad || ""}
+                  <select
+                    name="ciudad_id"
+                    value={formValues.ciudad_id ?? ""}
                     onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Santiago, Chile"
-                  />
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-white font-medium"
+                  >
+                    <option value="">-- Seleccione Ciudad --</option>
+                    {(lookups.ciudades || []).map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.Nombre || c.nombre || `Ciudad #${c.id}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Horario Desayuno</label>
