@@ -269,7 +269,12 @@ export default function TableEditor({
       }
     } else if (table === "crew_llamado") {
       if (crewSortMode === "id") {
-        sortedList.sort((a, b) => a.id - b.id);
+        sortedList.sort((a, b) => {
+          const ordA = a.orden === null || a.orden === undefined ? Infinity : Number(a.orden);
+          const ordB = b.orden === null || b.orden === undefined ? Infinity : Number(b.orden);
+          if (ordA !== ordB) return ordA - ordB;
+          return a.id - b.id;
+        });
       } else {
         sortedList.sort((a, b) => {
           const cA = lookups.crew.find((c) => c.id === a.crew_id);
@@ -277,6 +282,10 @@ export default function TableEditor({
           const deptA = String(cA?.departamento || "").toLowerCase();
           const deptB = String(cB?.departamento || "").toLowerCase();
           if (deptA !== deptB) return deptA.localeCompare(deptB);
+          
+          const ordA = a.orden === null || a.orden === undefined ? Infinity : Number(a.orden);
+          const ordB = b.orden === null || b.orden === undefined ? Infinity : Number(b.orden);
+          if (ordA !== ordB) return ordA - ordB;
           return a.id - b.id;
         });
       }
@@ -386,7 +395,7 @@ export default function TableEditor({
                       : "text-neutral-500 hover:text-neutral-900"
                   }`}
                 >
-                  ID (Asc)
+                  {table === "crew_llamado" ? "NUM" : "ID (Asc)"}
                 </button>
                 <button
                   type="button"
@@ -430,7 +439,7 @@ export default function TableEditor({
             <table className="w-full text-left border-collapse relative">
               <thead>
                 <tr className="bg-neutral-900 text-white font-condensed font-bold text-sm tracking-wide sticky top-0 uppercase z-10">
-                  <th className="p-3.5 pl-6 w-20">ID</th>
+                  {table !== "crew_llamado" && <th className="p-3.5 pl-6 w-20">ID</th>}
                   
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
@@ -541,14 +550,16 @@ export default function TableEditor({
                     onDrop={table === "pdr" ? () => handleDrop(index) : undefined}
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
-                    <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
-                      <div className="flex items-center gap-1.5">
-                        {table === "pdr" && (
-                          <GripVertical className="w-3.5 h-3.5 text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing" />
-                        )}
-                        #{row.id}
-                      </div>
-                    </td>
+                    {table !== "crew_llamado" && (
+                      <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
+                        <div className="flex items-center gap-1.5">
+                          {table === "pdr" && (
+                            <GripVertical className="w-3.5 h-3.5 text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                          )}
+                          #{row.id}
+                        </div>
+                      </td>
+                    )}
                     
                     {/* ───── TABLA: PROYECTOS ───── */}
                     {table === "proyectos" && (
