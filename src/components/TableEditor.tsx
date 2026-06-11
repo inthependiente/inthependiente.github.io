@@ -315,6 +315,7 @@ export default function TableEditor({
                       <th className="p-3.5">Llamado</th>
                       <th className="p-3.5">Personal del Crew</th>
                       <th className="p-3.5">Departamento</th>
+                      <th className="p-3.5">Prioridad</th>
                     </>
                   )}
 
@@ -510,6 +511,9 @@ export default function TableEditor({
                           <span className="font-bold text-neutral-700 uppercase bg-neutral-100 px-2 py-1 rounded-sm tracking-wide text-xs">
                             {lookups.crew.find((c) => c.id === row.crew_id)?.departamento || "Cámara"}
                           </span>
+                        </td>
+                        <td className="p-3.5 text-xs font-semibold text-neutral-700">
+                          {row.prioridad !== null && row.prioridad !== undefined ? row.prioridad : "—"}
                         </td>
                       </>
                     )}

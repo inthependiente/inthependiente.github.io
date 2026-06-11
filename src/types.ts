@@ -65,6 +65,7 @@ export interface CrewLlamado {
   llamado_id: number;
   crew_id: number;
   orden?: number;
+  prioridad?: number;
 }
 
 export interface ClienteAgencia {

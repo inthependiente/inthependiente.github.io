@@ -933,6 +933,17 @@ export default function FormModal({
                     placeholder="Ej: 1"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Prioridad en Cabecera</label>
+                  <input
+                    type="number"
+                    name="prioridad"
+                    value={formValues.prioridad === undefined || formValues.prioridad === null ? "" : formValues.prioridad}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                    placeholder="Ej: 1 (Ejecutivo), 2 (Dir)"
+                  />
+                </div>
               </>
             )}
 

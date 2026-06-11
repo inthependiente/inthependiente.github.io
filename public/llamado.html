@@ -98,13 +98,8 @@
         <div class="font-condensed font-bold text-[16px] mt-1" id="hdr-productora"></div>
         <div class="text-[11px] text-gray-500 leading-tight" id="hdr-dir-productora">—</div>
         <!-- Main Crew -->
-        <div class="border-t border-neutral-300 mt-1 pt-1 text-left">
-          <div><span class="font-bold inline-block">Prod. Ejecutivo:</span> <span id="hdr-prodejec">—</span> <span class="text-neutral-400 italic" id="hdr-prodejec-tel"></span></div>
-          <div><span class="font-bold">Director:</span> <span id="hdr-director">—</span></div>
-          <div><span class="font-bold inline-block">AD:</span> <span id="hdr-ad">—</span> <span class="text-neutral-400 italic" id="hdr-ad-tel"></span></div>
-          <div><span class="font-bold inline-block">Jefe de Prod.:</span> <span id="hdr-jefeprod">—</span> <span class="text-neutral-400 italic" id="hdr-jefeprod-tel"></span></div>
-          <div><span class="font-bold inline-block">Asist. de Prod.:</span> <span id="hdr-asistprod">—</span> <span class="text-neutral-400 italic" id="hdr-asistprod-tel"></span></div>
-          <div><span class="font-bold inline-block">Casting:</span> <span id="hdr-casting">—</span> <span class="text-neutral-400 italic" id="hdr-casting-tel"></span></div>
+        <div id="main-crew-container" class="border-t border-neutral-300 mt-1 pt-1 text-left flex flex-col gap-0.5">
+          <div class="text-neutral-400 italic text-[10px]">Cargando...</div>
         </div>
       </div>
       <!-- Cliente / Campaña -->
@@ -875,8 +870,8 @@ async function loadTalento() {
 // ═══════════════════════════════════════════════════
 async function loadCrew() {
   const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, 'orden',
-    'id, crew_id, orden, crew(id, departamento, cargo, nombre, notas, celular, llamado_hora)');
-  const flatRows = rows.map(r => ({ _cl_id: r.id, ...(r.crew||{}) }));
+    'id, crew_id, orden, prioridad, crew(id, departamento, cargo, nombre, notas, celular, llamado_hora)');
+  const flatRows = rows.map(r => ({ _cl_id: r.id, prioridad: r.prioridad, ...(r.crew||{}) }));
   crewRows = flatRows;
 
   const container = document.getElementById('crew-container');
@@ -929,20 +924,55 @@ async function loadCrew() {
 }
 
 function loadMainCrew() {
-  const find = (term) => crewRows.find(r => (r.cargo||'').toLowerCase().includes(term.toLowerCase()));
-  const cargos = [
-    { termino:'prod. ejecutivo', idNombre:'hdr-prodejec',  idTel:'hdr-prodejec-tel'  },
-    { termino:'director',        idNombre:'hdr-director',  idTel:null                },
-    { termino:'ad',              idNombre:'hdr-ad',        idTel:'hdr-ad-tel'        },
-    { termino:'jefe de prod',    idNombre:'hdr-jefeprod',  idTel:'hdr-jefeprod-tel'  },
-    { termino:'runner',          idNombre:'hdr-asistprod', idTel:'hdr-asistprod-tel' },
-    { termino:'casting',         idNombre:'hdr-casting',   idTel:'hdr-casting-tel'   },
-  ];
-  cargos.forEach(({ termino, idNombre, idTel }) => {
-    const m = find(termino);
-    set(idNombre, m?.nombre||'');
-    if (idTel) set(idTel, m?.celular ? `- ${m.celular}` : '');
-  });
+  const container = document.getElementById('main-crew-container');
+  if (!container) return;
+
+  // 1. Try to get crew members with explicit priority (prioridad) set
+  const prioritarios = crewRows.filter(r => r.prioridad !== null && r.prioridad !== undefined && r.prioridad !== '');
+  
+  if (prioritarios.length > 0) {
+    // Sort ascending by prioridad
+    prioritarios.sort((a, b) => {
+      const valA = parseInt(a.prioridad, 10);
+      const valB = parseInt(b.prioridad, 10);
+      if (isNaN(valA) && isNaN(valB)) return 0;
+      if (isNaN(valA)) return 1;
+      if (isNaN(valB)) return -1;
+      return valA - valB;
+    });
+
+    container.innerHTML = prioritarios.map(r => {
+      const cargoStr = r.cargo ? `<span class="font-bold inline-block">${r.cargo}:</span>` : '';
+      const celStr = r.celular ? `<span class="text-neutral-400 italic font-normal text-[9px] ml-0.5">- ${r.celular}</span>` : '';
+      return `<div class="text-[10px] leading-tight">
+        ${cargoStr}
+        <span>${r.nombre || '—'}</span>
+        ${celStr}
+      </div>`;
+    }).join('');
+  } else {
+    // 2. Clear template / fallback logic to find standard roles if no priorities are set
+    const findRole = (term) => crewRows.find(r => (r.cargo||'').toLowerCase().includes(term.toLowerCase()));
+    const fallbackCargos = [
+      { label: 'Prod. Ejecutivo', key: 'prod. ejecutivo' },
+      { label: 'Director', key: 'director' },
+      { label: 'AD', key: 'ad' },
+      { label: 'Jefe de Prod.', key: 'jefe de prod' },
+      { label: 'Asist. de Prod.', key: 'runner' },
+      { label: 'Casting', key: 'casting' }
+    ];
+
+    container.innerHTML = fallbackCargos.map(cfg => {
+      const m = findRole(cfg.key);
+      if (!m) return ''; // don't show if missing in crew
+      const celStr = m.celular ? `<span class="text-neutral-400 italic font-normal text-[9px] ml-0.5">- ${m.celular}</span>` : '';
+      return `<div class="text-[10px] leading-tight">
+        <span class="font-bold inline-block">${cfg.label}:</span>
+        <span>${m.nombre || '—'}</span>
+        ${celStr}
+      </div>`;
+    }).filter(Boolean).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════════
