@@ -532,7 +532,7 @@ function activarEditHora(tabla, id, campo, valorActual, wid) {
   const wrapper = document.getElementById(`hora-display-${wid}`);
   if (!wrapper) return;
   wrapper.outerHTML = `<span id="hora-display-${wid}" class="inline-flex items-center gap-0.5">
-    <input id="hora-input-${wid}" class="edit-inline-input" value="${valorActual}" maxlength="5" placeholder="HH:MM">
+    <input id="hora-input-${wid}" class="edit-inline-input" value="${valorActual}" maxlength="5" placeholder="H:MM">
     <button class="save-btn" onclick="guardarHora('${tabla}',${id},'${campo}','${wid}')">✓</button>
     <button class="save-btn" style="background:#9ca3af" onclick="cancelarEditHora('${tabla}',${id},'${campo}','${valorActual}','${wid}')">✕</button>
   </span>`;
@@ -542,8 +542,11 @@ function activarEditHora(tabla, id, campo, valorActual, wid) {
 async function guardarHora(tabla, id, campo, wid) {
   const input = document.getElementById(`hora-input-${wid}`);
   if (!input) return;
-  const v = input.value.trim();
-  if (!v.match(/^\d{2}:\d{2}$/)) { showToast('Formato inválido. Usa HH:MM', false); return; }
+  let v = input.value.trim();
+  if (v.match(/^\d{1}:\d{2}$/)) {
+    v = "0" + v;
+  }
+  if (!v.match(/^\d{2}:\d{2}$/)) { showToast('Formato inválido. Usa H:MM o HH:MM', false); return; }
   try {
     await sbPatch(tabla, id, { [campo]: v });
     const wrapper = document.getElementById(`hora-display-${wid}`);

@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   ExternalLink,
   GripVertical,
-  RefreshCcw
+  RefreshCcw,
+  Layers
 } from "lucide-react";
 
 interface TableEditorProps {
@@ -48,6 +49,60 @@ export default function TableEditor({
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [crewSortMode, setCrewSortMode] = useState<"id" | "dept">("id");
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    proyecto_id: true,
+    esc: true,
+    plano: true,
+    prep: true,
+    descripcion: true,
+    cast_nombres: true,
+    locacion_id: true,
+    notas: true,
+    referencia_urls: true,
+  });
+  const [isUploadingRowId, setIsUploadingRowId] = useState<number | null>(null);
+
+  const handleQuickAddShotlist = async () => {
+    setIsProcessing(true);
+    try {
+      const defaultProjId = lookups.proyectos && lookups.proyectos.length > 0
+        ? lookups.proyectos[0].id
+        : null;
+
+      if (!defaultProjId) {
+        alert("Primero crea un Proyecto para registrar renglones en el Shotlist.");
+        return;
+      }
+
+      const maxOrden = data && data.length > 0 
+        ? Math.max(...data.map(d => Number(d.orden || 0))) 
+        : 0;
+
+      const newRow = {
+        proyecto_id: defaultProjId,
+        esc: "1",
+        plano: "1",
+        orden: maxOrden + 1,
+        prep: "",
+        descripcion: "",
+        cast_nombres: "",
+        locacion_id: (lookups.locaciones && lookups.locaciones.length > 0) ? lookups.locaciones[0].id : null,
+        notas: "",
+        referencia_urls: ""
+      };
+
+      const { error } = await supabase.from("shotlist").insert([newRow]);
+      if (error) throw error;
+
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al añadir fila: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const [confirmModal, setConfirmModal] = useState<{
     type: "deleteAll" | "resetIds" | "sqlExplanation";
@@ -304,7 +359,7 @@ export default function TableEditor({
       cliente_agencia: "Cliente & Agencia",
       talento: "Talento",
       pdr: "Plan de Rodaje",
-      shotlist: "Lista de Tomas (Shotlist)",
+      shotlist: "Shotlist",
     };
     return titles[table] || table;
   };
@@ -413,6 +468,48 @@ export default function TableEditor({
           )}
         </div>
       </div>
+
+      {/* Column visibility control for Shotlist */}
+      {table === "shotlist" && (
+        <div className="bg-white rounded-xl shadow-xs border border-neutral-200 p-4 shrink-0">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-neutral-500 uppercase tracking-wider">
+              <Layers className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Columnas Visibles de Shotlist (Haz clic para alternar):</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "proyecto_id", label: "Proyecto" },
+                { key: "esc", label: "Escena" },
+                { key: "plano", label: "Plano" },
+                { key: "prep", label: "Prep Nº" },
+                { key: "descripcion", label: "Descripción" },
+                { key: "cast_nombres", label: "Cast" },
+                { key: "locacion_id", label: "Locación" },
+                { key: "notas", label: "Notas" },
+                { key: "referencia_urls", label: "Referencia" },
+              ].map((col) => {
+                const isVisible = visibleColumns[col.key];
+                return (
+                  <button
+                    key={col.key}
+                    type="button"
+                    onClick={() => setVisibleColumns(prev => ({ ...prev, [col.key]: !prev[col.key] }))}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border cursor-pointer ${
+                      isVisible
+                        ? "bg-neutral-900 border-neutral-900 text-white"
+                        : "bg-neutral-50 border-neutral-200 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
+                    }`}
+                  >
+                    <span className="mr-1">{isVisible ? "✓" : "+"}</span>
+                    {col.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Database Table Display */}
       <div className="flex-1 bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-0">
@@ -524,11 +621,44 @@ export default function TableEditor({
 
                   {table === "shotlist" && (
                     <>
-                      <th className="p-3.5 font-condensed">Proyecto / Escena</th>
-                      <th className="p-3.5">Orden</th>
-                      <th className="p-3.5">Plano / Prep Nº</th>
-                      <th className="p-3.5">Descripción de Toma</th>
-                      <th className="p-3.5">Imagen Storyboard</th>
+                      <th className="p-2 border border-neutral-200 text-center bg-neutral-900 text-white w-20 sticky top-0 z-10 font-bold">
+                        {/* Big Plus button on the far left column header for quick add */}
+                        <button
+                          type="button"
+                          onClick={handleQuickAddShotlist}
+                          className="p-1 px-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-md shadow-xs text-xs cursor-pointer inline-flex items-center justify-center gap-1 transition-colors"
+                          title="Crear fila rápida"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </th>
+                      {visibleColumns.proyecto_id && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Proyecto</th>
+                      )}
+                      {visibleColumns.esc && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Esc (Escena)</th>
+                      )}
+                      {visibleColumns.plano && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Plano</th>
+                      )}
+                      {visibleColumns.prep && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-28 text-center">Prep Nº</th>
+                      )}
+                      {visibleColumns.descripcion && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed min-w-[14rem]">Descripción</th>
+                      )}
+                      {visibleColumns.cast_nombres && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-28 text-center">Cast</th>
+                      )}
+                      {visibleColumns.locacion_id && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Locación</th>
+                      )}
+                      {visibleColumns.notas && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-40 text-center">Notas</th>
+                      )}
+                      {visibleColumns.referencia_urls && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-48 text-center">Referencia</th>
+                      )}
                     </>
                   )}
 
@@ -550,7 +680,7 @@ export default function TableEditor({
                     onDrop={table === "pdr" ? () => handleDrop(index) : undefined}
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
-                    {table !== "crew_llamado" && (
+                    {table !== "crew_llamado" && table !== "shotlist" && (
                       <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
                         <div className="flex items-center gap-1.5">
                           {table === "pdr" && (
@@ -799,48 +929,270 @@ export default function TableEditor({
                     {/* ───── TABLA: SHOTLIST (STORIES) ───── */}
                     {table === "shotlist" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-neutral-800">{row.orden}º</td>
-                        <td className="p-3.5 text-xs">
-                          <div className="font-extrabold text-neutral-900">{resolveProject(row.proyecto_id)}</div>
-                          <span className="inline-block mt-0.5 bg-orange-50 text-orange-700 font-bold px-1.5 py-0.5 rounded-sm">Escena: {row.esc || "1"}</span>
+                        {/* Far Left Cell showing Order / ID and a quick edit/delete indicator */}
+                        <td className="p-2 border border-neutral-200 text-center bg-neutral-50/50 font-mono font-bold text-xs text-neutral-500">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <span className="font-extrabold text-neutral-850">#{row.orden || "—"}</span>
+                            <span className="text-[9px] text-neutral-400 font-normal">Id: {row.id}</span>
+                          </div>
                         </td>
-                        <td className="p-3.5 text-xs">
-                          <div className="font-bold text-neutral-700">📹 Plano: {row.plano || "-"}</div>
-                          {row.prep && <div className="text-pink-600 font-bold uppercase text-[9px] mt-0.5">⚙️ {row.prep}</div>}
-                        </td>
-                        <td className="p-3.5 text-xs max-w-sm">
-                          <p className="text-neutral-600 font-medium line-clamp-2">{row.descripcion || "Sin descripción"}</p>
-                          <div className="text-neutral-400 mt-1 font-mono text-[10px]">👥 Cast: {row.cast_nombres || row.cast_ids || "N/A"}</div>
-                          <div className="text-[10px] text-neutral-400">📍 Loc: {resolveLocacion(row.locacion_id)}</div>
-                        </td>
-                        <td className="p-3.5 text-xs">
-                          {row.referencia_urls ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="inline-flex items-center gap-1 font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-sm text-[10px]">
-                                <Camera className="w-3.5 h-3.5 shrink-0" />
-                                {row.referencia_urls.split(",").filter(Boolean).length} Referencias
-                              </span>
-                              <div className="flex -space-x-2.5 overflow-hidden p-0.5">
-                                {row.referencia_urls.split(",").map((s: string) => s.trim()).filter(Boolean).slice(0, 3).map((url, i) => (
-                                  <img
-                                    key={i}
-                                    src={url}
-                                    alt="Ref Thumbnail"
-                                    referrerPolicy="no-referrer"
-                                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover"
-                                  />
-                                ))}
-                                {row.referencia_urls.split(",").filter(Boolean).length > 3 && (
-                                  <span className="flex items-center justify-center h-6 w-6 rounded-full bg-neutral-200 text-[10px] font-bold text-neutral-600 ring-2 ring-white">
-                                    +{row.referencia_urls.split(",").filter(Boolean).length - 3}
-                                  </span>
-                                )}
-                              </div>
+
+                        {/* 1. Proyecto ID */}
+                        {visibleColumns.proyecto_id && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <select
+                              value={row.proyecto_id || ""}
+                              onChange={(e) => handleInlineUpdate(row.id, "proyecto_id", e.target.value ? Number(e.target.value) : null)}
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-neutral-850 text-xs font-bold p-1 rounded text-neutral-850"
+                            >
+                              <option value="">-- Proy --</option>
+                              {lookups.proyectos.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.campana || p.id}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+
+                        {/* 2. Escena */}
+                        {visibleColumns.esc && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <input
+                              type="text"
+                              defaultValue={row.esc || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.esc || "")) {
+                                  handleInlineUpdate(row.id, "esc", e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-extrabold text-neutral-850 p-1 text-center rounded"
+                              placeholder="—"
+                            />
+                          </td>
+                        )}
+
+                        {/* 3. Plano */}
+                        {visibleColumns.plano && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <input
+                              type="text"
+                              defaultValue={row.plano || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.plano || "")) {
+                                  handleInlineUpdate(row.id, "plano", e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-850 p-1 text-center rounded"
+                              placeholder="—"
+                            />
+                          </td>
+                        )}
+
+                        {/* 4. Prep Nº */}
+                        {visibleColumns.prep && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <input
+                              type="text"
+                              defaultValue={row.prep || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.prep || "")) {
+                                  handleInlineUpdate(row.id, "prep", e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-pink-600 p-1 text-center rounded placeholder-pink-300"
+                              placeholder="—"
+                            />
+                          </td>
+                        )}
+
+                        {/* 5. Descripción de la Toma */}
+                        {visibleColumns.descripcion && (
+                          <td className="p-1 border border-neutral-200 bg-white min-w-[14rem]">
+                            <textarea
+                              rows={2}
+                              defaultValue={row.descripcion || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.descripcion || "")) {
+                                  handleInlineUpdate(row.id, "descripcion", e.target.value);
+                                }
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-700 p-1 rounded resize-none leading-relaxed"
+                              placeholder="Descripción..."
+                            />
+                          </td>
+                        )}
+
+                        {/* 6. Cast */}
+                        {visibleColumns.cast_nombres && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <input
+                              type="text"
+                              defaultValue={row.cast_nombres || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.cast_nombres || "")) {
+                                  handleInlineUpdate(row.id, "cast_nombres", e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-600 p-1 text-center rounded"
+                              placeholder="—"
+                            />
+                          </td>
+                        )}
+
+                        {/* 7. Locación */}
+                        {visibleColumns.locacion_id && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <select
+                              value={row.locacion_id || ""}
+                              onChange={(e) => handleInlineUpdate(row.id, "locacion_id", e.target.value ? Number(e.target.value) : null)}
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-neutral-850 text-xs p-1 rounded text-neutral-855"
+                            >
+                              <option value="">-- Loc --</option>
+                              {lookups.locaciones.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                  {l.locacion}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+
+                        {/* 8. Notas */}
+                        {visibleColumns.notas && (
+                          <td className="p-1 border border-neutral-200 bg-white">
+                            <input
+                              type="text"
+                              defaultValue={row.notas || ""}
+                              onBlur={(e) => {
+                                if (e.target.value !== (row.notas || "")) {
+                                  handleInlineUpdate(row.id, "notas", e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-500 p-1 rounded"
+                              placeholder="Notas..."
+                            />
+                          </td>
+                        )}
+
+                        {/* 9. Referencia con subida directa y vista storyboard stacked */}
+                        {visibleColumns.referencia_urls && (
+                          <td className="p-2 border border-neutral-200 bg-white w-48">
+                            <div className="flex flex-col gap-2">
+                              {(() => {
+                                const urls = row.referencia_urls ? row.referencia_urls.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                                return (
+                                  <>
+                                    {urls.length > 0 ? (
+                                      <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto p-0.5 border border-dashed border-neutral-100 rounded-lg">
+                                        {urls.map((url: string, i: number) => (
+                                          <div key={i} className="relative group aspect-video bg-neutral-50 border border-neutral-200 rounded-md overflow-hidden shadow-xs">
+                                            <img
+                                              src={url}
+                                              alt={`Ref ${i + 1}`}
+                                              referrerPolicy="no-referrer"
+                                              className="w-full h-full object-cover"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                const confirmed = window.confirm("¿Seguro que deseas eliminar esta imagen de referencia?");
+                                                if (!confirmed) return;
+                                                const newUrls = urls.filter((_, idx) => idx !== i).join(",");
+                                                await handleInlineUpdate(row.id, "referencia_urls", newUrls === "" ? null : newUrls);
+                                              }}
+                                              className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white p-1 rounded shadow-md cursor-pointer transition-transform duration-100 group-hover:scale-105 animate-fade-in"
+                                              title="Eliminar de Referencias"
+                                            >
+                                              <Trash2 className="w-2.5 h-2.5" />
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-2.5 bg-neutral-50/50 border border-dashed border-neutral-200 rounded-lg text-[10px] text-neutral-400 italic">
+                                        Sin Referencias
+                                      </div>
+                                    )}
+
+                                    <div className="relative">
+                                      {isUploadingRowId === row.id ? (
+                                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-neutral-500 font-bold bg-neutral-50 border border-neutral-200 py-1 rounded">
+                                          <span className="w-2.5 h-2.5 border-2 border-t-transparent border-neutral-600 rounded-full animate-spin"></span>
+                                          <span>Subiendo...</span>
+                                        </div>
+                                      ) : (
+                                        <label className="flex items-center justify-center gap-1 px-2 py-1 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded text-[10px] font-bold text-neutral-700 cursor-pointer transition-colors w-full">
+                                          <Camera className="w-3 h-3 text-orange-500 shrink-0" />
+                                          <span>Subir Foto</span>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                              const files = e.target.files;
+                                              if (!files || files.length === 0) return;
+                                              
+                                              setIsUploadingRowId(row.id);
+                                              try {
+                                                const uploadedUrls: string[] = [];
+                                                for (let idx = 0; idx < files.length; idx++) {
+                                                  const file = files[idx];
+                                                  const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+                                                  
+                                                  const { error: uploadError } = await supabase.storage
+                                                    .from("referencias")
+                                                    .upload(cleanName, file, {
+                                                      cacheControl: "3600",
+                                                      upsert: false,
+                                                    });
+
+                                                  if (uploadError) throw uploadError;
+
+                                                  const { data: urlData } = supabase.storage
+                                                    .from("referencias")
+                                                    .getPublicUrl(cleanName);
+
+                                                  if (urlData?.publicUrl) {
+                                                    uploadedUrls.push(urlData.publicUrl);
+                                                  }
+                                                }
+
+                                                const activeUrls = [...urls, ...uploadedUrls].join(",");
+                                                await handleInlineUpdate(row.id, "referencia_urls", activeUrls);
+                                              } catch (err: any) {
+                                                console.error(err);
+                                                alert(`Error al subir imagen: ${err.message}`);
+                                              } finally {
+                                                setIsUploadingRowId(null);
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                      )}
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
-                          ) : (
-                            <span className="text-neutral-400 text-xs italic">Sin imágenes</span>
-                          )}
-                        </td>
+                          </td>
+                        )}
                       </>
                     )}
 

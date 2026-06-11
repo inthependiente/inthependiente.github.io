@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   CheckCircle,
   XCircle,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from "lucide-react";
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
   // Form Modal controls
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Status alerts & notifications
   const [notification, setNotification] = useState<{ text: string; mode: "success" | "error" | null }>({
@@ -574,6 +576,16 @@ export default function App() {
       {/* Top Level Quick Action Dashboard Bar */}
       <header className="bg-neutral-900 text-white p-4 px-6 border-b border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 text-neutral-300 rounded-lg transition-colors cursor-pointer flex items-center gap-2 text-xs"
+            title={isSidebarOpen ? "Ocultar panel lateral (más espacio)" : "Mostrar panel lateral"}
+          >
+            <Menu className="w-4 h-4 text-orange-500 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] hidden sm:inline">
+              {isSidebarOpen ? "Ocultar Menú" : "Mostrar Menú"}
+            </span>
+          </button>
           <div className="flex items-center gap-2 bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-700/60 text-xs">
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
             <span className="font-semibold text-neutral-300">Nivel Admin: Total Control</span>
@@ -617,13 +629,15 @@ export default function App() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         
         {/* Left tables indexer */}
-        <Sidebar 
-          activeTable={activeTable} 
-          onTableChange={(table) => {
-            setActiveTable(table);
-          }}
-          counts={tableCounts}
-        />
+        {isSidebarOpen && (
+          <Sidebar 
+            activeTable={activeTable} 
+            onTableChange={(table) => {
+              setActiveTable(table);
+            }}
+            counts={tableCounts}
+          />
+        )}
 
         {/* Central rows management zone */}
         {isTableLoading && tableData.length === 0 ? (
