@@ -228,10 +228,15 @@ export default function App() {
   const fetchCurrentTableData = async () => {
     setIsTableLoading(true);
     try {
-      const { data, error } = await supabase
-        .from(activeTable)
-        .select("*")
-        .order("id", { ascending: false });
+      let query = supabase.from(activeTable).select("*");
+      
+      if (activeTable === "pdr") {
+        query = query.order("orden", { ascending: true });
+      } else {
+        query = query.order("id", { ascending: false });
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw new Error(error.message);
@@ -308,6 +313,46 @@ export default function App() {
   // Action: Delete row payload in Supabase
   const handleDeleteRow = async (id: number) => {
     try {
+      // Find row details before we delete it to clean up references in storage if any
+      const rowToDelete = tableData.find((row) => row.id === id);
+      if (rowToDelete) {
+        // Helper to extract storage path/filename from public URL
+        const getFileNameFromUrl = (url: string) => {
+          if (!url) return null;
+          try {
+            const marker = "/storage/v1/object/public/referencias/";
+            const index = url.indexOf(marker);
+            if (index !== -1) {
+              return decodeURIComponent(url.slice(index + marker.length));
+            }
+            const parts = url.split("/");
+            return decodeURIComponent(parts[parts.length - 1]);
+          } catch {
+            return null;
+          }
+        };
+
+        const deleteFromStorage = async (url: string) => {
+          const filename = getFileNameFromUrl(url);
+          if (filename) {
+            await supabase.storage.from("referencias").remove([filename]);
+          }
+        };
+
+        if (activeTable === "proyectos") {
+          if (rowToDelete.cliente) await deleteFromStorage(rowToDelete.cliente);
+          if (rowToDelete.logo_productora) await deleteFromStorage(rowToDelete.logo_productora);
+        } else if (activeTable === "shotlist") {
+          const urlsStr = rowToDelete.referencia_urls || "";
+          if (urlsStr) {
+            const urls = urlsStr.split(",").map((s: string) => s.trim()).filter(Boolean);
+            for (const url of urls) {
+              await deleteFromStorage(url);
+            }
+          }
+        }
+      }
+
       const { error } = await supabase
         .from(activeTable)
         .delete()

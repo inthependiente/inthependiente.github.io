@@ -153,8 +153,97 @@ export default function FormModal({
     }
   };
 
-  // Remove a reference URL from comma-separated input list
-  const removeUrl = (urlToRemove: string) => {
+  // Helper to extract storage filename from Supabase public URL
+  const getFileStoragePathFromUrl = (url: string) => {
+    if (!url) return null;
+    try {
+      const marker = "/storage/v1/object/public/referencias/";
+      const index = url.indexOf(marker);
+      if (index !== -1) {
+        return decodeURIComponent(url.slice(index + marker.length));
+      }
+      const parts = url.split("/");
+      return decodeURIComponent(parts[parts.length - 1]);
+    } catch (err) {
+      console.error("Error parsing URL path:", err);
+      return null;
+    }
+  };
+
+  // Helper to delete a file from the 'referencias' bucket
+  const deleteFileFromBucket = async (url: string) => {
+    if (!url) return;
+    const filename = getFileStoragePathFromUrl(url);
+    if (!filename) return;
+
+    try {
+      const { error } = await supabase.storage
+        .from("referencias")
+        .remove([filename]);
+      if (error) {
+        console.warn("Could not delete from storage bucket:", error.message);
+      } else {
+        console.log("Deleted successfully from storage bucket:", filename);
+      }
+    } catch (err) {
+      console.warn("Error deleting file from bucket:", err);
+    }
+  };
+
+  // Single logo upload to bucket 'referencias'
+  const handleSingleUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFiles(true);
+    setUploadProgress(`Subiendo logo...`);
+
+    try {
+      // If there was an existing image in this field from our bucket, we can delete it first
+      const existingUrl = formValues[fieldName];
+      if (existingUrl) {
+        await deleteFileFromBucket(existingUrl);
+      }
+
+      const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+
+      const { error } = await supabase.storage
+        .from("referencias")
+        .upload(cleanName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        throw new Error(`Error al subir ${file.name}: ${error.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("referencias")
+        .getPublicUrl(cleanName);
+
+      if (urlData?.publicUrl) {
+        setFormValues((prev: any) => ({
+          ...prev,
+          [fieldName]: urlData.publicUrl,
+        }));
+      }
+
+      setUploadProgress("¡Subida exitosa!");
+      setTimeout(() => setUploadProgress(""), 2000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "Error al subir imagen");
+    } finally {
+      setUploadingFiles(false);
+      e.target.value = "";
+    }
+  };
+
+  // Remove a reference URL from comma-separated input list and delete from bucket
+  const removeUrl = async (urlToRemove: string) => {
+    await deleteFileFromBucket(urlToRemove);
+
     const currentVal = formValues.referencia_urls || "";
     const currentList = currentVal.split(",").map((s: string) => s.trim()).filter(Boolean);
     const updatedList = currentList.filter((url) => url !== urlToRemove);
@@ -235,17 +324,48 @@ export default function FormModal({
                     placeholder="Ej: Lanzamiento Verano 2026"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Logo Cliente</label>
-                  <input
-                    required
-                    type="text"
-                    name="cliente"
-                    value={formValues.cliente || ""}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Pepsi Co."
-                  />
+                <div className="col-span-1 flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase">Logo Cliente (URL o Subida) *</label>
+                  <div className="flex gap-2">
+                    <input
+                      required
+                      type="text"
+                      name="cliente"
+                      value={formValues.cliente || ""}
+                      onChange={handleChange}
+                      className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                      placeholder="Ej: Pepsi Co."
+                    />
+                    <label className="flex items-center justify-center p-2.5 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-lg border border-neutral-300 text-neutral-600 transition-colors shrink-0" title="Subir Logo Cliente">
+                      <Upload className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleSingleUpload(e, "cliente")}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {formValues.cliente && formValues.cliente.startsWith("http") && (
+                    <div className="flex items-center gap-2 p-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs justify-between mt-1">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <img src={formValues.cliente} alt="Logo Cliente" className="w-10 h-10 object-contain rounded bg-white p-0.5 border" referrerPolicy="no-referrer" />
+                        <span className="truncate font-mono text-neutral-500 max-w-[120px]">{formValues.cliente}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const urlToDelete = formValues.cliente;
+                          await deleteFileFromBucket(urlToDelete);
+                          setFormValues((prev: any) => ({ ...prev, cliente: "" }));
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                        title="Borrar imagen del bucket y limpiar campo"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Productora</label>
@@ -259,16 +379,47 @@ export default function FormModal({
                     placeholder="Ej: Gecko Films"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Url Logo Productora</label>
-                  <input
-                    type="text"
-                    name="logo_productora"
-                    value={formValues.logo_productora || ""}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: https://example.com/logo.png"
-                  />
+                <div className="col-span-2 flex flex-col gap-1">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase">Logo Productora (URL o Subida)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="logo_productora"
+                      value={formValues.logo_productora || ""}
+                      onChange={handleChange}
+                      className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                      placeholder="Ej: https://example.com/logo.png"
+                    />
+                    <label className="flex items-center justify-center p-2.5 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-lg border border-neutral-300 text-neutral-600 transition-colors shrink-0" title="Subir Logo Productora">
+                      <Upload className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleSingleUpload(e, "logo_productora")}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {formValues.logo_productora && formValues.logo_productora.startsWith("http") && (
+                    <div className="flex items-center gap-2 p-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs justify-between mt-1">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <img src={formValues.logo_productora} alt="Logo Productora" className="w-10 h-10 object-contain rounded bg-white p-0.5 border" referrerPolicy="no-referrer" />
+                        <span className="truncate font-mono text-neutral-500 max-w-[200px]">{formValues.logo_productora}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const urlToDelete = formValues.logo_productora;
+                          await deleteFileFromBucket(urlToDelete);
+                          setFormValues((prev: any) => ({ ...prev, logo_productora: "" }));
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                        title="Borrar imagen del bucket y limpiar campo"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Dirección Productora</label>
