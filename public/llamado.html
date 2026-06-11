@@ -321,15 +321,6 @@
         .replace(/_+/g, "_");
       const storagePath = `llamados/${cleanStorageName}`;
       
-      const opt = {
-        margin:       5, // 5mm is exactly 0.5 cm margin
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
-      };
-      
       showToast('Generando archivo PDF...', true);
       
       // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
@@ -337,6 +328,34 @@
       const originalMaxWidth = element.style.maxWidth;
       element.style.width = '205.9mm';
       element.style.maxWidth = '205.9mm';
+      
+      // Check if we need to force a page break before Plan de Rodaje Completo
+      const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
+      let pageBreakAdded = false;
+      if (pdrSection) {
+        const rectPage = element.getBoundingClientRect();
+        const rectPdr = pdrSection.getBoundingClientRect();
+        const offsetTop = rectPdr.top - rectPage.top;
+        const pagePixelWidth = rectPage.width;
+        // Aspect ratio of USA Letter is 8.5 x 11 inches (215.9mm x 279.4mm)
+        // With 5mm margins (top and bottom), safe printable area height is 279.4 - 10 = 269.4mm
+        const printablePixelHeight = pagePixelWidth * (269.4 / 215.9);
+        
+        if (offsetTop < printablePixelHeight) {
+          pageBreakAdded = true;
+        }
+      }
+
+      const opt = {
+        margin:       5, // 5mm is exactly 0.5 cm margin
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak:    pageBreakAdded 
+                        ? { mode: ['css', 'legacy'], before: '#plan-de-rodaje-completo-section' }
+                        : { mode: ['css', 'legacy'] }
+      };
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
       const originalGetComputedStyle = window.getComputedStyle;
@@ -397,44 +416,16 @@
         });
       };
       
-      // Check if we need to force a page break before Plan de Rodaje Completo
-      const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
-      let pageBreakAdded = false;
-      if (pdrSection) {
-        const rectPage = element.getBoundingClientRect();
-        const rectPdr = pdrSection.getBoundingClientRect();
-        const offsetTop = rectPdr.top - rectPage.top;
-        const pagePixelWidth = rectPage.width;
-        // Aspect ratio of USA Letter is 8.5 x 11 inches (215.9mm x 279.4mm)
-        // With 5mm margins (top and bottom), safe printable area height is 279.4 - 10 = 269.4mm
-        const printablePixelHeight = pagePixelWidth * (269.4 / 215.9);
-        
-        if (offsetTop < printablePixelHeight) {
-          // If it starts on page 1, force a page break to push to page 2 by inserting a helper div
-          const pb = document.createElement('div');
-          pb.className = 'html2pdf__page-break';
-          pb.id = 'dynamic-page-break-pdr';
-          pdrSection.parentNode.insertBefore(pb, pdrSection);
-          pageBreakAdded = true;
-        }
-      }
-      
       try {
         // Generate and download locally
         const worker = html2pdf().set(opt).from(element).toPdf();
         const blob = await worker.output('blob');
         await worker.save();
         
-        // Restore elements width, computed styles & dynamic page break
+        // Restore elements width & computed styles
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
-        if (pageBreakAdded) {
-          const activePb = document.getElementById('dynamic-page-break-pdr');
-          if (activePb) {
-            activePb.remove();
-          }
-        }
         
         // Handle upload session checking
         let token = null;
@@ -479,10 +470,6 @@
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
         window.getComputedStyle = originalGetComputedStyle;
-        const activePb = document.getElementById('dynamic-page-break-pdr');
-        if (activePb) {
-          activePb.remove();
-        }
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
       }
