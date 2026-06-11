@@ -239,6 +239,7 @@
       <table class="w-full border-collapse">
         <thead>
           <tr class="bg-neutral-400 font-condensed font-bold text-[11px] uppercase">
+            <th class="border border-neutral-600 px-1 py-[2px] text-center w-[25px]">Esc</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[30px]">Plano</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[36px]">Inicio</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-left">Descripción</th>
@@ -986,7 +987,7 @@ let pdrRowsCache = []; // cache para re-renderizar y guardar orden
 async function loadPDR() {
   const [pdrRows, llamadoData] = await Promise.all([
     fetchSupabase('pdr', { llamado_id: LLAMADO_ID }, 'orden',
-      'id, orden, duracion_min, shotlist(id, plano, descripcion, cast_nombres, notas, referencia_urls, locaciones(locacion))'),
+      'id, orden, duracion_min, shotlist(id, esc, plano, descripcion, cast_nombres, notas, referencia_urls, locaciones(locacion))'),
     fetchSupabase('llamados', { id: LLAMADO_ID }),
   ]);
 
@@ -1028,16 +1029,19 @@ function renderPDR(pdrRows, llamadoHora) {
 
     if (planosEspeciales.includes(plano)) {
       return `<tr class="${rowBg(i)}" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
-        <td colspan="2" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-condensed font-bold text-[14px] tracking-wide text-center">
+        <td colspan="3" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-condensed font-bold text-[14px] tracking-wide text-center">
           ${dragHandle}${inicioStr}
         </td>
-        <td colspan="5" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-bold text-[14px] tracking-wide uppercase text-center">
+        <td colspan="4" class="border border-neutral-600 px-2 py-[3px] bg-neutral-300 font-bold text-[14px] tracking-wide uppercase text-center">
           ${editableSpan('shotlist', s.id, 'descripcion', s.descripcion||'', `pdr-sdesc-${r.id}`)}
         </td>
       </tr>`;
     }
 
     return `<tr class="${rowBg(i)} align-middle text-[11px]" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
+      <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">
+        ${editableSpan('shotlist', s.id, 'esc', s.esc||'', `pdr-esc-${r.id}`)}
+      </td>
       <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">
         ${dragHandle}${editableSpan('shotlist', s.id, 'plano', s.plano||'', `pdr-plano-${r.id}`)}
       </td>

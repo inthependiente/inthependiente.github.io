@@ -325,6 +325,41 @@ export default function TableEditor({
     setDraggedIndex(null);
   };
 
+  const getFileStoragePathFromUrl = (url: string) => {
+    if (!url) return null;
+    try {
+      const marker = "/storage/v1/object/public/referencias/";
+      const index = url.indexOf(marker);
+      if (index !== -1) {
+        return decodeURIComponent(url.slice(index + marker.length));
+      }
+      const parts = url.split("/");
+      return decodeURIComponent(parts[parts.length - 1]);
+    } catch (err) {
+      console.error("Error parsing URL path:", err);
+      return null;
+    }
+  };
+
+  const deleteFileFromBucket = async (url: string) => {
+    if (!url) return;
+    const filename = getFileStoragePathFromUrl(url);
+    if (!filename) return;
+
+    try {
+      const { error } = await supabase.storage
+        .from("referencias")
+        .remove([filename]);
+      if (error) {
+        console.warn("Could not delete from storage bucket:", error.message);
+      } else {
+        console.log("Deleted successfully from storage bucket:", filename);
+      }
+    } catch (err) {
+      console.warn("Error deleting file from bucket:", err);
+    }
+  };
+
   const handleInlineUpdate = async (rowId: number, fieldName: string, value: any) => {
     try {
       const { error } = await supabase
@@ -719,6 +754,7 @@ export default function TableEditor({
                       <th className="p-3.5 w-16">Orden</th>
                       <th className="p-3.5">Llamado</th>
                       <th className="p-3.5">Toma del Shotlist</th>
+                      <th className="p-3.5 w-40 text-center">Referencia</th>
                       <th className="p-3.5">Minutos</th>
                     </>
                   )}
@@ -1021,13 +1057,43 @@ export default function TableEditor({
                               className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer max-w-md"
                             >
                               <option value="">-- Seleccionar Toma/Plano --</option>
-                              {lookups.shotlist.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
-                                </option>
-                              ))}
+                              {[...lookups.shotlist]
+                                .sort((a, b) => {
+                                  const escComp = (a.esc || "").localeCompare(b.esc || "", undefined, { numeric: true, sensitivity: "base" });
+                                  if (escComp !== 0) return escComp;
+                                  return (a.plano || "").localeCompare(b.plano || "", undefined, { numeric: true, sensitivity: "base" });
+                                })
+                                .map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
+                                  </option>
+                                ))}
                             </select>
                           </div>
+                        </td>
+                        <td className="p-2 border-l border-r border-neutral-100 bg-white w-40">
+                          {(() => {
+                            const shotlistRow = lookups.shotlist.find((s) => s.id === row.shotlist_id);
+                            const refUrls = shotlistRow?.referencia_urls ? shotlistRow.referencia_urls.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                            return refUrls.length > 0 ? (
+                              <div className="flex flex-col gap-1 max-h-24 overflow-y-auto p-0.5">
+                                {refUrls.map((url: string, i: number) => (
+                                  <div key={i} className="relative aspect-video bg-neutral-50 border border-neutral-200 rounded overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                                    <img
+                                      src={url}
+                                      alt={`Ref ${i + 1}`}
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-1.5 text-[10px] text-neutral-405 italic">
+                                Sin Referencias
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="p-3.5 font-mono text-xs">
                           <div className="flex items-center gap-1">
@@ -1251,6 +1317,7 @@ export default function TableEditor({
                                               onClick={async () => {
                                                 const confirmed = window.confirm("¿Seguro que deseas eliminar esta imagen de referencia?");
                                                 if (!confirmed) return;
+                                                await deleteFileFromBucket(url);
                                                 const newUrls = urls.filter((_, idx) => idx !== i).join(",");
                                                 await handleInlineUpdate(row.id, "referencia_urls", newUrls === "" ? null : newUrls);
                                               }}
@@ -1439,6 +1506,7 @@ export default function TableEditor({
                     </td>
 
                     {/* All other columns with plain empty white cells */}
+                    <td className="p-1 border border-neutral-200 bg-white" />
                     <td className="p-1 border border-neutral-200 bg-white" />
                     <td className="p-1 border border-neutral-200 bg-white" />
                     <td className="p-1 border border-neutral-200 bg-white" />

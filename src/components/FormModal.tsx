@@ -1167,11 +1167,17 @@ export default function FormModal({
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                   >
                     <option value="">-- Seleccionar Shotlist --</option>
-                    {lookups.shotlist.map((sh) => (
-                      <option key={sh.id} value={sh.id}>
-                        Esc: {sh.esc || "S/E"} | Plano: {sh.plano || "S/P"} - {sh.descripcion?.substring(0, 40) || "Sin descripción"}
-                      </option>
-                    ))}
+                    {[...lookups.shotlist]
+                      .sort((a, b) => {
+                        const escComp = (a.esc || "").localeCompare(b.esc || "", undefined, { numeric: true, sensitivity: "base" });
+                        if (escComp !== 0) return escComp;
+                        return (a.plano || "").localeCompare(b.plano || "", undefined, { numeric: true, sensitivity: "base" });
+                      })
+                      .map((sh) => (
+                        <option key={sh.id} value={sh.id}>
+                          Esc: {sh.esc || "S/E"} | Plano: {sh.plano || "S/P"} - {sh.descripcion?.substring(0, 40) || "Sin descripción"}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
