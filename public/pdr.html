@@ -62,7 +62,7 @@
         <div class="bg-neutral-800 text-white font-condensed font-bold text-[14px] px-3 py-1 rounded-sm tracking-wider uppercase mb-1" id="hdr-dod">
           —
         </div>
-        <div class="font-bold text-[12px] text-rose-600" id="hdr-fecha">
+        <div class="font-bold text-[12px]" id="hdr-fecha">
           —
         </div>
         <div class="text-[10px] text-gray-500 tracking-wide font-semibold mt-0.5 uppercase" id="hdr-campana">
@@ -85,7 +85,7 @@
             <th class="border border-neutral-600 px-1 py-[3px] text-left">Descripción</th>
             <th class="border border-neutral-600 px-1 py-[3px] text-left w-[110px]">Locación</th>
             <th class="border border-neutral-600 px-1 py-[3px] text-left w-[140px]">Notas</th>
-            <th class="border border-neutral-600 px-1 py-[3px] text-center w-[140px]">Referencia</th>
+            <th class="border border-neutral-600 px-1 py-[2px] text-center w-[140px]">Referencia</th>
           </tr>
         </thead>
         <tbody id="tbody-pdr">
@@ -134,7 +134,7 @@
       document.getElementById('hdr-productora').textContent = p.productora || 'Gecko Films';
       document.getElementById('hdr-dod').textContent = l.d_o_d || 'Día único';
       document.getElementById('hdr-fecha').textContent = formatFecha(l.fecha);
-      document.getElementById('hdr-campana').textContent = `Campaña: ${p.campana || '—'}`;
+      document.getElementById('hdr-campana').textContent = `${p.campana || '—'}`;
       
       const logoImg = document.getElementById('hdr-logo-prod');
       if (p.logo_productora) {
@@ -148,10 +148,10 @@
 
     async function loadDirector() {
       try {
-        const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, null, 'crew(cargo, nombre)');
-        const flatCrew = rows.map(r => r.crew || {}).filter(Boolean);
-        const directorObj = flatCrew.find(r => (r.cargo||'').toLowerCase().includes('director'));
-        document.getElementById('hdr-director').textContent = directorObj ? (directorObj.nombre || '—') : '—';
+        const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, null, 'prioridad, crew(cargo, nombre)');
+        const directorRow = rows.find(r => r.prioridad === 2 || Number(r.prioridad) === 2);
+        const directorObj = directorRow ? (directorRow.crew || {}) : {};
+        document.getElementById('hdr-director').textContent = directorObj.nombre || '—';
       } catch (e) {
         console.warn('Error loading director:', e);
         document.getElementById('hdr-director').textContent = '—';
@@ -200,7 +200,7 @@
         }
 
         const urls = s.referencia_urls ? s.referencia_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
-        const imgsHtml = urls.map(u => `<img src="${u}" class="max-w-full h-auto object-cover inline-block rounded border border-neutral-200 shadow-xs mb-1 last:mb-0 max-h-24">`).join('');
+        const imgsHtml = urls.map(u => `<img src="${u}" class="max-w-full h-auto object-cover inline-block">`).join('');
         const refsHtml = imgsHtml || '<span class="text-neutral-300 italic text-[10px]">sin imágenes</span>';
 
         return `<tr class="${rowBg(i)} align-middle text-[11px]">
@@ -210,8 +210,8 @@
           <td class="border border-neutral-600 px-1 py-1 text-left whitespace-pre-wrap leading-relaxed">${s.descripcion||''}</td>
           <td class="border border-neutral-600 px-1 py-1 text-left">${loc.locacion||''}</td>
           <td class="border border-neutral-600 px-1 py-1 text-left whitespace-pre-wrap leading-relaxed">${s.notas||''}</td>
-          <td class="border border-neutral-600 p-1 text-center">
-            <div class="flex flex-col gap-1 items-center justify-center">${refsHtml}</div>
+          <td class="border border-neutral-600 p-0 text-center">
+            <div class="flex flex-col items-center justify-center">${refsHtml}</div>
           </td>
         </tr>`;
       }).join('');
