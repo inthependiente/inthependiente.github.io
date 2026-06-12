@@ -36,6 +36,47 @@ export default function FormModal({
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // List of previously uploaded files in the root of 'referencias' bucket
+  const [rootFiles, setRootFiles] = useState<{ name: string; url: string; id: string }[]>([]);
+  const [loadingRootFiles, setLoadingRootFiles] = useState(false);
+
+  const fetchRootFiles = async () => {
+    setLoadingRootFiles(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("referencias")
+        .list("", { limit: 150 });
+      if (error) {
+        console.error("Error listing root files:", error.message);
+      } else if (data) {
+        // Filter out folders/subfolders and empty/system assets
+        const filesOnly = data
+          .filter((item) => item.id !== null && item.name !== ".emptyFolderPlaceholder" && item.name !== "img" && item.name !== "llamados")
+          .map((item) => {
+            const { data: urlData } = supabase.storage
+              .from("referencias")
+              .getPublicUrl(item.name);
+            return {
+              name: item.name,
+              url: urlData?.publicUrl || "",
+              id: item.id || item.name,
+            };
+          });
+        setRootFiles(filesOnly);
+      }
+    } catch (err) {
+      console.error("Error fetching root files:", err);
+    } finally {
+      setLoadingRootFiles(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && table === "proyectos") {
+      fetchRootFiles();
+    }
+  }, [isOpen, table]);
+
   // Sync Form State with initialData
   useEffect(() => {
     if (initialData) {
@@ -108,7 +149,7 @@ export default function FormModal({
         setUploadProgress(`Subiendo (${i + 1}/${files.length}): ${file.name}`);
 
         // Format clean, unique file name to prevent collision or URL issues
-        const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+        const cleanName = `img/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
         const { data, error } = await supabase.storage
           .from("referencias")
@@ -191,7 +232,7 @@ export default function FormModal({
     }
   };
 
-  // Single logo upload to bucket 'referencias'
+  // Single logo upload to bucket 'referencias' (storing directly in the root directory)
   const handleSingleUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -228,6 +269,7 @@ export default function FormModal({
           ...prev,
           [fieldName]: urlData.publicUrl,
         }));
+        await fetchRootFiles();
       }
 
       setUploadProgress("¡Subida exitosa!");
@@ -335,7 +377,7 @@ export default function FormModal({
                       value={formValues.cliente || ""}
                       onChange={handleChange}
                       className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                      placeholder=""
+                      placeholder="Ej: https://example.com/logo.png"
                     />
                     <label className="flex items-center justify-center p-2.5 bg-neutral-100 hover:bg-neutral-200 cursor-pointer rounded-lg border border-neutral-300 text-neutral-600 transition-colors shrink-0" title="Subir Logo Cliente">
                       <Upload className="w-5 h-5" />
@@ -347,24 +389,56 @@ export default function FormModal({
                       />
                     </label>
                   </div>
+                  {/* Select con archivos de raíz del bucket */}
+                  <div className="mt-1">
+                    <select
+                      className="w-full border border-neutral-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-white text-neutral-600 cursor-pointer"
+                      value={rootFiles.some(rf => rf.url === formValues.cliente) ? formValues.cliente : ""}
+                      onChange={(e) => {
+                        setFormValues((prev: any) => ({ ...prev, cliente: e.target.value }));
+                      }}
+                    >
+                      <option value="">{loadingRootFiles ? "Cargando biblioteca..." : "-- Usar archivo de biblioteca (Raíz) --"}</option>
+                      {rootFiles.map((file) => (
+                        <option key={file.id} value={file.url}>
+                          {file.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {formValues.cliente && formValues.cliente.startsWith("http") && (
                     <div className="flex items-center gap-2 p-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs justify-between mt-1">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <img src={formValues.cliente} alt="Logo Cliente" className="w-10 h-10 object-contain rounded bg-white p-0.5 border" referrerPolicy="no-referrer" />
                         <span className="truncate font-mono text-neutral-500 max-w-[120px]">{formValues.cliente}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const urlToDelete = formValues.cliente;
-                          await deleteFileFromBucket(urlToDelete);
-                          setFormValues((prev: any) => ({ ...prev, cliente: "" }));
-                        }}
-                        className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
-                        title="Borrar imagen del bucket y limpiar campo"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormValues((prev: any) => ({ ...prev, cliente: "" }));
+                          }}
+                          className="text-neutral-500 hover:text-neutral-700 p-1.5 hover:bg-neutral-100 rounded transition-colors"
+                          title="Quitar logo de este proyecto (conservar archivo en biblioteca)"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const urlToDelete = formValues.cliente;
+                            if (confirm("¿Estás seguro de que deseas eliminar este archivo de forma permanente de la biblioteca en Supabase? Esta acción no se puede deshacer.")) {
+                              await deleteFileFromBucket(urlToDelete);
+                              setFormValues((prev: any) => ({ ...prev, cliente: "" }));
+                              await fetchRootFiles();
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                          title="Eliminar archivo permanentemente de la biblioteca en Supabase"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -401,24 +475,56 @@ export default function FormModal({
                       />
                     </label>
                   </div>
+                  {/* Select con archivos de raíz del bucket */}
+                  <div className="mt-1">
+                    <select
+                      className="w-full border border-neutral-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-white text-neutral-600 cursor-pointer"
+                      value={rootFiles.some(rf => rf.url === formValues.logo_productora) ? formValues.logo_productora : ""}
+                      onChange={(e) => {
+                        setFormValues((prev: any) => ({ ...prev, logo_productora: e.target.value }));
+                      }}
+                    >
+                      <option value="">{loadingRootFiles ? "Cargando biblioteca..." : "-- Usar archivo de biblioteca (Raíz) --"}</option>
+                      {rootFiles.map((file) => (
+                        <option key={file.id} value={file.url}>
+                          {file.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {formValues.logo_productora && formValues.logo_productora.startsWith("http") && (
                     <div className="flex items-center gap-2 p-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs justify-between mt-1">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <img src={formValues.logo_productora} alt="Logo Productora" className="w-10 h-10 object-contain rounded bg-white p-0.5 border" referrerPolicy="no-referrer" />
                         <span className="truncate font-mono text-neutral-500 max-w-[200px]">{formValues.logo_productora}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const urlToDelete = formValues.logo_productora;
-                          await deleteFileFromBucket(urlToDelete);
-                          setFormValues((prev: any) => ({ ...prev, logo_productora: "" }));
-                        }}
-                        className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
-                        title="Borrar imagen del bucket y limpiar campo"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormValues((prev: any) => ({ ...prev, logo_productora: "" }));
+                          }}
+                          className="text-neutral-500 hover:text-neutral-700 p-1.5 hover:bg-neutral-100 rounded transition-colors"
+                          title="Quitar logo de este proyecto (conservar archivo en biblioteca)"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const urlToDelete = formValues.logo_productora;
+                            if (confirm("¿Estás seguro de que deseas eliminar este archivo de forma permanente de la biblioteca en Supabase? Esta acción no se puede deshacer.")) {
+                              await deleteFileFromBucket(urlToDelete);
+                              setFormValues((prev: any) => ({ ...prev, logo_productora: "" }));
+                              await fetchRootFiles();
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors"
+                          title="Eliminar archivo permanentemente de la biblioteca en Supabase"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

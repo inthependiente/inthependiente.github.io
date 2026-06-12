@@ -29,6 +29,9 @@
       #loading { display: none !important; }
       .no-print { display: none !important; }
     }
+    .generating-pdf .no-print {
+      display: none !important;
+    }
     .html2pdf__page-break {
       height: 0 !important;
       border: none !important;
@@ -45,7 +48,7 @@
   <!-- ── LOADING OVERLAY ── -->
   <div id="loading" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl px-10 py-8 text-center shadow-2xl">
-      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">Gecko Films</div>
+      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">PDR - Llamado APP</div>
       <div class="text-gray-500 text-sm mt-2">Cargando Plan de Rodaje...</div>
       <div class="mt-4 w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mx-auto">
         <div class="h-full bg-[#14cbb5] rounded-full animate-pulse w-3/4"></div>
@@ -300,6 +303,7 @@
 
     // Export PDF dynamic function for pdr.html
     async function exportToPDF() {
+      document.body.classList.add('generating-pdf');
       const element = document.querySelector('.page');
       const docTitle = document.title || 'Plan de Rodaje';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
@@ -327,8 +331,13 @@
       // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
       const originalWidth = element.style.width;
       const originalMaxWidth = element.style.maxWidth;
+      const originalBoxSizing = element.style.boxSizing;
       element.style.width = '205.9mm';
       element.style.maxWidth = '205.9mm';
+      element.style.boxSizing = 'border-box';
+      
+      // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
+      element.offsetHeight;
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
       const originalGetComputedStyle = window.getComputedStyle;
@@ -398,7 +407,9 @@
         // Restore elements width & computed styles
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
+        element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        document.body.classList.remove('generating-pdf');
         
         showToast('Buscando sesión activa para respaldar...', true);
         const { data: { session } } = await sb.auth.getSession();
@@ -434,7 +445,9 @@
       } catch (err) {
         element.style.width = originalWidth;
         element.style.maxWidth = originalMaxWidth;
+        element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        document.body.classList.remove('generating-pdf');
         console.error('PDF generation error:', err);
         showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
       }

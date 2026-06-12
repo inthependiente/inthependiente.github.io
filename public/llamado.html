@@ -31,6 +31,9 @@
       #loading { display: none !important; }
       .no-print { display: none !important; }
     }
+    .generating-pdf .no-print {
+      display: none !important;
+    }
     .html2pdf__page-break {
       height: 0 !important;
       border: none !important;
@@ -91,7 +94,7 @@
   <!-- ── LOADING OVERLAY ── -->
   <div id="loading" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl px-10 py-8 text-center shadow-2xl">
-      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">Gecko Films</div>
+      <div class="font-condensed font-black text-2xl text-[#561d68] mb-1">LlamadoAPP</div>
       <div class="text-gray-500 text-sm mt-2">Cargando llamado de rodaje...</div>
       <div class="mt-4 w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mx-auto">
         <div class="h-full bg-[#14cbb5] rounded-full animate-pulse w-3/4"></div>
@@ -309,6 +312,7 @@
 
     // Export PDF dynamic function
     async function exportToPDF() {
+      document.body.classList.add('generating-pdf');
       const element = document.querySelector('.page');
       const docTitle = document.title || 'Llamado';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
@@ -352,7 +356,7 @@
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
+        pagebreak:    { mode: ['specify', 'css', 'legacy'], before: '#plan-de-rodaje-completo-section' }
       };
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
@@ -425,6 +429,7 @@
         element.style.maxWidth = originalMaxWidth;
         element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        document.body.classList.remove('generating-pdf');
         if (pbDiv) {
           pbDiv.remove();
         }
@@ -473,6 +478,7 @@
         element.style.maxWidth = originalMaxWidth;
         element.style.boxSizing = originalBoxSizing;
         window.getComputedStyle = originalGetComputedStyle;
+        document.body.classList.remove('generating-pdf');
         if (pbDiv) {
           pbDiv.remove();
         }
@@ -539,13 +545,13 @@ async function sbUpload(file) {
   if (!userSession) { showToast('Inicia sesión para subir imágenes', false); throw new Error('Sin sesión'); }
   const ext  = file.name.split('.').pop();
   const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/referencias/${name}`, {
+  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/referencias/img/${name}`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${userSession.access_token}`, 'Content-Type': file.type },
     body: file,
   });
   if (!res.ok) throw new Error(`Upload error: ${await res.text()}`);
-  return `${SUPABASE_URL}/storage/v1/object/public/referencias/${name}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/referencias/img/${name}`;
 }
 
 // ═══════════════════════════════════════════════════

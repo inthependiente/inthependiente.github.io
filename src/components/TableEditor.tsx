@@ -1603,7 +1603,7 @@ export default function TableEditor({
                                                 const uploadedUrls: string[] = [];
                                                 for (let idx = 0; idx < files.length; idx++) {
                                                   const file = files[idx];
-                                                  const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+                                                  const cleanName = `img/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
                                                   
                                                   const { error: uploadError } = await supabase.storage
                                                     .from("referencias")
