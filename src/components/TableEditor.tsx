@@ -1301,7 +1301,13 @@ export default function TableEditor({
                               className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer max-w-md"
                             >
                               <option value="">-- Seleccionar Toma/Plano --</option>
-                              {[...lookups.shotlist]
+                              {[...(() => {
+                                const matchingLlamado = lookups.llamados.find(l => Number(l.id) === Number(row.llamado_id));
+                                const rowProyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+                                return rowProyectoId 
+                                  ? lookups.shotlist.filter(s => Number(s.proyecto_id) === Number(rowProyectoId))
+                                  : [];
+                              })()]
                                 .sort((a, b) => {
                                   const escComp = (a.esc || "").localeCompare(b.esc || "", undefined, { numeric: true, sensitivity: "base" });
                                   if (escComp !== 0) return escComp;
