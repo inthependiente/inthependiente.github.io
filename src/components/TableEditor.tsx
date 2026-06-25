@@ -129,12 +129,8 @@ export default function TableEditor({
         return;
       }
 
-      const defaultShotlistId = lookups.shotlist && lookups.shotlist.length > 0
-        ? lookups.shotlist[0].id
-        : null;
-
-      if (!defaultShotlistId) {
-        alert("Primero crea un registro en el Shotlist para vincularlo en el PDR.");
+      if (!quickAddPdrShotlistId) {
+        alert("Por favor, selecciona una Toma del Shotlist en el menú desplegable para añadirla al PDR.");
         return;
       }
 
@@ -144,7 +140,7 @@ export default function TableEditor({
 
       const newRow = {
         llamado_id: defaultLlamadoId,
-        shotlist_id: defaultShotlistId,
+        shotlist_id: Number(quickAddPdrShotlistId),
         orden: maxOrden + 1,
         duracion_min: 0
       };
@@ -155,6 +151,8 @@ export default function TableEditor({
       if (insertedData && insertedData.length > 0) {
         setNewlyCreatedId(insertedData[0].id);
       }
+
+      setQuickAddPdrShotlistId("");
 
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -221,6 +219,7 @@ export default function TableEditor({
     isOpen: boolean;
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [quickAddPdrShotlistId, setQuickAddPdrShotlistId] = useState<number | "">("");
   const [modalFeedback, setModalFeedback] = useState<{
     success: boolean;
     title: string;
@@ -1755,10 +1754,46 @@ export default function TableEditor({
                       </button>
                     </td>
 
-                    {/* All other columns with plain empty white cells */}
+                    {/* 2. Llamado empty cell placeholder */}
+                    <td className="p-1 border border-neutral-200 bg-white text-xs text-center font-mono font-bold text-neutral-400">
+                      Nuevo
+                    </td>
+
+                    {/* 3. Toma del Shotlist dropdown select */}
+                    <td className="p-1 border border-neutral-200 bg-white text-xs">
+                      <div className="flex items-center gap-1">
+                        <CornerDownRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-1.5" />
+                        <select
+                          value={quickAddPdrShotlistId}
+                          onChange={(e) => setQuickAddPdrShotlistId(e.target.value ? Number(e.target.value) : "")}
+                          className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-[#059669] p-2 rounded cursor-pointer max-w-md w-full"
+                        >
+                          <option value="">-- Seleccionar Toma/Plano a añadir --</option>
+                          {[...(() => {
+                            const matchingLlamado = lookups.llamados.find(l => Number(l.id) === Number(selectedLlamadoId));
+                            const rowProyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+                            return rowProyectoId 
+                              ? lookups.shotlist.filter(s => Number(s.proyecto_id) === Number(rowProyectoId))
+                              : [];
+                          })()]
+                            .sort((a, b) => {
+                              const escComp = (a.esc || "").localeCompare(b.esc || "", undefined, { numeric: true, sensitivity: "base" });
+                              if (escComp !== 0) return escComp;
+                              return (a.plano || "").localeCompare(b.plano || "", undefined, { numeric: true, sensitivity: "base" });
+                            })
+                            .map((s) => (
+                              <option key={s.id} value={s.id}>
+                                Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </td>
+
+                    {/* 4. Referencia empty cell */}
                     <td className="p-1 border border-neutral-200 bg-white" />
-                    <td className="p-1 border border-neutral-200 bg-white" />
-                    <td className="p-1 border border-neutral-200 bg-white" />
+
+                    {/* 5. Minutos empty cell */}
                     <td className="p-1 border border-neutral-200 bg-white" />
                     
                     {/* Actions column empty placeholder */}
