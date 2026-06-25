@@ -276,7 +276,7 @@ export default function App() {
     // 4. Shotlists
     let shotlistList: any[] = [];
     try {
-      const { data, error } = await supabase.from("shotlist").select("id, esc, plano, descripcion, proyecto_id").order("id", { ascending: false });
+      const { data, error } = await supabase.from("shotlist").select("id, esc, plano, descripcion, proyecto_id, referencia_urls").order("id", { ascending: false });
       if (error) console.error("Error fetching shotlist database lookup:", error);
       else shotlistList = data || [];
     } catch (e) {
