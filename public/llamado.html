@@ -1043,8 +1043,8 @@ function renderListaContactos(rows, containerId) {
 
 async function loadAgenciaCliente() {
   const rows = await fetchSupabase('cliente_agencia', { llamado_id: LLAMADO_ID });
-  renderListaContactos(rows.filter(r=>r.tipo==='cliente'), 'lista-cliente');
-  renderListaContactos(rows.filter(r=>r.tipo==='agencia'), 'lista-agencia');
+  renderListaContactos(rows.filter(r => r.tipo?.toLowerCase() === 'cliente'), 'lista-cliente');
+  renderListaContactos(rows.filter(r => r.tipo?.toLowerCase() === 'agencia'), 'lista-agencia');
 }
 
 // ═══════════════════════════════════════════════════
