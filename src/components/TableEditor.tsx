@@ -796,7 +796,7 @@ export default function TableEditor({
 
       {/* Main Database Table Display */}
       <div className="flex-1 bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-0">
-        {["escenas", "crew_llamado", "cliente_agencia", "talento", "pdr"].includes(table) && !selectedLlamadoId ? (
+        {["crew_llamado", "cliente_agencia", "pdr"].includes(table) && !selectedLlamadoId ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto my-auto animate-fade-in shadow-xs">
             <div className="p-3.5 bg-teal-50 border border-teal-100 rounded-full text-teal-600 mb-4 animate-bounce">
               <Calendar className="w-8 h-8" />
