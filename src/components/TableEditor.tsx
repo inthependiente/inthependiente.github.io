@@ -672,7 +672,7 @@ export default function TableEditor({
         </div>
         
         <div className="flex flex-wrap items-center gap-2.5">
-          {["escenas", "talento", "pdr", "shotlist"].includes(table) && (
+          {["escenas", "talento", "pdr", "shotlist", "proyectos", "llamados", "locaciones", "cliente_agencia", "crew_llamado"].includes(table) && (
             <>
               <button
                 onClick={() => setConfirmModal({ type: "deleteAll", isOpen: true })}
