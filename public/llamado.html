@@ -330,72 +330,78 @@
       // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
       element.offsetHeight;
       
-      // ── Collect sections after Cronograma ──
+      // ── Collect all sections ──
       const pageSections = Array.from(element.children).filter(
         el => el.className && el.className.includes('mb-1')
       );
       // Indices: [0]=notas, [1]=cronograma, [2]=cliente/agencia, [3]=talento, [4]=crew, [5]=pdr
-      const protectSections = pageSections.slice(2);
+      const protectSections = new Set(pageSections.slice(2));
       
-      // ── Measure and calculate page breaks ──
+      // ── Simulate cumulative layout with page breaks ──
       const pageRect = element.getBoundingClientRect();
       const pxPerMm = element.offsetWidth / 205.9;
-      const pageContentH = 279.4 - 10; // 269.4mm usable per page
+      const pageH = 269.4; // usable mm per page (letter - 2×5mm margin)
       
-      function mmPos(el) {
-        const r = el.getBoundingClientRect();
-        return {
-          top: (r.top - pageRect.top) / pxPerMm,
-          bottom: (r.bottom - pageRect.top) / pxPerMm,
-          height: (r.bottom - r.top) / pxPerMm
-        };
+      function mmHeight(el) {
+        return (el.getBoundingClientRect().bottom - el.getBoundingClientRect().top) / pxPerMm;
       }
       
+      // Start simulation at the actual position of the first section
+      let simY = pageSections.length ? (pageSections[0].getBoundingClientRect().top - pageRect.top) / pxPerMm : 0;
+      const sectionSimStart = []; // simulated start Y for each section
+      const sectionSimEnd = [];   // simulated end Y for each section
       const breakSelectors = [];
       
-      // ── Pass 1: Sections ──
-      for (const sec of pageSections) {
-        const p = mmPos(sec);
-        const needsProtection = protectSections.includes(sec);
-        // Check if the section extends beyond the page where it starts
-        const startPage = Math.floor(p.top / pageContentH);
-        const pageEnd = (startPage + 1) * pageContentH;
+      for (let i = 0; i < pageSections.length; i++) {
+        const sec = pageSections[i];
+        const h = mmHeight(sec);
+        const simEnd = simY + h;
+        const pageEnd = (Math.floor(simY / pageH) + 1) * pageH;
         
-        if (needsProtection && p.bottom > pageEnd) {
+        if (protectSections.has(sec) && simEnd > pageEnd) {
+          // Section would be split → page break before it
           sec.classList.add('pdf-break-section');
           breakSelectors.push('.pdf-break-section');
+          // Section starts at top of next page
+          simY = pageEnd + h;
+        } else {
+          simY = simEnd;
         }
+        sectionSimStart[i] = simY - h;
+        sectionSimEnd[i] = simY;
       }
       
-      // ── Pass 2: PDR rows ──
+      // ── PDR rows: use SIMULATED positions (accounting for prior breaks) ──
       const pdrRows = document.querySelectorAll('#tbody-pdr tr');
       if (pdrRows.length) {
         const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
-        const pdrPos = mmPos(pdrSection);
-        const pdrHasBreak = pdrSection.classList.contains('pdf-break-section');
-        // If PDR has a section break, it starts at the next page boundary in the PDF
-        const pdrPdfTop = pdrHasBreak
-          ? Math.ceil(pdrPos.top / pageContentH) * pageContentH
-          : pdrPos.top;
+        const pdrIdx = pageSections.indexOf(pdrSection);
+        // PDR's simulated start Y in the PDF
+        let rowSimY = sectionSimStart[pdrIdx];
+        // Offset from PDR section top to first row (title + thead)
+        const firstRow = pdrRows[0];
+        const pdrTop = (pdrSection.getBoundingClientRect().top - pageRect.top) / pxPerMm;
+        const firstRowTop = (firstRow.getBoundingClientRect().top - pageRect.top) / pxPerMm;
+        const titleTheadOffset = firstRowTop - pdrTop;
+        rowSimY += titleTheadOffset;
         
         for (const row of pdrRows) {
-          const rp = mmPos(row);
-          if (rp.height < 0.5) continue;
+          const rh = mmHeight(row);
+          if (rh < 0.5) continue;
+          const rowEnd = rowSimY + rh;
+          const rowPageEnd = (Math.floor(rowSimY / pageH) + 1) * pageH;
           
-          // Row position in the PDF (relative to PDR's position in PDF)
-          const rowPdfBottom = pdrPdfTop + (rp.top - pdrPos.top) + rp.height;
-          const rowPdfTop = pdrPdfTop + (rp.top - pdrPos.top);
-          const rowPage = Math.floor(rowPdfTop / pageContentH);
-          const rowPageEnd = (rowPage + 1) * pageContentH;
-          
-          if (rowPdfBottom > rowPageEnd) {
+          if (rowEnd > rowPageEnd) {
             row.classList.add('pdf-break-row');
             breakSelectors.push('.pdf-break-row');
+            rowSimY = rowPageEnd + rh;
+          } else {
+            rowSimY = rowEnd;
           }
         }
       }
       
-      // Only set pagebreak.before if there are actual breaks
+      // Build pagebreak config only if breaks exist
       const pageBreakConfig = breakSelectors.length
         ? { mode: ['specify', 'css', 'legacy'], before: [...new Set(breakSelectors)].join(', ') }
         : undefined;
@@ -630,7 +636,7 @@ function showToast(msg, ok = true) {
   t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
 
-const mapPin = `<span class="text-[13px] leading-none align-middle">📍</span>`;
+const mapPin = `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E" class="size-4 inline-block" alt="">`;
 
 function badgeIntExt(val) {
   const v = (val||'').toUpperCase().trim();
