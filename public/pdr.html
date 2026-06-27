@@ -301,15 +301,42 @@
       }, 4000);
     }
 
-    // Export PDF dynamic function for pdr.html
+    // ── Compress images to avoid bloated PDF ──
+    async function compressImage(img) {
+      return new Promise((resolve) => {
+        if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
+        // Skip header logo to preserve PNG transparency
+        if (img.id === 'hdr-logo-prod') { resolve(); return; }
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => {
+          const MAX_W = 800;
+          let w = image.naturalWidth;
+          let h = image.naturalHeight;
+          if (w > MAX_W) { h = h * (MAX_W / w); w = MAX_W; }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(image, 0, 0, w, h);
+          img.src = canvas.toDataURL('image/jpeg', 0.7);
+          resolve();
+        };
+        image.onerror = () => resolve();
+        image.src = img.src;
+      });
+    }
+
+    // Export PDF — via Supabase Edge Function with Puppeteer
     async function exportToPDF() {
       document.body.classList.add('generating-pdf');
       const element = document.querySelector('.page');
       const docTitle = document.title || 'Plan de Rodaje';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
+      
       const filename = `${safeTitle}.pdf`;
       
-      // Sanitize the storage path specifically for Supabase compatible keys (letters, digits, dashes, underscores)
+      // Sanitize the storage path for Supabase compatible keys
       const cleanStorageName = filename
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -317,139 +344,128 @@
         .replace(/_+/g, "_");
       const storagePath = `llamados/${cleanStorageName}`;
       
-      const opt = {
-        margin:       5, // 5mm is exactly 0.5 cm margin
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
-      };
-      
-      showToast('Generando archivo PDF...', true);
-      
-      // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
-      const originalWidth = element.style.width;
-      const originalMaxWidth = element.style.maxWidth;
-      const originalBoxSizing = element.style.boxSizing;
-      element.style.width = '205.9mm';
-      element.style.maxWidth = '205.9mm';
-      element.style.boxSizing = 'border-box';
-      
-      // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
-      element.offsetHeight;
-      
-      // Patch getComputedStyle to bypass the oklch parse error of html2canvas
-      const originalGetComputedStyle = window.getComputedStyle;
-      
-      function oklchToRgb(l, c, h, a = 1) {
-        const hRad = (h * Math.PI) / 180;
-        const L = l + 0.3963377774 * c * Math.cos(hRad) + 0.2158037573 * c * Math.sin(hRad);
-        const M = l - 0.1055613458 * c * Math.cos(hRad) - 0.0638541728 * c * Math.sin(hRad);
-        const S = l - 0.0894841775 * c * Math.cos(hRad) - 1.2914855480 * c * Math.sin(hRad);
-        
-        const l_ = L * L * L;
-        const m_ = M * M * M;
-        const s_ = S * S * S;
-        
-        let r = +4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_;
-        let g = -1.2684380046 * l_ + 2.5090391104 * m_ - 0.2406011058 * s_;
-        let b = -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076186100 * s_;
-        
-        const fn = (x) => x > 0.0031308 ? 1.055 * Math.pow(x, 1/2.4) - 0.055 : 12.92 * x;
-        
-        r = Math.round(Math.max(0, Math.min(1, fn(r))) * 255);
-        g = Math.round(Math.max(0, Math.min(1, fn(g))) * 255);
-        b = Math.round(Math.max(0, Math.min(1, fn(b))) * 255);
-        
-        return a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
-      }
-
-      function replaceOklchWithRgb(str) {
-        if (typeof str !== 'string' || !str.includes('oklch')) return str;
-        return str.replace(/oklch\(([-+\d.%]+)\s+([-+\d.%]+)\s+([-+\d.%]+)(?:\s*\/\s*([-+\d.%]+))?\)/g, (match, lStr, cStr, hStr, aStr) => {
-          const l = lStr.endsWith('%') ? parseFloat(lStr) / 100 : parseFloat(lStr);
-          const c = cStr.endsWith('%') ? parseFloat(cStr) / 100 : parseFloat(cStr);
-          const h = hStr.endsWith('%') ? (parseFloat(hStr) * 3.6) : parseFloat(hStr);
-          let a = 1;
-          if (aStr) {
-            a = aStr.endsWith('%') ? parseFloat(aStr) / 100 : parseFloat(aStr);
-          }
-          return oklchToRgb(l, c, h, a);
-        });
-      }
-
-      window.getComputedStyle = function(el, pseudoElt) {
-        const style = originalGetComputedStyle(el, pseudoElt);
-        return new Proxy(style, {
-          get(target, prop) {
-            const val = target[prop];
-            if (typeof val === 'function') {
-              if (prop === 'getPropertyValue') {
-                return function(key) {
-                  const raw = target.getPropertyValue(key);
-                  return replaceOklchWithRgb(raw);
-                }
-              }
-              return val.bind(target);
-            }
-            return replaceOklchWithRgb(val);
-          }
-        });
-      };
+      showToast('Generando PDF vectorial...', true);
       
       try {
-        // Generate and download locally
-        const worker = html2pdf().set(opt).from(element).toPdf();
-        const blob = await worker.output('blob');
-        await worker.save();
+        // ── Set element to PDF width for accurate measurements ──
+        const origWidth = element.style.width;
+        const origMaxW = element.style.maxWidth;
+        const origBox = element.style.boxSizing;
+        element.style.width = '205.9mm';
+        element.style.maxWidth = '205.9mm';
+        element.style.boxSizing = 'border-box';
+        element.offsetHeight; // force reflow
         
-        // Restore elements width & computed styles
-        element.style.width = originalWidth;
-        element.style.maxWidth = originalMaxWidth;
-        element.style.boxSizing = originalBoxSizing;
-        window.getComputedStyle = originalGetComputedStyle;
+        // ── Clone AFTER measurements ──
+        const clone = element.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+        clone.style.margin = '0';
+        clone.style.boxShadow = 'none';
+        
+        // ── Compress images to avoid bloated PDF ──
+        const images = Array.from(clone.querySelectorAll('img'));
+        if (images.length > 0) await Promise.all(images.map(compressImage));
+        
+        // ── CSS to prevent row splitting in PDR table ──
+        const breakCSS = ['#tbody-pdr tr { page-break-inside: avoid; }'];
+        
+        // ── Get ALL CSS rules from the document ──
+        const allCSSRules = [];
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              allCSSRules.push(rule.cssText);
+            }
+          } catch(e) {
+            // Ignore cross-origin stylesheets (like Google Fonts, Tailwind CDN)
+          }
+        }
+        const customStyles = allCSSRules.join('\n');
+        
+        // ── Build complete standalone HTML for Puppeteer ──
+        const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    ${customStyles}
+    @page { size: letter; margin: 5mm; }
+    html { margin: 0; padding: 0; background: white; }
+    body { margin: 0; padding: 0; background: white; font-family: 'Barlow', sans-serif; font-size: 10px; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    ${breakCSS.join('\n')}
+  </style>
+</head>
+<body>
+  ${clone.outerHTML}
+</body>
+</html>`;
+        
+        // Restore original element width (before fetch)
+        element.style.width = origWidth;
+        element.style.maxWidth = origMaxW;
+        element.style.boxSizing = origBox;
+        
+        // ── Call Supabase Edge Function ──
+        const functionUrl = `${SUPABASE_URL}/functions/v1/generate-pdf`;
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+          },
+          body: JSON.stringify({ html: htmlContent, filename }),
+        });
+        
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(err.error || `Error HTTP ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // ── Download ──
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
         document.body.classList.remove('generating-pdf');
+        showToast('PDF descargado ✓');
         
-        showToast('Buscando sesión activa para respaldar...', true);
-        const { data: { session } } = await sb.auth.getSession();
+        // ── Upload to Supabase bucket ──
+        let token = null;
+        if (typeof sb !== 'undefined') {
+          const { data: { session } } = await sb.auth.getSession();
+          if (session) token = session.access_token;
+        }
         
-        if (!session) {
-          showToast('Descargado localmente. Inicia sesión si deseas respaldarlo en la nube.', false);
+        if (!token) {
+          showToast('PDF descargado. Inicia sesión para respaldar en la nube.', false);
           return;
         }
         
-        // Authenticate the sb client using active token to bypass anonymous RLS failures
         if (typeof sb !== 'undefined') {
-          await sb.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: ''
-          });
+          await sb.auth.setSession({ access_token: token, refresh_token: '' });
         }
         
-        showToast('Subiendo copia al bucket "referencias" (carpeta "llamados")...', true);
-        
-        // Upload/overwrite to Supabase references storage bucket
+        showToast('Subiendo copia al bucket "referencias"...', true);
         const { data, error } = await sb.storage
           .from("referencias")
-          .upload(storagePath, blob, {
-            contentType: 'application/pdf',
-            upsert: true
-          });
-          
-        if (error) {
-          throw error;
-        }
+          .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
+        if (error) throw error;
         
         showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
       } catch (err) {
-        element.style.width = originalWidth;
-        element.style.maxWidth = originalMaxWidth;
-        element.style.boxSizing = originalBoxSizing;
-        window.getComputedStyle = originalGetComputedStyle;
-        document.body.classList.remove('generating-pdf');
         console.error('PDF generation error:', err);
-        showToast('Descargado localmente. Error al respaldar: ' + err.message, false);
+        document.body.classList.remove('generating-pdf');
+        showToast('Error: ' + err.message, false);
       }
     }
   </script>
