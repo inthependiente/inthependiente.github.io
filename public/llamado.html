@@ -318,15 +318,22 @@
       showToast('Generando PDF vectorial...', true);
       
       try {
-        // ── Prepare HTML for server-side rendering ──
-        // Clone the .page element and remove no-print elements
+        // ── Set element to PDF width for accurate measurements ──
+        const origWidth = element.style.width;
+        const origMaxW = element.style.maxWidth;
+        const origBox = element.style.boxSizing;
+        element.style.width = '205.9mm';
+        element.style.maxWidth = '205.9mm';
+        element.style.boxSizing = 'border-box';
+        element.offsetHeight; // force reflow
+        
+        // ── Detect orphaned titles and row-count rules ──
+        const pageRect = element.getBoundingClientRect();
+        const pxPerMm = element.offsetWidth / 205.9;
+        
+        // Clone for PDF HTML (after measuring, before restoring)
         const clone = element.cloneNode(true);
         clone.querySelectorAll('.no-print').forEach(el => el.remove());
-        
-        // Set proper width for letter
-        clone.style.width = '205.9mm';
-        clone.style.maxWidth = '205.9mm';
-        clone.style.boxSizing = 'border-box';
         clone.style.margin = '0';
         clone.style.boxShadow = 'none';
         
@@ -335,9 +342,10 @@
           .map(s => s.innerHTML)
           .join('\n');
         
-        // ── Detect orphaned titles and row-count rules ──
-        const pageRect = element.getBoundingClientRect();
-        const pxPerMm = element.offsetWidth / 205.9;
+        // Restore original element width
+        element.style.width = origWidth;
+        element.style.maxWidth = origMaxW;
+        element.style.boxSizing = origBox;
         const pageH = 269.4;
         
         function mmPos(el) {
