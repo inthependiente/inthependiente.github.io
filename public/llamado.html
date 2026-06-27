@@ -356,8 +356,10 @@
         const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
         
         for (const sec of sectionsToCheck) {
+          const secPos = mmPos(sec);
+          
           if (sec === pdrSection) {
-            // PDR: if fewer than 3 rows fit in remaining space → page break
+            // PDR: if <= 3 rows fit in remaining space after title → page break
             const pdrTitle = sec.querySelector('.bg-neutral-600.font-bold');
             if (!pdrTitle) continue;
             const tPos = mmPos(pdrTitle);
@@ -379,14 +381,9 @@
               extraCSS.push('.pdf-break-section { page-break-before: always; }');
             }
           } else {
-            // Other sections: orphaned title → page break
-            const titleEl = sec.querySelector('.bg-neutral-600.font-bold');
-            if (!titleEl) continue;
-            const firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div, #crew-container .grid-cols-14');
-            if (!firstContent) continue;
-            const tPos = mmPos(titleEl);
-            const cPos = mmPos(firstContent);
-            if (Math.floor(cPos.top / pageH) > Math.floor(tPos.bottom / pageH)) {
+            // Cliente/Agencia, Talento, Crew: if section overflows the page → page break
+            const pageEnd = (Math.floor(secPos.top / pageH) + 1) * pageH;
+            if (secPos.bottom > pageEnd) {
               sec.classList.add('pdf-break-section');
               extraCSS.push('.pdf-break-section { page-break-before: always; }');
             }
