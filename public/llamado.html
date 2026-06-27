@@ -306,7 +306,11 @@
       const element = document.querySelector('.page');
       const docTitle = document.title || 'Llamado';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
-      const filename = `${safeTitle}.pdf`;
+      
+      // Obtener el d_o_d desde el DOM (ya cargado desde la tabla llamados)
+      const dodEl = document.getElementById('hdr-dia');
+      const dod = dodEl ? dodEl.textContent.trim() : '';
+      const filename = dod ? `${safeTitle} - ${dod}.pdf` : `${safeTitle}.pdf`;
       
       const cleanStorageName = filename
         .normalize("NFD")
