@@ -331,21 +331,6 @@
         const pageRect = element.getBoundingClientRect();
         const pxPerMm = element.offsetWidth / 205.9;
         
-        // Clone for PDF HTML (after measuring, before restoring)
-        const clone = element.cloneNode(true);
-        clone.querySelectorAll('.no-print').forEach(el => el.remove());
-        clone.style.margin = '0';
-        clone.style.boxShadow = 'none';
-        
-        // Get all <style> tags from the document
-        const styles = Array.from(document.querySelectorAll('style'))
-          .map(s => s.innerHTML)
-          .join('\n');
-        
-        // Restore original element width
-        element.style.width = origWidth;
-        element.style.maxWidth = origMaxW;
-        element.style.boxSizing = origBox;
         const pageH = 269.4;
         
         function mmPos(el) {
@@ -357,11 +342,11 @@
           };
         }
         
-        // Determine page breaks before rendering
-        const extraCSS = [];
+        // ── Determine page breaks before rendering ──
         const allSections = Array.from(document.querySelectorAll('.mb-1\\.5'));
         const sectionsToCheck = allSections.slice(2); // skip notas and cronograma
         const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
+        const sectionsToBreak = [];
         
         for (const sec of sectionsToCheck) {
           const secPos = mmPos(sec);
@@ -384,22 +369,44 @@
               used += rh;
               fitCount++;
             }
-            if (fitCount < 3) {
-              sec.classList.add('pdf-break-section');
-              extraCSS.push('.pdf-break-section { page-break-before: always; }');
-            }
+            if (fitCount < 3) sectionsToBreak.push(sec);
           } else {
             // Cliente/Agencia, Talento, Crew: if section overflows the page → page break
             const pageEnd = (Math.floor(secPos.top / pageH) + 1) * pageH;
-            if (secPos.bottom > pageEnd) {
-              sec.classList.add('pdf-break-section');
-              extraCSS.push('.pdf-break-section { page-break-before: always; }');
-            }
+            if (secPos.bottom > pageEnd) sectionsToBreak.push(sec);
           }
         }
         
-        // PDR rows: avoid splitting individual rows
-        extraCSS.push('#tbody-pdr tr { page-break-inside: avoid; }');
+        // Restore original element width (before cloning)
+        element.style.width = origWidth;
+        element.style.maxWidth = origMaxW;
+        element.style.boxSizing = origBox;
+        
+        // ── Clone AFTER page break decisions ──
+        const clone = element.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+        clone.style.margin = '0';
+        clone.style.boxShadow = 'none';
+        
+        // Add page-break classes to the CLONE (not the original)
+        const breakCSS = [];
+        for (const sec of sectionsToBreak) {
+          // Find corresponding section in clone by index
+          const idx = allSections.indexOf(sec);
+          if (idx >= 0) {
+            const cloneSections = clone.querySelectorAll('.mb-1\\.5');
+            if (cloneSections[idx]) {
+              cloneSections[idx].style.pageBreakBefore = 'always';
+            }
+          }
+        }
+        // PDR rows: avoid splitting
+        breakCSS.push('#tbody-pdr tr { page-break-inside: avoid; }');
+        
+        // Get all <style> tags from the document
+        const styles = Array.from(document.querySelectorAll('style'))
+          .map(s => s.innerHTML)
+          .join('\n');
         
         // Build complete standalone HTML for Puppeteer
         const htmlContent = `<!DOCTYPE html>
@@ -411,9 +418,9 @@
     @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
     ${styles}
     @page { size: letter; margin: 5mm; }
-    html, body { margin: 0; padding: 0; background: white; width: 215.9mm; }
+    html, body { margin: 0; padding: 0; background: white; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    ${extraCSS.join('\n')}
+    ${breakCSS.join('\n')}
   </style>
 </head>
 <body>
