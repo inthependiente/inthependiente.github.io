@@ -1122,7 +1122,7 @@ async function loadTalento() {
         ${horaEditable('talento', r.id, 'en_set', r.en_set, `talset-${r.id}`)}
       </td>
       <td class="border border-gray-200 px-1 py-[2px]">
-        ${editableSpan('talento', r.id, 'notes', r.notas||'', `tal-not-${r.id}`)}
+        ${editableSpan('talento', r.id, 'notas', r.notas||'', `tal-not-${r.id}`)}
       </td>
       <td class="border border-gray-200 px-1 py-[2px] text-center">
         ${badgeWStatus(r.w_status, r.id, r.id)}
