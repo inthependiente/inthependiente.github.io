@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
+const BROWSERLESS_TOKEN = "2UmKLTSZ47WQhuNdc82d1cfa63f1a34659a2f6d1f89767351";
+const BROWSERLESS_WS = `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`;
+
 interface RequestBody {
   html: string;
   filename?: string;
@@ -28,25 +31,20 @@ serve(async (req) => {
       );
     }
 
-    // Launch headless Chromium
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
+    // Connect to Browserless.io cloud Chrome
+    const browser = await puppeteer.connect({
+      browserWSEndpoint: BROWSERLESS_WS,
     });
 
     const page = await browser.newPage();
 
-    // Set content and wait for fonts/images to load
+    // Set content and wait for fonts/images/Tailwind to load
     await page.setContent(body.html, {
       waitUntil: "networkidle0",
     });
 
-    await page.waitForNetworkIdle({ idleTime: 500 });
+    // Extra wait for Tailwind CDN to process classes
+    await new Promise(r => setTimeout(r, 1500));
 
     // Generate PDF with print CSS respected
     const pdf = await page.pdf({
