@@ -388,6 +388,32 @@
         clone.style.margin = '0';
         clone.style.boxShadow = 'none';
         
+        // ── Compress images to avoid bloated PDF ──
+        async function compressImage(img) {
+          return new Promise((resolve) => {
+            if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const image = new Image();
+            image.crossOrigin = 'anonymous';
+            image.onload = () => {
+              const MAX_W = 800;
+              let w = image.naturalWidth;
+              let h = image.naturalHeight;
+              if (w > MAX_W) { h = h * (MAX_W / w); w = MAX_W; }
+              canvas.width = w;
+              canvas.height = h;
+              ctx.drawImage(image, 0, 0, w, h);
+              img.src = canvas.toDataURL('image/jpeg', 0.7);
+              resolve();
+            };
+            image.onerror = () => resolve();
+            image.src = img.src;
+          });
+        }
+        const images = Array.from(clone.querySelectorAll('img'));
+        if (images.length > 0) await Promise.all(images.map(compressImage));
+        
         // Add page-break classes to the CLONE (not the original)
         const breakCSS = [];
         for (const sec of sectionsToBreak) {
