@@ -1008,7 +1008,7 @@ async function loadClima(lat, lng, fechaStr) {
     const longitude = (lng !== undefined && lng !== null) ? lng : -70.6693;
     const timezone = 'auto';
 
-    const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 7,
+    const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 16,
       daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' });
     const dataFc = await (await fetch(`https://api.open-meteo.com/v1/forecast?${params}`)).json();
     const idx = dataFc.daily.time.findIndex(t => t === fechaISO);
