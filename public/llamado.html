@@ -382,7 +382,7 @@
             // Other sections: orphaned title → page break
             const titleEl = sec.querySelector('.bg-neutral-600.font-bold');
             if (!titleEl) continue;
-            const firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div');
+            const firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div, #crew-container > div > div > div.grid');
             if (!firstContent) continue;
             const tPos = mmPos(titleEl);
             const cPos = mmPos(firstContent);
