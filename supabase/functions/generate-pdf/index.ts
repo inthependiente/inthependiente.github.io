@@ -34,11 +34,11 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         html: body.html,
+        waitFor: 500,
         options: {
           format: "Letter",
           margin: { top: "5mm", right: "5mm", bottom: "5mm", left: "5mm" },
           printBackground: true,
-          waitFor: 500,
         },
       }),
     });
