@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const BROWSERLESS_TOKEN = "2UmKLTSZ47WQhuNdc82d1cfa63f1a34659a2f6d1f89767351";
-const BROWSERLESS_WS = `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`;
+const BROWSERLESS_API = "https://chrome.browserless.io/pdf";
 
 interface RequestBody {
   html: string;
@@ -10,7 +9,6 @@ interface RequestBody {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
@@ -23,40 +21,34 @@ serve(async (req) => {
 
   try {
     const body: RequestBody = await req.json();
-
     if (!body.html) {
-      return new Response(
-        JSON.stringify({ error: "Missing 'html' field in request body" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing 'html' field" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
     }
 
-    // Connect to Browserless.io cloud Chrome
-    const browser = await puppeteer.connect({
-      browserWSEndpoint: BROWSERLESS_WS,
+    // Forward HTML to Browserless.io PDF API (no puppeteer needed)
+    const response = await fetch(`${BROWSERLESS_API}?token=${BROWSERLESS_TOKEN}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        html: body.html,
+        options: {
+          format: "Letter",
+          margin: { top: "5mm", right: "5mm", bottom: "5mm", left: "5mm" },
+          printBackground: true,
+          waitFor: 500,
+        },
+      }),
     });
 
-    const page = await browser.newPage();
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Browserless error (${response.status}): ${text}`);
+    }
 
-    // Set content and render as fast as possible
-    await page.setContent(body.html, {
-      waitUntil: "load",
-      timeout: 15000,
-    });
-
-    // Small safety wait for layout
-    await new Promise(r => setTimeout(r, 500));
-
-    // Generate PDF with print CSS respected
-    const pdf = await page.pdf({
-      format: "letter",
-      margin: { top: "5mm", right: "5mm", bottom: "5mm", left: "5mm" },
-      printBackground: true,
-      preferCSSPageSize: false,
-    });
-
-    await browser.close();
-
+    const pdf = await response.arrayBuffer();
     const filename = body.filename || "documento.pdf";
 
     return new Response(pdf, {
@@ -65,20 +57,13 @@ serve(async (req) => {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Access-Control-Allow-Origin": "*",
-        "Content-Length": pdf.length.toString(),
       },
     });
   } catch (error) {
     console.error("PDF generation error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message || "Internal error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
   }
 });
