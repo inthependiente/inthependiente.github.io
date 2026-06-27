@@ -403,12 +403,11 @@
         // PDR rows: avoid splitting
         breakCSS.push('#tbody-pdr tr { page-break-inside: avoid; }');
         
-        // Get all <style> tags from the document
-        const styles = Array.from(document.querySelectorAll('style'))
-          .map(s => s.innerHTML)
-          .join('\n');
+        // Get ONLY our custom styles (first <style> tag), not Tailwind's
+        const customStyles = document.querySelector('style')?.innerHTML || '';
         
         // Build complete standalone HTML for Puppeteer
+        // Tailwind CDN processes the clone and generates all needed classes
         const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -417,7 +416,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
-    ${styles}
+    ${customStyles}
     @page { size: letter; margin: 5mm; }
     html, body { margin: 0; padding: 0; background: white; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
