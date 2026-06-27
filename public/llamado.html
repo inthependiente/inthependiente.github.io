@@ -335,6 +335,67 @@
           .map(s => s.innerHTML)
           .join('\n');
         
+        // ── Detect orphaned titles and row-count rules ──
+        const pageRect = element.getBoundingClientRect();
+        const pxPerMm = element.offsetWidth / 205.9;
+        const pageH = 269.4;
+        
+        function mmPos(el) {
+          const r = el.getBoundingClientRect();
+          return {
+            top: (r.top - pageRect.top) / pxPerMm,
+            bottom: (r.bottom - pageRect.top) / pxPerMm,
+            height: (r.bottom - r.top) / pxPerMm
+          };
+        }
+        
+        // Determine page breaks before rendering
+        const extraCSS = [];
+        const allSections = Array.from(document.querySelectorAll('.mb-1\\.5'));
+        const sectionsToCheck = allSections.slice(2); // skip notas and cronograma
+        const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
+        
+        for (const sec of sectionsToCheck) {
+          if (sec === pdrSection) {
+            // PDR: if fewer than 3 rows fit in remaining space → page break
+            const pdrTitle = sec.querySelector('.bg-neutral-600.font-bold');
+            if (!pdrTitle) continue;
+            const tPos = mmPos(pdrTitle);
+            const pageEnd = (Math.floor(tPos.bottom / pageH) + 1) * pageH;
+            const remaining = pageEnd - tPos.bottom;
+            
+            const rows = sec.querySelectorAll('#tbody-pdr tr');
+            const thead = sec.querySelector('thead');
+            let used = thead ? mmPos(thead).height : 0;
+            let fitCount = 0;
+            for (const row of rows) {
+              const rh = mmPos(row).height;
+              if (used + rh > remaining) break;
+              used += rh;
+              fitCount++;
+            }
+            if (fitCount < 3) {
+              sec.classList.add('pdf-break-section');
+              extraCSS.push('.pdf-break-section { page-break-before: always; }');
+            }
+          } else {
+            // Other sections: orphaned title → page break
+            const titleEl = sec.querySelector('.bg-neutral-600.font-bold');
+            if (!titleEl) continue;
+            const firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div');
+            if (!firstContent) continue;
+            const tPos = mmPos(titleEl);
+            const cPos = mmPos(firstContent);
+            if (Math.floor(cPos.top / pageH) > Math.floor(tPos.bottom / pageH)) {
+              sec.classList.add('pdf-break-section');
+              extraCSS.push('.pdf-break-section { page-break-before: always; }');
+            }
+          }
+        }
+        
+        // PDR rows: avoid splitting individual rows
+        extraCSS.push('#tbody-pdr tr { page-break-inside: avoid; }');
+        
         // Build complete standalone HTML for Puppeteer
         const htmlContent = `<!DOCTYPE html>
 <html lang="es">
@@ -347,9 +408,7 @@
     @page { size: letter; margin: 5mm; }
     html, body { margin: 0; padding: 0; background: white; width: 215.9mm; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    tr { page-break-inside: avoid; }
-    #lista-cliente > div, #lista-agencia > div { page-break-inside: avoid; }
-    #crew-container > div > div > div.grid { page-break-inside: avoid; }
+    ${extraCSS.join('\n')}
   </style>
 </head>
 <body>
