@@ -703,7 +703,7 @@ function editableSpan(tabla, id, campo, valor, wid, opts = {}) {
   // Si nos pasan un displayFn (como el de la fecha o día), lo usamos, si no, el valor por defecto
   const fallback = opts.allowEmpty ? '' : '<span class="no-print select-none text-neutral-300">—</span>';
   const display = opts.displayFn ? opts.displayFn() : (valor || fallback);
-  const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded px-0.5';
+  const cls     = opts.cls || 'cursor-pointer hover:bg-neutral-100 rounded';
   
   return `<span id="ed-${wid}" class="${cls}"
     onclick="${userSession ? `activarEdit('${tabla}',${id},'${campo}','${(valor||'').toString().replace(/'/g,"\\'")}','${wid}')` : ''}"
