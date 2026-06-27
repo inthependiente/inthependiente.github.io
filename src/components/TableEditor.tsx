@@ -1238,16 +1238,65 @@ export default function TableEditor({
                             {lookups.crew.find((c) => c.id === row.crew_id)?.departamento || "Cámara"}
                           </span>
                         </td>
-                        <td className="p-3.5 text-xs font-semibold text-neutral-700">
-                          {row.prioridad !== null && row.prioridad !== undefined ? row.prioridad : "—"}
-                        </td>
-                        <td className="p-3.5 text-xs text-neutral-600 max-w-[140px] truncate">
-                          {row.notas || <span className="text-neutral-400 italic">—</span>}
+                        <td className="p-3.5 text-xs">
+                          <input
+                            key={`${row.id}_${row.prioridad ?? ""}`}
+                            type="number"
+                            defaultValue={row.prioridad === undefined || row.prioridad === null ? "" : row.prioridad}
+                            onBlur={(e) => {
+                              const val = e.target.value === "" ? null : Number(e.target.value);
+                              if (val !== row.prioridad) {
+                                handleInlineUpdate(row.id, "prioridad", val);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-16 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            placeholder="—"
+                          />
                         </td>
                         <td className="p-3.5 text-xs">
-                          <span className="font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">
-                            {row.hora_llamado || <span className="text-neutral-400 italic">—</span>}
-                          </span>
+                          <input
+                            key={`${row.id}_${row.notas ?? ""}`}
+                            type="text"
+                            defaultValue={row.notas || ""}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              if (val !== (row.notas || "")) {
+                                handleInlineUpdate(row.id, "notas", val);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-full max-w-[140px] px-1.5 py-0.5 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            placeholder="—"
+                          />
+                        </td>
+                        <td className="p-3.5 text-xs">
+                          <input
+                            key={`${row.id}_${row.hora_llamado ?? ""}`}
+                            type="text"
+                            defaultValue={row.hora_llamado || ""}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              if (val !== (row.hora_llamado || "")) {
+                                handleInlineUpdate(row.id, "hora_llamado", val);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            className="w-20 px-1.5 py-0.5 text-center font-mono font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            placeholder="—"
+                          />
                         </td>
                       </>
                     )}
