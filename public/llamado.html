@@ -301,15 +301,13 @@
       document.getElementById('btn-ver-pdr').style.display = 'none';
     }
 
-    // Export PDF dynamic function
+    // Export PDF — via Supabase Edge Function with Puppeteer
     async function exportToPDF() {
-      document.body.classList.add('generating-pdf');
       const element = document.querySelector('.page');
       const docTitle = document.title || 'Llamado';
       const safeTitle = docTitle.replace(/[\\/:*?"<>|]/g, "_");
       const filename = `${safeTitle}.pdf`;
       
-      // Sanitize the storage path specifically for Supabase compatible keys (letters, digits, dashes, underscores)
       const cleanStorageName = filename
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -317,222 +315,105 @@
         .replace(/_+/g, "_");
       const storagePath = `llamados/${cleanStorageName}`;
       
-      showToast('Generando archivo PDF...', true);
-      
-      // Temporarily scale page size to perfectly fit Letter sheet printable width (215.9mm - 10mm margins = 205.9mm)
-      const originalWidth = element.style.width;
-      const originalMaxWidth = element.style.maxWidth;
-      const originalBoxSizing = element.style.boxSizing;
-      element.style.width = '205.9mm';
-      element.style.maxWidth = '205.9mm';
-      element.style.boxSizing = 'border-box';
-      
-      // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
-      element.offsetHeight;
-      
-      // Clean up any leftover classes from previous exports
-      document.querySelectorAll('.pdf-break-section, .pdf-break-row').forEach(el => {
-        el.classList.remove('pdf-break-section', 'pdf-break-row');
-      });
-      
-      // ── Detect orphaned titles and row splits ──
-      const pageRect = element.getBoundingClientRect();
-      const pxPerMm = element.offsetWidth / 205.9;
-      const pageH = 269.4; // letter printable height (279.4 - 2×5mm margins)
-      
-      function mmPos(el) {
-        const r = el.getBoundingClientRect();
-        return {
-          top: (r.top - pageRect.top) / pxPerMm,
-          bottom: (r.bottom - pageRect.top) / pxPerMm,
-          height: (r.bottom - r.top) / pxPerMm
-        };
-      }
-      
-      const breakSelectors = [];
-      const sectionsToCheck = Array.from(
-        element.querySelectorAll(':scope > .mb-1\\.5')
-      ).slice(2); // skip notas band and cronograma
-      
-      // ── Pass 1: Orphaned section titles ──
-      for (const sec of sectionsToCheck) {
-        const titleEl = sec.querySelector('.bg-neutral-600.font-bold');
-        if (!titleEl) continue;
-        
-        // Find first content row after the title
-        let firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div');
-        if (!firstContent) continue;
-        
-        const tPos = mmPos(titleEl);
-        const cPos = mmPos(firstContent);
-        const titlePage = Math.floor(tPos.bottom / pageH);
-        const contentPage = Math.floor(cPos.top / pageH);
-        
-        if (contentPage > titlePage) {
-          // Title is orphaned → add page break before section
-          sec.classList.add('pdf-break-section');
-          breakSelectors.push('.pdf-break-section');
-        }
-      }
-      
-      // ── Pass 2: PDR row splits ──
-      const pdrRows = document.querySelectorAll('#tbody-pdr tr');
-      if (pdrRows.length) {
-        const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
-        const pdrDomPos = mmPos(pdrSection);
-        const pdrHasBreak = pdrSection.classList.contains('pdf-break-section');
-        // Effective start in PDF (shifts by one page if section has a break)
-        const pdrPdfTop = pdrHasBreak
-          ? Math.ceil(pdrDomPos.top / pageH) * pageH
-          : pdrDomPos.top;
-        
-        for (const row of pdrRows) {
-          const rp = mmPos(row);
-          if (rp.height < 0.5) continue;
-          
-          // Row position in the PDF (relative to PDR section)
-          const rowPdfTop = pdrPdfTop + (rp.top - pdrDomPos.top);
-          const rowPdfBottom = rowPdfTop + rp.height;
-          const rowPage = Math.floor(rowPdfTop / pageH);
-          const rowPageEnd = (rowPage + 1) * pageH;
-          
-          if (rowPdfBottom > rowPageEnd) {
-            row.classList.add('pdf-break-row');
-            breakSelectors.push('.pdf-break-row');
-          }
-        }
-      }
-      
-      const pageBreakConfig = breakSelectors.length
-        ? { mode: ['specify', 'css', 'legacy'], before: [...new Set(breakSelectors)].join(', ') }
-        : undefined;
-      
-      const opt = {
-        margin:       5,
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-      };
-      if (pageBreakConfig) opt.pagebreak = pageBreakConfig;
-      
-      // Patch getComputedStyle to bypass the oklch parse error of html2canvas
-      const originalGetComputedStyle = window.getComputedStyle;
-      
-      function oklchToRgb(l, c, h, a = 1) {
-        const hRad = (h * Math.PI) / 180;
-        const L = l + 0.3963377774 * c * Math.cos(hRad) + 0.2158037573 * c * Math.sin(hRad);
-        const M = l - 0.1055613458 * c * Math.cos(hRad) - 0.0638541728 * c * Math.sin(hRad);
-        const S = l - 0.0894841775 * c * Math.cos(hRad) - 1.2914855480 * c * Math.sin(hRad);
-        
-        const l_ = L * L * L;
-        const m_ = M * M * M;
-        const s_ = S * S * S;
-        
-        let r = +4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_;
-        let g = -1.2684380046 * l_ + 2.5090391104 * m_ - 0.2406011058 * s_;
-        let b = -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076186100 * s_;
-        
-        const fn = (x) => x > 0.0031308 ? 1.055 * Math.pow(x, 1/2.4) - 0.055 : 12.92 * x;
-        
-        r = Math.round(Math.max(0, Math.min(1, fn(r))) * 255);
-        g = Math.round(Math.max(0, Math.min(1, fn(g))) * 255);
-        b = Math.round(Math.max(0, Math.min(1, fn(b))) * 255);
-        
-        return a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
-      }
-
-      function replaceOklchWithRgb(str) {
-        if (typeof str !== 'string' || !str.includes('oklch')) return str;
-        return str.replace(/oklch\(([-+\d.%]+)\s+([-+\d.%]+)\s+([-+\d.%]+)(?:\s*\/\s*([-+\d.%]+))?\)/g, (match, lStr, cStr, hStr, aStr) => {
-          const l = lStr.endsWith('%') ? parseFloat(lStr) / 100 : parseFloat(lStr);
-          const c = cStr.endsWith('%') ? parseFloat(cStr) / 100 : parseFloat(cStr);
-          const h = hStr.endsWith('%') ? (parseFloat(hStr) * 3.6) : parseFloat(hStr);
-          let a = 1;
-          if (aStr) {
-            a = aStr.endsWith('%') ? parseFloat(aStr) / 100 : parseFloat(aStr);
-          }
-          return oklchToRgb(l, c, h, a);
-        });
-      }
-
-      window.getComputedStyle = function(el, pseudoElt) {
-        const style = originalGetComputedStyle(el, pseudoElt);
-        return new Proxy(style, {
-          get(target, prop) {
-            const val = target[prop];
-            if (typeof val === 'function') {
-              if (prop === 'getPropertyValue') {
-                return function(key) {
-                  const raw = target.getPropertyValue(key);
-                  return replaceOklchWithRgb(raw);
-                }
-              }
-              return val.bind(target);
-            }
-            return replaceOklchWithRgb(val);
-          }
-        });
-      };
+      showToast('Generando PDF vectorial...', true);
       
       try {
-        // Generate and download locally
-        const worker = html2pdf().set(opt).from(element).toPdf();
-        const blob = await worker.output('blob');
-        await worker.save();
+        // ── Prepare HTML for server-side rendering ──
+        // Clone the .page element and remove no-print elements
+        const clone = element.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
         
-        // Restore elements width & computed styles
-        element.style.width = originalWidth;
-        element.style.maxWidth = originalMaxWidth;
-        element.style.boxSizing = originalBoxSizing;
-        window.getComputedStyle = originalGetComputedStyle;
-        document.body.classList.remove('generating-pdf');
-        // Remove dynamic page break classes
-        // Handle upload session checking
+        // Set proper width for letter
+        clone.style.width = '205.9mm';
+        clone.style.maxWidth = '205.9mm';
+        clone.style.boxSizing = 'border-box';
+        clone.style.margin = '0';
+        clone.style.boxShadow = 'none';
+        
+        // Get all <style> tags from the document
+        const styles = Array.from(document.querySelectorAll('style'))
+          .map(s => s.innerHTML)
+          .join('\n');
+        
+        // Build complete standalone HTML for Puppeteer
+        const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    ${styles}
+    @page { size: letter; margin: 5mm; }
+    html, body { margin: 0; padding: 0; background: white; width: 215.9mm; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr { page-break-inside: avoid; }
+    #lista-cliente > div, #lista-agencia > div { page-break-inside: avoid; }
+    #crew-container > div > div > div.grid { page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+  ${clone.outerHTML}
+</body>
+</html>`;
+        
+        // ── Call Supabase Edge Function ──
+        const functionUrl = `${SUPABASE_URL}/functions/v1/generate-pdf`;
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+          },
+          body: JSON.stringify({ html: htmlContent, filename }),
+        });
+        
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(err.error || `Error HTTP ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // ── Download ──
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('PDF descargado ✓');
+        
+        // ── Upload to Supabase bucket ──
         let token = null;
         if (typeof userSession !== 'undefined' && userSession) {
           token = userSession.access_token;
         } else if (typeof sb !== 'undefined') {
           const { data: { session } } = await sb.auth.getSession();
-          if (session) {
-            token = session.access_token;
-          }
+          if (session) token = session.access_token;
         }
         
         if (!token) {
-          showToast('Descargado localmente. Inicia sesión si deseas respaldarlo en la nube.', false);
+          showToast('PDF descargado. Inicia sesión para respaldar en la nube.', false);
           return;
         }
         
-        // Authenticate the sb client using active token to bypass anonymous RLS failures
         if (typeof sb !== 'undefined') {
-          await sb.auth.setSession({
-            access_token: token,
-            refresh_token: ''
-          });
+          await sb.auth.setSession({ access_token: token, refresh_token: '' });
         }
         
-        showToast('Subiendo copia al bucket "referencias" (carpeta "llamados")...', true);
-        
-        // Upload/overwrite to Supabase references storage bucket
+        showToast('Subiendo copia al bucket "referencias"...', true);
         const { data, error } = await sb.storage
           .from("referencias")
-          .upload(storagePath, blob, {
-            contentType: 'application/pdf',
-            upsert: true
-          });
-          
-        if (error) {
-          throw error;
-        }
+          .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
+        if (error) throw error;
         
         showToast('¡PDF guardado en el bucket (carpeta llamados)! ✓');
       } catch (err) {
-        element.style.width = originalWidth;
-        element.style.maxWidth = originalMaxWidth;
-        element.style.boxSizing = originalBoxSizing;
-        window.getComputedStyle = originalGetComputedStyle;
-        document.body.classList.remove('generating-pdf');
         console.error('PDF generation error:', err);
         showToast('Error: ' + err.message, false);
       }
