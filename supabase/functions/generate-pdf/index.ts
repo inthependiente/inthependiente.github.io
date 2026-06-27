@@ -38,13 +38,14 @@ serve(async (req) => {
 
     const page = await browser.newPage();
 
-    // Set content and wait for fonts/images/Tailwind to load
+    // Set content and render as fast as possible
     await page.setContent(body.html, {
-      waitUntil: "networkidle0",
+      waitUntil: "load",
+      timeout: 15000,
     });
 
-    // Extra wait for Tailwind CDN to process classes
-    await new Promise(r => setTimeout(r, 1500));
+    // Small safety wait for layout
+    await new Promise(r => setTimeout(r, 500));
 
     // Generate PDF with print CSS respected
     const pdf = await page.pdf({
