@@ -123,7 +123,7 @@
             <span class="font-black text-[60px] uppercase mb-2" id="hdr-llamado">—</span>
           </div>
           <div class="h-5 flex items-center justify-center">
-            <span class="font-normal text-[16px] uppercase mb-2">EN LOCACIÓN</span>
+            <span class="font-normal text-[16px] uppercase mb-2" id="hdr-lugar-llamado">EN LOCACIÓN</span>
           </div>
         </div>
       </div>
@@ -977,6 +977,24 @@ async function loadLlamado() {
     }
   });
 
+  // ── lugar_llamado (reemplaza "EN LOCACIÓN") ──
+  const lugarEl = document.getElementById('hdr-lugar-llamado');
+  if (lugarEl) {
+    const raw = l.lugar_llamado || '';
+    lugarEl.innerHTML = editableSpan('llamados', l.id, 'lugar_llamado', raw, 'hdr-lugar', {
+      displayFn: () => raw || 'EN LOCACIÓN'
+    });
+  }
+
+  // ── lluvia_c (complemento de lluvia) ──
+  const lluviaCEl = document.getElementById('hdr-lluvia-c');
+  if (lluviaCEl) {
+    const raw = l.lluvia_c || '';
+    lluviaCEl.innerHTML = editableSpan('llamados', l.id, 'lluvia_c', raw, 'hdr-lluvia-c', {
+      displayFn: () => raw || '-'
+    });
+  }
+
   // Proyectos (solo lectura en el llamado)
   set('hdr-productora',     p.productora);
   set('hdr-campana',        p.campana);
@@ -1136,8 +1154,22 @@ async function loadTalento() {
 // ═══════════════════════════════════════════════════
 async function loadCrew() {
   const rows = await fetchSupabase('crew_llamado', { llamado_id: LLAMADO_ID }, 'orden',
-    'id, crew_id, orden, prioridad, crew(id, departamento, cargo, nombre, notas, celular, llamado_hora)');
-  const flatRows = rows.map(r => ({ _cl_id: r.id, prioridad: r.prioridad, ...(r.crew||{}) }));
+    'id, crew_id, orden, prioridad, notas, hora_llamado, crew(id, departamento, cargo, nombre, celular)');
+  const flatRows = rows.map(r => {
+    const c = r.crew || {};
+    // Priorizar valores de crew_llamado sobre crew
+    return {
+      _cl_id: r.id,
+      _crew_id: c.id,
+      prioridad: r.prioridad,
+      notas: r.notas || c.notas || '',
+      hora_llamado: r.hora_llamado || c.llamado_hora || '',
+      departamento: c.departamento,
+      cargo: c.cargo,
+      nombre: c.nombre,
+      celular: c.celular,
+    };
+  });
   crewRows = flatRows;
 
   const container = document.getElementById('crew-container');
@@ -1168,16 +1200,17 @@ async function loadCrew() {
 
   function renderDept(deptName) {
     return `<div class="mb-0">
-      <div class="grid grid-cols-2 bg-neutral-300 font-condensed font-bold uppercase tracking-wide px-2 py-[2px] items-center">
+      <div class="grid grid-cols-3 bg-neutral-300 font-condensed font-bold uppercase tracking-wide px-2 py-[2px] items-center">
         <span class="text-[12px]">${deptName}</span>
+        <span class="font-normal text-center">Notas</span>
         <span class="font-normal text-right">Llamado</span>
       </div>
       ${depts[deptName].map((r, i) => `
         <div class="grid grid-cols-14 px-2 ${rowBg(i)} border-b border-gray-100 items-center">
           <span class="text-neutral-500 col-span-4">${r.cargo ? r.cargo+':' : ''}</span>
-          <span class="font-semibold col-span-4">${editableSpan('crew', r.id, 'nombre', r.nombre||'', `crew-nom-${r.id}`)}</span>
-          <span class="italic text-neutral-500 col-span-4 text-red-500">${editableSpan('crew', r.id, 'notas', r.notas||'', `crew-not-${r.id}`)}</span>
-          <span class="font-condensed font-bold text-[12px] text-right col-span-2">${horaEditable('crew', r.id, 'llamado_hora', r.llamado_hora, `crew-${r.id}`)}</span>
+          <span class="font-semibold col-span-3">${r.nombre || '—'}</span>
+          <span class="italic text-neutral-500 col-span-4 text-red-500">${editableSpan('crew_llamado', r._cl_id, 'notas', r.notas||'', `cl-not-${r._cl_id}`)}</span>
+          <span class="font-condensed font-bold text-[12px] text-right col-span-3">${horaEditable('crew_llamado', r._cl_id, 'hora_llamado', r.hora_llamado||'', `cl-${r._cl_id}`)}</span>
         </div>`).join('')}
           
     </div>`;

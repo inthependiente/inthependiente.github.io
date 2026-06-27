@@ -17,6 +17,8 @@ export interface Llamados {
   d_o_d?: string;
   fecha: string;
   llamado_hora?: string;
+  lugar_llamado?: string;
+  lluvia_c?: string;
   ciudad_id?: number | null;
   desayuno?: string;
   almuerzo?: string;
@@ -66,6 +68,8 @@ export interface CrewLlamado {
   crew_id: number;
   orden?: number;
   prioridad?: number;
+  notas?: string;
+  hora_llamado?: string;
 }
 
 export interface ClienteAgencia {

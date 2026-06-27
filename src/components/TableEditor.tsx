@@ -892,6 +892,7 @@ export default function TableEditor({
                       <th className="p-3.5">Fecha / D.O.D</th>
                       <th className="p-3.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Hora / Ciudad</th>
                       <th className="p-3.5">Comidas</th>
+                      <th className="p-3.5">Lugar / Lluvia</th>
                     </>
                   )}
 
@@ -928,6 +929,8 @@ export default function TableEditor({
                       <th className="p-3.5">Personal del Crew</th>
                       <th className="p-3.5">Departamento</th>
                       <th className="p-3.5">Prioridad</th>
+                      <th className="p-3.5">Notas</th>
+                      <th className="p-3.5">Hora Llamado</th>
                     </>
                   )}
 
@@ -1116,6 +1119,10 @@ export default function TableEditor({
                           <div>☕ Desayuno: <span className="font-bold">{row.desayuno || "No especifica"}</span></div>
                           <div>🍽️ Almuerzo: <span className="font-bold">{row.almuerzo || "No especifica"}</span></div>
                         </td>
+                        <td className="p-3.5 text-xs">
+                          <div className="font-semibold text-neutral-700">📍 {row.lugar_llamado || <span className="text-neutral-400 italic">sin especificar</span>}</div>
+                          <div className="text-neutral-500">🌧️ {row.lluvia_c || <span className="text-neutral-400 italic">—</span>}</div>
+                        </td>
                       </>
                     )}
 
@@ -1233,6 +1240,14 @@ export default function TableEditor({
                         </td>
                         <td className="p-3.5 text-xs font-semibold text-neutral-700">
                           {row.prioridad !== null && row.prioridad !== undefined ? row.prioridad : "—"}
+                        </td>
+                        <td className="p-3.5 text-xs text-neutral-600 max-w-[140px] truncate">
+                          {row.notas || <span className="text-neutral-400 italic">—</span>}
+                        </td>
+                        <td className="p-3.5 text-xs">
+                          <span className="font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">
+                            {row.hora_llamado || <span className="text-neutral-400 italic">—</span>}
+                          </span>
                         </td>
                       </>
                     )}

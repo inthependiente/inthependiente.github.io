@@ -647,6 +647,28 @@ export default function FormModal({
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Lugar del Llamado</label>
+                  <input
+                    type="text"
+                    name="lugar_llamado"
+                    value={formValues.lugar_llamado || ""}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                    placeholder="Ej: EN LOCACIÓN, EN ESTUDIO"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Complemento Lluvia</label>
+                  <input
+                    type="text"
+                    name="lluvia_c"
+                    value={formValues.lluvia_c || ""}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                    placeholder="Ej: Lluvias aisladas"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Ciudad</label>
                   <select
                     name="ciudad_id"
@@ -1048,6 +1070,28 @@ export default function FormModal({
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                     placeholder="Ej: 1 (Ejecutivo), 2 (Dir)"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Notas (específicas del llamado)</label>
+                  <input
+                    type="text"
+                    name="notas"
+                    value={formValues.notas || ""}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                    placeholder="Ej: Opción vegetariana solo este día"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Hora Llamado (específica del llamado)</label>
+                  <input
+                    type="text"
+                    name="hora_llamado"
+                    value={formValues.hora_llamado || ""}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+                    placeholder="Ej: 07:00"
                   />
                 </div>
               </>
