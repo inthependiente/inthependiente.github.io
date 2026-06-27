@@ -403,8 +403,18 @@
         // PDR rows: avoid splitting
         breakCSS.push('#tbody-pdr tr { page-break-inside: avoid; }');
         
-        // Get ONLY our custom styles (first <style> tag), not Tailwind's
-        const customStyles = document.querySelector('style')?.innerHTML || '';
+        // Get ALL CSS rules from the document (including Tailwind-generated ones)
+        const allCSSRules = [];
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              allCSSRules.push(rule.cssText);
+            }
+          } catch(e) {
+            // Ignore cross-origin stylesheets (like Google Fonts, Tailwind CDN)
+          }
+        }
+        const customStyles = allCSSRules.join('\n');
         
         // Build complete standalone HTML for Puppeteer
         // Tailwind CDN processes the clone and generates all needed classes
@@ -413,9 +423,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
     ${customStyles}
     @page { size: letter; margin: 5mm; }
     html, body { margin: 0; padding: 0; background: white; }
