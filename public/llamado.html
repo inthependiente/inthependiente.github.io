@@ -330,14 +330,91 @@
       // Force immediate layout reflow so getBoundingClientRect uses the new scaled widths
       element.offsetHeight;
       
+      // Clean up any leftover classes from previous exports
+      document.querySelectorAll('.pdf-break-section, .pdf-break-row').forEach(el => {
+        el.classList.remove('pdf-break-section', 'pdf-break-row');
+      });
+      
+      // ── Detect orphaned titles and row splits ──
+      const pageRect = element.getBoundingClientRect();
+      const pxPerMm = element.offsetWidth / 205.9;
+      const pageH = 269.4; // letter printable height (279.4 - 2×5mm margins)
+      
+      function mmPos(el) {
+        const r = el.getBoundingClientRect();
+        return {
+          top: (r.top - pageRect.top) / pxPerMm,
+          bottom: (r.bottom - pageRect.top) / pxPerMm,
+          height: (r.bottom - r.top) / pxPerMm
+        };
+      }
+      
+      const breakSelectors = [];
+      const sectionsToCheck = Array.from(
+        element.querySelectorAll(':scope > .mb-1\\.5')
+      ).slice(2); // skip notas band and cronograma
+      
+      // ── Pass 1: Orphaned section titles ──
+      for (const sec of sectionsToCheck) {
+        const titleEl = sec.querySelector('.bg-neutral-600.font-bold');
+        if (!titleEl) continue;
+        
+        // Find first content row after the title
+        let firstContent = sec.querySelector('tbody tr, #lista-cliente > div, #lista-agencia > div');
+        if (!firstContent) continue;
+        
+        const tPos = mmPos(titleEl);
+        const cPos = mmPos(firstContent);
+        const titlePage = Math.floor(tPos.bottom / pageH);
+        const contentPage = Math.floor(cPos.top / pageH);
+        
+        if (contentPage > titlePage) {
+          // Title is orphaned → add page break before section
+          sec.classList.add('pdf-break-section');
+          breakSelectors.push('.pdf-break-section');
+        }
+      }
+      
+      // ── Pass 2: PDR row splits ──
+      const pdrRows = document.querySelectorAll('#tbody-pdr tr');
+      if (pdrRows.length) {
+        const pdrSection = document.getElementById('plan-de-rodaje-completo-section');
+        const pdrDomPos = mmPos(pdrSection);
+        const pdrHasBreak = pdrSection.classList.contains('pdf-break-section');
+        // Effective start in PDF (shifts by one page if section has a break)
+        const pdrPdfTop = pdrHasBreak
+          ? Math.ceil(pdrDomPos.top / pageH) * pageH
+          : pdrDomPos.top;
+        
+        for (const row of pdrRows) {
+          const rp = mmPos(row);
+          if (rp.height < 0.5) continue;
+          
+          // Row position in the PDF (relative to PDR section)
+          const rowPdfTop = pdrPdfTop + (rp.top - pdrDomPos.top);
+          const rowPdfBottom = rowPdfTop + rp.height;
+          const rowPage = Math.floor(rowPdfTop / pageH);
+          const rowPageEnd = (rowPage + 1) * pageH;
+          
+          if (rowPdfBottom > rowPageEnd) {
+            row.classList.add('pdf-break-row');
+            breakSelectors.push('.pdf-break-row');
+          }
+        }
+      }
+      
+      const pageBreakConfig = breakSelectors.length
+        ? { mode: ['specify', 'css', 'legacy'], before: [...new Set(breakSelectors)].join(', ') }
+        : undefined;
+      
       const opt = {
         margin:       5,
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['specify', 'css', 'legacy'], avoid: ['tr'] }
       };
+      if (pageBreakConfig) opt.pagebreak = pageBreakConfig;
       
       // Patch getComputedStyle to bypass the oklch parse error of html2canvas
       const originalGetComputedStyle = window.getComputedStyle;
