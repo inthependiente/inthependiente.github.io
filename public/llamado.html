@@ -392,6 +392,8 @@
         async function compressImage(img) {
           return new Promise((resolve) => {
             if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
+            // Skip header logos to preserve PNG transparency
+            if (img.id === 'hdr-logo-prod' || img.id === 'hdr-logo-cliente') { resolve(); return; }
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             const image = new Image();
