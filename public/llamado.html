@@ -243,7 +243,7 @@
       </div>
       <table class="w-full border-collapse">
         <thead>
-          <tr class="bg-neutral-400 font-condensed font-bold text-[11px] uppercase">
+          <tr class="bg-neutral-400 font-condensed font-bold text-[12px] uppercase">
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[25px]">Esc</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[30px]">Plano</th>
             <th class="border border-neutral-600 px-1 py-[2px] text-center w-[36px]">Inicio</th>
@@ -1042,27 +1042,27 @@ async function loadCronograma() {
     return `
     <tr class="align-top border-neutral-400 ${rowBg(i)}">
       <td class="border px-1 py-1 content-center">
-        <span class="font-condensed font-semibold text-[11px] block leading-none">
+        <span class="font-condensed font-semibold text-[12px] block leading-none">
           ${editableSpan('escenas', r.id, 'escena', r.escena||'', `esc-escena-${r.id}`)}
         </span>
       </td>
-      <td class="border px-1 py-1 font-condensed font-bold text-[13px] text-center content-center">
+      <td class="border px-1 py-1 font-condensed font-bold text-[14px] text-center content-center">
         ${horaEditable('escenas', r.id, 'hora', r.hora, wId)}
       </td>
-      <td class="border px-1 py-1 leading-none content-center">
+      <td class="border px-1 py-1 leading-tight content-center text-[13px]">
         ${editableSpan('escenas', r.id, 'descripcion', r.descripcion||'', `esc-desc-${r.id}`)}
       </td>
-      <td class="border px-1 py-1 text-center content-center">
+      <td class="border px-1 py-1 text-center content-center text-[12px]">
         ${editableSpan('escenas', r.id, 'cast_nombres', r.cast_nombres||'', `esc-cast-${r.id}`)}
       </td>
       <td class="border px-1 py-1 text-center content-center">${badgeIntExt(r.int_ext)}</td>
       <td class="border px-1 py-1 text-center content-center">${badgeDN(r.d_n)}</td>
-      <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
+      <td class="border px-1 py-1 leading-none content-center text-center font-bold text-[12px]">
         <div>${editableSpan('locaciones', locId, 'locacion', loc.locacion||'', `loc-nom-${r.id}`)}</div>
         <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_loc', loc.direccion_loc||'', `loc-dir-${r.id}`)}</div>
         ${urlEditable('locaciones', locId, 'url_loc', loc.url_loc||'', 'Ubicación', `loc-url-${r.id}`)}
       </td>
-      <td class="border px-1 py-1 leading-tight content-center text-center font-bold text-[12px]">
+      <td class="border px-1 py-1 leading-none content-center text-center font-bold text-[12px]">
         <div>${editableSpan('locaciones', locId, 'centro_medico', loc.centro_medico||'', `loc-med-${r.id}`)}</div>
         <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_med', loc.direccion_med||'', `loc-dmed-${r.id}`)}</div>
         ${urlEditable('locaciones', locId, 'url_med', loc.url_med||'', 'Ubicación', `loc-umed-${r.id}`)}
@@ -1300,15 +1300,15 @@ function renderPDR(pdrRows, llamadoHora) {
       </tr>`;
     }
 
-    return `<tr class="${rowBg(i)} align-middle text-[11px]" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
+    return `<tr class="${rowBg(i)} align-middle text-[12px] leading-tight" data-pdr-id="${r.id}" draggable="${userSession ? 'true' : 'false'}">
       <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">
         ${editableSpan('shotlist', s.id, 'esc', s.esc||'', `pdr-esc-${r.id}`)}
       </td>
       <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">
         ${dragHandle}${editableSpan('shotlist', s.id, 'plano', s.plano||'', `pdr-plano-${r.id}`)}
       </td>
-      <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[12px]">${inicioStr}</td>
-      <td class="border border-neutral-600 px-1 py-1">
+      <td class="border border-neutral-600 px-1 py-1 text-center font-condensed font-bold text-[14px]">${inicioStr}</td>
+      <td class="border border-neutral-600 px-1 py-1 text-[13px]">
         ${editableSpan('shotlist', s.id, 'descripcion', s.descripcion||'', `pdr-desc-${r.id}`)}
       </td>
       
