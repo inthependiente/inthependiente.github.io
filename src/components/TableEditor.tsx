@@ -238,6 +238,14 @@ export default function TableEditor({
   const [isPdrBulkSaving, setIsPdrBulkSaving] = useState(false);
   const [pdrBulkSearch, setPdrBulkSearch] = useState("");
   const [projectPdrShotlistIds, setProjectPdrShotlistIds] = useState<Set<number>>(new Set());
+  const [isTalentoBulkOpen, setIsTalentoBulkOpen] = useState(false);
+  const [selectedTalentoKeys, setSelectedTalentoKeys] = useState<Set<string>>(new Set());
+  const [isTalentoBulkSaving, setIsTalentoBulkSaving] = useState(false);
+  const [talentoBulkSearch, setTalentoBulkSearch] = useState("");
+  const [isClienteBulkOpen, setIsClienteBulkOpen] = useState(false);
+  const [selectedClienteKeys, setSelectedClienteKeys] = useState<Set<string>>(new Set());
+  const [isClienteBulkSaving, setIsClienteBulkSaving] = useState(false);
+  const [clienteBulkSearch, setClienteBulkSearch] = useState("");
 
   // When the PDR bulk modal opens, load which shotlists are already used across ALL llamados of the project
   React.useEffect(() => {
@@ -363,6 +371,188 @@ export default function TableEditor({
       alert(`Error al asignar tomas al PDR: ${err.message}`);
     } finally {
       setIsPdrBulkSaving(false);
+    }
+  };
+
+  // Unique talent "base" profiles available for the active llamado:
+  // - Belong to the active llamado's project
+  // - Dedup by normalized nombre (a talent may have one row per llamado)
+  // - Excluded if a row with that nombre already exists in the ACTIVE llamado
+  const availableTalentoBase = React.useMemo(() => {
+    if (table !== "talento" || !selectedLlamadoId) return [];
+    const matchingLlamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    const proyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+    if (!proyectoId) return [];
+
+    // names already present in the ACTIVE llamado (data contains all talento rows;
+    // filter by selectedLlamadoId to only count rows of the active llamado)
+    const activeLlamadoNames = new Set(
+      data
+        .filter((r) => Number(r.llamado_id) === Number(selectedLlamadoId))
+        .map((r) => String(r.nombre || "").trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    // project llamados ids
+    const projectLlamadoIds = new Set(
+      lookups.llamados.filter((l) => Number(l.proyecto_id) === proyectoId).map((l) => Number(l.id))
+    );
+
+    // Collect unique profiles from talents that belong to the project's llamados
+    const seen = new Map<string, any>(); // key -> profile
+    lookups.talento.forEach((t) => {
+      if (!projectLlamadoIds.has(Number(t.llamado_id))) return;
+      const name = String(t.nombre || "").trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (activeLlamadoNames.has(key)) return; // already assigned to active llamado
+      if (!seen.has(key)) seen.set(key, t);
+    });
+
+    let list = Array.from(seen.values());
+
+    // Apply search filter
+    if (talentoBulkSearch.trim()) {
+      const q = talentoBulkSearch.toLowerCase();
+      list = list.filter((t) => `${t.nombre || ""} ${t.rol || ""}`.toLowerCase().includes(q));
+    }
+
+    // Sort alphabetically by nombre
+    return [...list].sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || ""), undefined, { sensitivity: "base" }));
+  }, [table, selectedLlamadoId, lookups.llamados, lookups.talento, data, talentoBulkSearch]);
+
+  const handleBulkAssignTalento = async () => {
+    if (!selectedLlamadoId) return;
+    if (selectedTalentoKeys.size === 0) {
+      alert("Selecciona al menos un talento.");
+      return;
+    }
+    setIsTalentoBulkSaving(true);
+    try {
+      const activeLlamadoRows = data.filter((r) => Number(r.llamado_id) === Number(selectedLlamadoId));
+      const maxOrden = activeLlamadoRows.length > 0
+        ? Math.max(...activeLlamadoRows.map((d) => Number(d.orden || 0)))
+        : 0;
+
+      // Map selected keys back to their profile rows
+      const keyToProfile = new Map<string, any>();
+      availableTalentoBase.forEach((t) => {
+        keyToProfile.set(String(t.nombre || "").trim().toLowerCase(), t);
+      });
+
+      const rows = Array.from(selectedTalentoKeys).map((key: string, i) => {
+        const profile = keyToProfile.get(key) || {};
+        return {
+          llamado_id: selectedLlamadoId,
+          nombre: profile.nombre || "",
+          rol: profile.rol || null,
+          orden: maxOrden + 1 + i,
+          llamado_hora: profile.llamado_hora || null,
+          locacion_id: profile.locacion_id || null,
+          en_set: profile.en_set || null,
+          notas: profile.notas || null,
+          w_status: profile.w_status || null,
+        };
+      });
+
+      const { error } = await supabase.from("talento").insert(rows);
+      if (error) throw error;
+
+      setSelectedTalentoKeys(new Set());
+      setTalentoBulkSearch("");
+      setIsTalentoBulkOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al asignar talentos: ${err.message}`);
+    } finally {
+      setIsTalentoBulkSaving(false);
+    }
+  };
+
+  // Unique "Cliente/Agencia" base profiles available for the active llamado:
+  // - Belong to the active llamado's project
+  // - Dedup by normalized nombre
+  // - Excluded if a row with that nombre already exists in the ACTIVE llamado
+  const availableClienteBase = React.useMemo(() => {
+    if (table !== "cliente_agencia" || !selectedLlamadoId) return [];
+    const matchingLlamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    const proyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+    if (!proyectoId) return [];
+
+    // names already present in the ACTIVE llamado (data contains all rows; filter by selectedLlamadoId)
+    const activeLlamadoNames = new Set(
+      data
+        .filter((r) => Number(r.llamado_id) === Number(selectedLlamadoId))
+        .map((r) => String(r.nombre || "").trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    // project llamados ids
+    const projectLlamadoIds = new Set(
+      lookups.llamados.filter((l) => Number(l.proyecto_id) === proyectoId).map((l) => Number(l.id))
+    );
+
+    // Collect unique profiles from cliente_agencia rows that belong to the project's llamados
+    const seen = new Map<string, any>();
+    data.forEach((r) => {
+      if (!projectLlamadoIds.has(Number(r.llamado_id))) return;
+      const name = String(r.nombre || "").trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (activeLlamadoNames.has(key)) return;
+      if (!seen.has(key)) seen.set(key, r);
+    });
+
+    let list = Array.from(seen.values());
+
+    // Apply search filter
+    if (clienteBulkSearch.trim()) {
+      const q = clienteBulkSearch.toLowerCase();
+      list = list.filter((r) => `${r.nombre || ""} ${r.empresa || ""} ${r.tipo || ""}`.toLowerCase().includes(q));
+    }
+
+    // Sort alphabetically by nombre
+    return [...list].sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || ""), undefined, { sensitivity: "base" }));
+  }, [table, selectedLlamadoId, lookups.llamados, data, clienteBulkSearch]);
+
+  const handleBulkAssignCliente = async () => {
+    if (!selectedLlamadoId) return;
+    if (selectedClienteKeys.size === 0) {
+      alert("Selecciona al menos un cliente / agencia.");
+      return;
+    }
+    setIsClienteBulkSaving(true);
+    try {
+      // Map selected keys back to their profile rows
+      const keyToProfile = new Map<string, any>();
+      availableClienteBase.forEach((r) => {
+        keyToProfile.set(String(r.nombre || "").trim().toLowerCase(), r);
+      });
+
+      const rows = Array.from(selectedClienteKeys).map((key: string) => {
+        const profile = keyToProfile.get(key) || {};
+        return {
+          llamado_id: selectedLlamadoId,
+          tipo: profile.tipo || "Cliente",
+          nombre: profile.nombre || "",
+          empresa: profile.empresa || null,
+          horario_loc: profile.horario_loc || null,
+        };
+      });
+
+      const { error } = await supabase.from("cliente_agencia").insert(rows);
+      if (error) throw error;
+
+      setSelectedClienteKeys(new Set());
+      setClienteBulkSearch("");
+      setIsClienteBulkOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al asignar clientes: ${err.message}`);
+    } finally {
+      setIsClienteBulkSaving(false);
     }
   };
 
@@ -957,6 +1147,36 @@ export default function TableEditor({
               title="Asignar varias tomas del shotlist al llamado activo"
             >
               <Plus className="w-5 h-5 text-orange-200" />
+              Asignar Varios
+            </button>
+          )}
+
+          {table === "talento" && selectedLlamadoId !== null && (
+            <button
+              onClick={() => {
+                setSelectedTalentoKeys(new Set());
+                setTalentoBulkSearch("");
+                setIsTalentoBulkOpen(true);
+              }}
+              className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              title="Asignar varios talentos (clonando su perfil) al llamado activo"
+            >
+              <Plus className="w-5 h-5 text-violet-200" />
+              Asignar Varios
+            </button>
+          )}
+
+          {table === "cliente_agencia" && selectedLlamadoId !== null && (
+            <button
+              onClick={() => {
+                setSelectedClienteKeys(new Set());
+                setClienteBulkSearch("");
+                setIsClienteBulkOpen(true);
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              title="Asignar varios clientes/agencias (clonando su perfil) al llamado activo"
+            >
+              <Plus className="w-5 h-5 text-rose-200" />
               Asignar Varios
             </button>
           )}
@@ -2582,6 +2802,274 @@ export default function TableEditor({
                     className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     {isPdrBulkSaving ? "Asignando..." : "Asignar Seleccionados"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: ASIGNACIÓN MASIVA DE TALENTO (CLONACIÓN) ───── */}
+      {isTalentoBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-violet-600" />
+                  Asignar Varios Talentos
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Clonará los perfiles seleccionados para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsTalentoBulkOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {availableTalentoBase.length === 0 ? (
+              <div className="bg-violet-50 border border-violet-100 rounded-xl p-6 text-center text-sm text-violet-700 font-medium">
+                ✅ No hay talentos disponibles para asignar (todos los del proyecto ya están en este llamado).
+              </div>
+            ) : (
+              <>
+                {/* Barra de búsqueda + contador */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      value={talentoBulkSearch}
+                      onChange={(e) => setTalentoBulkSearch(e.target.value)}
+                      placeholder="Buscar por nombre o rol..."
+                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                    />
+                    {talentoBulkSearch && (
+                      <button
+                        onClick={() => setTalentoBulkSearch("")}
+                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        title="Limpiar búsqueda"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTalentoKeys(
+                          new Set(availableTalentoBase.map((t) => String(t.nombre || "").trim().toLowerCase()))
+                        );
+                      }}
+                      className="text-xs font-bold text-violet-700 hover:text-violet-900 cursor-pointer"
+                    >
+                      Seleccionar todos ({availableTalentoBase.length})
+                    </button>
+                    <span className="text-xs font-semibold text-neutral-500">
+                      {selectedTalentoKeys.size} seleccionados
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lista vertical de talentos */}
+                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                  {availableTalentoBase.map((t) => {
+                    const key = String(t.nombre || "").trim().toLowerCase();
+                    const isSelected = selectedTalentoKeys.has(key);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                          isSelected ? "bg-violet-50/70" : "hover:bg-neutral-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            setSelectedTalentoKeys((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(key);
+                              else next.delete(key);
+                              return next;
+                            });
+                          }}
+                          className="w-4 h-4 accent-violet-600 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-neutral-800">{t.nombre}</div>
+                          <div className="text-xs text-neutral-500 truncate">
+                            {t.rol || "Sin rol"} {t.llamado_hora ? `· ${t.llamado_hora}` : ""}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {availableTalentoBase.length === 0 && talentoBulkSearch && (
+                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                    No se encontraron resultados para "{talentoBulkSearch}".
+                  </div>
+                )}
+
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    disabled={isTalentoBulkSaving}
+                    onClick={() => setIsTalentoBulkOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isTalentoBulkSaving || selectedTalentoKeys.size === 0}
+                    onClick={handleBulkAssignTalento}
+                    className="flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isTalentoBulkSaving ? "Clonando..." : "Asignar Seleccionados"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: ASIGNACIÓN MASIVA DE CLIENTE / AGENCIA (CLONACIÓN) ───── */}
+      {isClienteBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-rose-600" />
+                  Asignar Varios Clientes / Agencias
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Clonará los perfiles seleccionados para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsClienteBulkOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {availableClienteBase.length === 0 ? (
+              <div className="bg-rose-50 border border-rose-100 rounded-xl p-6 text-center text-sm text-rose-700 font-medium">
+                ✅ No hay clientes/agencias disponibles para asignar (todos los del proyecto ya están en este llamado).
+              </div>
+            ) : (
+              <>
+                {/* Barra de búsqueda + contador */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      value={clienteBulkSearch}
+                      onChange={(e) => setClienteBulkSearch(e.target.value)}
+                      placeholder="Buscar por nombre, empresa o tipo..."
+                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                    />
+                    {clienteBulkSearch && (
+                      <button
+                        onClick={() => setClienteBulkSearch("")}
+                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        title="Limpiar búsqueda"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedClienteKeys(
+                          new Set(availableClienteBase.map((r) => String(r.nombre || "").trim().toLowerCase()))
+                        );
+                      }}
+                      className="text-xs font-bold text-rose-700 hover:text-rose-900 cursor-pointer"
+                    >
+                      Seleccionar todos ({availableClienteBase.length})
+                    </button>
+                    <span className="text-xs font-semibold text-neutral-500">
+                      {selectedClienteKeys.size} seleccionados
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lista vertical de clientes/agencias */}
+                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                  {availableClienteBase.map((r) => {
+                    const key = String(r.nombre || "").trim().toLowerCase();
+                    const isSelected = selectedClienteKeys.has(key);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                          isSelected ? "bg-rose-50/70" : "hover:bg-neutral-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            setSelectedClienteKeys((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(key);
+                              else next.delete(key);
+                              return next;
+                            });
+                          }}
+                          className="w-4 h-4 accent-rose-600 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-neutral-800">{r.nombre}</div>
+                          <div className="text-xs text-neutral-500 truncate">
+                            {r.empresa || "Sin empresa"} {r.tipo ? `· ${r.tipo}` : ""}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {availableClienteBase.length === 0 && clienteBulkSearch && (
+                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                    No se encontraron resultados para "{clienteBulkSearch}".
+                  </div>
+                )}
+
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    disabled={isClienteBulkSaving}
+                    onClick={() => setIsClienteBulkOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isClienteBulkSaving || selectedClienteKeys.size === 0}
+                    onClick={handleBulkAssignCliente}
+                    className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isClienteBulkSaving ? "Clonando..." : "Asignar Seleccionados"}
                   </button>
                 </div>
               </>
