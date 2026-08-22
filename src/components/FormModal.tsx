@@ -15,6 +15,7 @@ interface FormModalProps {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    talento: any[];
     ciudades: any[];
   };
 }
@@ -1045,7 +1046,7 @@ export default function FormModal({
                     <option value="">-- Seleccionar Personal --</option>
                     {[...lookups.crew].sort((a, b) => (a.id || 0) - (b.id || 0)).map((cr) => (
                       <option key={cr.id} value={cr.id}>
-                        (#{cr.id}) {cr.nombre} [{cr.cargo || cr.departamento || "Sin Cargo"}]
+                        {cr.nombre} [{cr.cargo || cr.departamento || "Sin Cargo"}]
                       </option>
                     ))}
                   </select>
@@ -1439,17 +1440,6 @@ export default function FormModal({
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Prep Nº (Shotlister)</label>
-                  <input
-                    type="text"
-                    name="prep"
-                    value={formValues.prep || ""}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Número correspondiente en Shotlister"
-                  />
-                </div>
-                <div className="col-span-2">
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Descripción de la Toma</label>
                   <textarea
                     rows={2}
@@ -1460,27 +1450,80 @@ export default function FormModal({
                     placeholder="Ej: Traveling lateral de izquierda a derecha siguiendo el producto..."
                   ></textarea>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Cast IDs</label>
-                  <input
-                    type="text"
-                    name="cast_ids"
-                    value={formValues.cast_ids || ""}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: 1, 2, B"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Cast Nombres</label>
-                  <input
-                    type="text"
-                    name="cast_nombres"
-                    value={formValues.cast_nombres || ""}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
-                    placeholder="Ej: Juan, Doble de Acción, Extras"
-                  />
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Cast (Talento del Proyecto)</label>
+                  {(() => {
+                    // Resolve selected talent IDs from the comma-separated cast_ids string
+                    const selectedIds: number[] = (formValues.cast_ids || "")
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
+                      .map(Number)
+                      .filter((n: number) => !isNaN(n));
+
+                    // Filter talents belonging to the currently selected project (via their llamado's proyecto)
+                    const projectLlamadoIds = new Set(
+                      lookups.llamados
+                        .filter((ll) => Number(ll.proyecto_id) === Number(formValues.proyecto_id))
+                        .map((ll) => Number(ll.id))
+                    );
+                    const projectTalents =
+                      formValues.proyecto_id
+                        ? lookups.talento.filter((t) => projectLlamadoIds.has(Number(t.llamado_id)))
+                        : lookups.talento;
+
+                    const toggleTalent = (talentId: number) => {
+                      const current = new Set(selectedIds);
+                      if (current.has(talentId)) {
+                        current.delete(talentId);
+                      } else {
+                        current.add(talentId);
+                      }
+                      setFormValues((prev: any) => ({
+                        ...prev,
+                        cast_ids: Array.from(current).sort((a, b) => a - b).join(", "),
+                      }));
+                    };
+
+                    return (
+                      <div className="border border-neutral-300 rounded-lg p-2.5">
+                        {projectTalents.length === 0 ? (
+                          <div className="text-xs text-neutral-400 italic">
+                            {formValues.proyecto_id
+                              ? "No hay talentos registrados para los llamados de este proyecto. Crea talentos en la sección 'Talento'."
+                              : "Selecciona un Proyecto para ver los talentos disponibles."}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
+                            {projectTalents.map((t) => {
+                              const isSelected = selectedIds.includes(Number(t.id));
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => toggleTalent(Number(t.id))}
+                                  className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? "bg-neutral-900 border-neutral-900 text-white"
+                                      : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+                                  }`}
+                                >
+                                  <span className="mr-1">{isSelected ? "✓" : "+"}</span>
+                                  {t.nombre}
+                                  {t.rol ? <span className="opacity-60 font-normal ml-1">({t.rol})</span> : null}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div className="mt-2 pt-2 border-t border-neutral-100 text-[10px] text-neutral-400 font-mono">
+                          {selectedIds.length > 0
+                            ? `Seleccionados: ${selectedIds.join(", ")} (guardados en Cast IDs)`
+                            : "Ningún talento seleccionado"}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Notas Adicionales del Plano</label>

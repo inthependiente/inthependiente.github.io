@@ -16,7 +16,9 @@ import {
   ExternalLink,
   GripVertical,
   RefreshCcw,
-  Layers
+  Layers,
+  Users,
+  X
 } from "lucide-react";
 
 interface TableEditorProps {
@@ -32,6 +34,7 @@ interface TableEditorProps {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    talento: any[];
     ciudades: any[];
   };
   selectedProjectId: number | null;
@@ -62,9 +65,8 @@ export default function TableEditor({
     proyecto_id: true,
     esc: true,
     plano: true,
-    prep: true,
     descripcion: true,
-    cast_nombres: true,
+    cast_ids: true,
     locacion_id: true,
     notas: true,
     referencia_urls: true,
@@ -93,9 +95,7 @@ export default function TableEditor({
         esc: "1",
         plano: "1",
         orden: maxOrden + 1,
-        prep: "",
         descripcion: "",
-        cast_nombres: "",
         locacion_id: (lookups.locaciones && lookups.locaciones.length > 0) ? lookups.locaciones[0].id : null,
         notas: "",
         referencia_urls: ""
@@ -226,6 +226,204 @@ export default function TableEditor({
     message: string;
     sqlStatement?: string;
   } | null>(null);
+  const [isCrewBulkOpen, setIsCrewBulkOpen] = useState(false);
+  const [selectedCrewIds, setSelectedCrewIds] = useState<Set<number>>(new Set());
+  const [isCrewBulkSaving, setIsCrewBulkSaving] = useState(false);
+  const [crewBulkSearch, setCrewBulkSearch] = useState("");
+  const [isHoraBulkOpen, setIsHoraBulkOpen] = useState(false);
+  const [bulkHora, setBulkHora] = useState("");
+  const [isHoraBulkSaving, setIsHoraBulkSaving] = useState(false);
+  const [isPdrBulkOpen, setIsPdrBulkOpen] = useState(false);
+  const [selectedPdrShotlistIds, setSelectedPdrShotlistIds] = useState<Set<number>>(new Set());
+  const [isPdrBulkSaving, setIsPdrBulkSaving] = useState(false);
+  const [pdrBulkSearch, setPdrBulkSearch] = useState("");
+  const [projectPdrShotlistIds, setProjectPdrShotlistIds] = useState<Set<number>>(new Set());
+
+  // When the PDR bulk modal opens, load which shotlists are already used across ALL llamados of the project
+  React.useEffect(() => {
+    if (!isPdrBulkOpen) return;
+    if (table !== "pdr" || !selectedLlamadoId) return;
+
+    const matchingLlamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    const proyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+    if (!proyectoId) return;
+
+    const projectLlamadoIds = lookups.llamados
+      .filter((l) => Number(l.proyecto_id) === proyectoId)
+      .map((l) => Number(l.id));
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: pdrRows, error } = await supabase
+          .from("pdr")
+          .select("shotlist_id")
+          .in("llamado_id", projectLlamadoIds);
+        if (error) throw error;
+        if (!cancelled) {
+          setProjectPdrShotlistIds(new Set((pdrRows || []).map((r: any) => Number(r.shotlist_id))));
+        }
+      } catch (err) {
+        console.error("Error fetching project PDR assignments:", err);
+        if (!cancelled) setProjectPdrShotlistIds(new Set());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPdrBulkOpen, table, selectedLlamadoId, lookups.llamados]);
+
+  // Crew not yet assigned to the active llamado (for bulk assignment)
+  const unassignedCrew = React.useMemo(() => {
+    if (table !== "crew_llamado" || !selectedLlamadoId) return [];
+    const assignedIds = new Set(
+      data.filter((r) => Number(r.llamado_id) === Number(selectedLlamadoId)).map((r) => Number(r.crew_id))
+    );
+    return lookups.crew.filter((c) => !assignedIds.has(Number(c.id)));
+  }, [table, selectedLlamadoId, data, lookups.crew]);
+
+  // Filtered list inside the bulk modal by search query
+  const filteredUnassignedCrew = React.useMemo(() => {
+    const list = crewBulkSearch.trim()
+      ? unassignedCrew.filter((c) =>
+          `${c.nombre} ${c.cargo || ""} ${c.departamento || ""}`.toLowerCase().includes(crewBulkSearch.toLowerCase())
+        )
+      : unassignedCrew;
+
+    // Group by departamento (alphabetical) and keep alphabetical order by nombre within each group
+    return [...list].sort((a, b) => {
+      const deptA = String(a.departamento || "").toLowerCase();
+      const deptB = String(b.departamento || "").toLowerCase();
+      if (deptA !== deptB) return deptA.localeCompare(deptB);
+      return String(a.nombre || "").localeCompare(String(b.nombre || ""), undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [unassignedCrew, crewBulkSearch]);
+
+  // Shotlists available for the PDR bulk modal:
+  // - Belong to the active llamado's project
+  // - EXCLUDED if already used in ANY llamado of the project (projectPdrShotlistIds),
+  //   EXCEPT planos "ES" which are reusable multiple times
+  const availablePdrShotlists = React.useMemo(() => {
+    if (table !== "pdr" || !selectedLlamadoId) return [];
+    const matchingLlamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    const proyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+    if (!proyectoId) return [];
+
+    const list = lookups.shotlist.filter((s) => {
+      if (Number(s.proyecto_id) !== proyectoId) return false;
+      const plano = String(s.plano || "").toUpperCase();
+      if (plano === "ES") return true; // ES reusable
+      return !projectPdrShotlistIds.has(Number(s.id));
+    });
+
+    // Apply search filter
+    const filtered = pdrBulkSearch.trim()
+      ? list.filter((s) =>
+          `${s.esc || ""} ${s.plano || ""} ${s.descripcion || ""}`.toLowerCase().includes(pdrBulkSearch.toLowerCase())
+        )
+      : list;
+
+    // Sort by esc (numeric) then plano (numeric)
+    return [...filtered].sort((a, b) => {
+      const escComp = String(a.esc || "").localeCompare(String(b.esc || ""), undefined, { numeric: true, sensitivity: "base" });
+      if (escComp !== 0) return escComp;
+      return String(a.plano || "").localeCompare(String(b.plano || ""), undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [table, selectedLlamadoId, lookups.llamados, lookups.shotlist, projectPdrShotlistIds, pdrBulkSearch]);
+
+  const handleBulkAssignPdr = async () => {
+    if (!selectedLlamadoId) return;
+    if (selectedPdrShotlistIds.size === 0) {
+      alert("Selecciona al menos una toma del Shotlist.");
+      return;
+    }
+    setIsPdrBulkSaving(true);
+    try {
+      const maxOrden = data && data.length > 0
+        ? Math.max(...data.map((d) => Number(d.orden || 0)))
+        : 0;
+
+      const rows = Array.from(selectedPdrShotlistIds).map((shotlistId, i) => ({
+        llamado_id: selectedLlamadoId,
+        shotlist_id: shotlistId,
+        orden: maxOrden + 1 + i,
+        duracion_min: 0,
+      }));
+
+      const { error } = await supabase.from("pdr").insert(rows);
+      if (error) throw error;
+
+      setSelectedPdrShotlistIds(new Set());
+      setPdrBulkSearch("");
+      setIsPdrBulkOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al asignar tomas al PDR: ${err.message}`);
+    } finally {
+      setIsPdrBulkSaving(false);
+    }
+  };
+
+  const handleBulkAssignCrew = async () => {
+    if (!selectedLlamadoId) return;
+    if (selectedCrewIds.size === 0) {
+      alert("Selecciona al menos un miembro del Crew.");
+      return;
+    }
+    setIsCrewBulkSaving(true);
+    try {
+      const maxOrden = data && data.length > 0
+        ? Math.max(...data.map((d) => Number(d.orden || 0)))
+        : 0;
+
+      const rows = Array.from(selectedCrewIds).map((crewId, i) => ({
+        llamado_id: selectedLlamadoId,
+        crew_id: crewId,
+        orden: maxOrden + 1 + i,
+        prioridad: null,
+      }));
+
+      const { error } = await supabase.from("crew_llamado").insert(rows);
+      if (error) throw error;
+
+      setSelectedCrewIds(new Set());
+      setIsCrewBulkOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al asignar Crew: ${err.message}`);
+    } finally {
+      setIsCrewBulkSaving(false);
+    }
+  };
+
+  const handleBulkSetHora = async () => {
+    if (!selectedLlamadoId) return;
+    const hora = bulkHora.trim();
+    if (!hora) {
+      alert("Ingresa una hora válida (ej: 07:00).");
+      return;
+    }
+    setIsHoraBulkSaving(true);
+    try {
+      const { error } = await supabase
+        .from("crew_llamado")
+        .update({ hora_llamado: hora })
+        .eq("llamado_id", selectedLlamadoId);
+      if (error) throw error;
+
+      setBulkHora("");
+      setIsHoraBulkOpen(false);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al actualizar Hora Llamado: ${err.message}`);
+    } finally {
+      setIsHoraBulkSaving(false);
+    }
+  };
 
   const handleDeleteAll = async () => {
     setIsProcessing(true);
@@ -421,6 +619,19 @@ export default function TableEditor({
     return parent ? (parent.Nombre || parent.nombre || `Ciudad #${id}`) : `Ciudad #${id}`;
   };
 
+  // Resolve comma-separated talent IDs (cast_ids) into talent names
+  const resolveCastIds = (castIds?: string | null) => {
+    if (!castIds) return [] as any[];
+    return castIds
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+      .map(Number)
+      .filter((n: number) => !isNaN(n))
+      .map((id: number) => lookups.talento.find((t) => Number(t.id) === id))
+      .filter(Boolean);
+  };
+
   // 1. Filter dynamically by Active Project / Active Called working context
   const relationallyFilteredData = data.filter((row) => {
     // If called is active, filter llamados by project if selected
@@ -468,6 +679,9 @@ export default function TableEditor({
       }
       if (key === "shotlist_id" && typeof val === "number") {
         return resolveShotlistSnippet(val).toLowerCase().includes(query);
+      }
+      if (key === "cast_ids" && typeof val === "string") {
+        return resolveCastIds(val).some((t: any) => t.nombre.toLowerCase().includes(query));
       }
 
       return false;
@@ -700,8 +914,52 @@ export default function TableEditor({
             id={`btn-add-${table}`}
           >
             <Plus className="w-5 h-5 text-orange-500" />
-            Nueva Entrada ({table})
+            Nueva Entrada
           </button>
+
+          {table === "crew_llamado" && selectedLlamadoId !== null && (
+            <>
+              <button
+                onClick={() => {
+                  setSelectedCrewIds(new Set());
+                  setCrewBulkSearch("");
+                  setIsCrewBulkOpen(true);
+                }}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                title="Asignar varios miembros del crew al llamado activo"
+              >
+                <Users className="w-5 h-5 text-teal-200" />
+                Asignar Varios
+              </button>
+
+              <button
+                onClick={() => {
+                  setBulkHora("");
+                  setIsHoraBulkOpen(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                title="Asignar la misma Hora Llamado a todo el crew del llamado activo"
+              >
+                <Clock className="w-5 h-5 text-indigo-200" />
+                Hora Llamado
+              </button>
+            </>
+          )}
+
+          {table === "pdr" && selectedLlamadoId !== null && (
+            <button
+              onClick={() => {
+                setSelectedPdrShotlistIds(new Set());
+                setPdrBulkSearch("");
+                setIsPdrBulkOpen(true);
+              }}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              title="Asignar varias tomas del shotlist al llamado activo"
+            >
+              <Plus className="w-5 h-5 text-orange-200" />
+              Asignar Varios
+            </button>
+          )}
         </div>
       </div>
 
@@ -764,9 +1022,8 @@ export default function TableEditor({
                 { key: "proyecto_id", label: "Proyecto" },
                 { key: "esc", label: "Escena" },
                 { key: "plano", label: "Plano" },
-                { key: "prep", label: "Prep Nº" },
                 { key: "descripcion", label: "Descripción" },
-                { key: "cast_nombres", label: "Cast" },
+                { key: "cast_ids", label: "Cast IDs" },
                 { key: "locacion_id", label: "Locación" },
                 { key: "notas", label: "Notas" },
                 { key: "referencia_urls", label: "Referencia" },
@@ -973,14 +1230,11 @@ export default function TableEditor({
                       {visibleColumns.plano && (
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Plano</th>
                       )}
-                      {visibleColumns.prep && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-28 text-center">Prep Nº</th>
-                      )}
                       {visibleColumns.descripcion && (
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed min-w-[14rem]">Descripción</th>
                       )}
-                      {visibleColumns.cast_nombres && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-28 text-center">Cast</th>
+                      {visibleColumns.cast_ids && (
+                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-40 text-center">Cast IDs</th>
                       )}
                       {visibleColumns.locacion_id && (
                         <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Locación</th>
@@ -1228,7 +1482,7 @@ export default function TableEditor({
                               .sort((a, b) => a.id - b.id)
                               .map((c) => (
                                 <option key={c.id} value={c.id}>
-                                  {c.nombre} [{c.cargo || "S/C"}] (ID: {c.id})
+                                  {c.nombre} [{c.cargo || "S/C"}]
                                 </option>
                               ))}
                           </select>
@@ -1512,27 +1766,7 @@ export default function TableEditor({
                           </td>
                         )}
 
-                        {/* 4. Prep Nº */}
-                        {visibleColumns.prep && (
-                          <td className="p-1 border border-neutral-200 bg-white">
-                            <input
-                              type="text"
-                              defaultValue={row.prep || ""}
-                              onBlur={(e) => {
-                                if (e.target.value !== (row.prep || "")) {
-                                  handleInlineUpdate(row.id, "prep", e.target.value);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") e.currentTarget.blur();
-                              }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-pink-600 p-1 text-center rounded placeholder-pink-300"
-                              placeholder="—"
-                            />
-                          </td>
-                        )}
-
-                        {/* 5. Descripción de la Toma */}
+                        {/* 4. Descripción de la Toma */}
                         {visibleColumns.descripcion && (
                           <td className="p-1 border border-neutral-200 bg-white min-w-[14rem]">
                             <textarea
@@ -1549,27 +1783,27 @@ export default function TableEditor({
                           </td>
                         )}
 
-                        {/* 6. Cast */}
-                        {visibleColumns.cast_nombres && (
+                        {/* 5. Cast IDs */}
+                        {visibleColumns.cast_ids && (
                           <td className="p-1 border border-neutral-200 bg-white">
-                            <input
-                              type="text"
-                              defaultValue={row.cast_nombres || ""}
-                              onBlur={(e) => {
-                                if (e.target.value !== (row.cast_nombres || "")) {
-                                  handleInlineUpdate(row.id, "cast_nombres", e.target.value);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") e.currentTarget.blur();
-                              }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-600 p-1 text-center rounded"
-                              placeholder="—"
-                            />
+                            {(() => {
+                              const talents = resolveCastIds(row.cast_ids);
+                              return talents.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 justify-center">
+                                  {talents.map((t: any) => (
+                                    <span key={t.id} className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-md">
+                                      {t.nombre}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-neutral-400 italic text-center">—</div>
+                              );
+                            })()}
                           </td>
                         )}
 
-                        {/* 7. Locación */}
+                        {/* 6. Locación */}
                         {visibleColumns.locacion_id && (
                           <td className="p-1 border border-neutral-200 bg-white">
                             <select
@@ -1587,7 +1821,7 @@ export default function TableEditor({
                           </td>
                         )}
 
-                        {/* 8. Notas */}
+                        {/* 7. Notas */}
                         {visibleColumns.notas && (
                           <td className="p-1 border border-neutral-200 bg-white">
                             <input
@@ -1607,7 +1841,7 @@ export default function TableEditor({
                           </td>
                         )}
 
-                        {/* 9. Referencia con subida directa y vista storyboard stacked */}
+                        {/* 8. Referencia con subida directa y vista storyboard stacked */}
                         {visibleColumns.referencia_urls && (
                           <td className="p-2 border border-neutral-200 bg-white w-48">
                             <div className="flex flex-col gap-2">
@@ -1781,13 +2015,10 @@ export default function TableEditor({
                     {visibleColumns.plano && (
                       <td className="p-1 border border-neutral-200 bg-white" />
                     )}
-                    {visibleColumns.prep && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
-                    )}
                     {visibleColumns.descripcion && (
                       <td className="p-1 border border-neutral-200 bg-white" />
                     )}
-                    {visibleColumns.cast_nombres && (
+                    {visibleColumns.cast_ids && (
                       <td className="p-1 border border-neutral-200 bg-white" />
                     )}
                     {visibleColumns.locacion_id && (
@@ -2022,6 +2253,338 @@ export default function TableEditor({
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: ASIGNACIÓN MASIVA DE CREW ───── */}
+      {isCrewBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-5xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Users className="w-5 h-5 text-teal-600" />
+                  Asignar Varios Crew
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Selecciona el personal para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCrewBulkOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {unassignedCrew.length === 0 ? (
+              <div className="bg-teal-50 border border-teal-100 rounded-xl p-6 text-center text-sm text-teal-700 font-medium">
+                ✅ Todo el personal del crew ya está asignado a este llamado.
+              </div>
+            ) : (
+              <>
+                {/* Barra de búsqueda + contador */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      value={crewBulkSearch}
+                      onChange={(e) => setCrewBulkSearch(e.target.value)}
+                      placeholder="Buscar por nombre, cargo o departamento..."
+                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                    />
+                    {crewBulkSearch && (
+                      <button
+                        onClick={() => setCrewBulkSearch("")}
+                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        title="Limpiar búsqueda"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCrewIds(
+                          new Set(filteredUnassignedCrew.map((c) => Number(c.id)))
+                        );
+                      }}
+                      className="text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
+                    >
+                      Seleccionar todos ({filteredUnassignedCrew.length})
+                    </button>
+                    <span className="text-xs font-semibold text-neutral-500">
+                      {selectedCrewIds.size} seleccionados
+                    </span>
+                  </div>
+                </div>
+
+                {/* Grid de 3 columnas compacto */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl p-1.5">
+                  {filteredUnassignedCrew.map((c) => {
+                    const isSelected = selectedCrewIds.has(Number(c.id));
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+                          isSelected ? "bg-teal-50/80 ring-1 ring-teal-200" : "hover:bg-neutral-50"
+                        }`}
+                        title={`${c.nombre} — ${c.cargo || "Sin cargo"} (${c.departamento || "Sin depto"})`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            setSelectedCrewIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(Number(c.id));
+                              else next.delete(Number(c.id));
+                              return next;
+                            });
+                          }}
+                          className="w-3.5 h-3.5 accent-teal-600 cursor-pointer shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-neutral-800 truncate">{c.nombre}</div>
+                          <div className="text-[10px] text-neutral-500 truncate">
+                            {c.cargo || "Sin cargo"} · {c.departamento || "Sin depto"}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {filteredUnassignedCrew.length === 0 && (
+                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                    No se encontraron resultados para "{crewBulkSearch}".
+                  </div>
+                )}
+
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    disabled={isCrewBulkSaving}
+                    onClick={() => setIsCrewBulkOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isCrewBulkSaving || selectedCrewIds.size === 0}
+                    onClick={handleBulkAssignCrew}
+                    className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isCrewBulkSaving ? "Asignando..." : "Asignar Seleccionados"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: HORA LLAMADO MASIVA ───── */}
+      {isHoraBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-indigo-600" />
+                  Hora Llamado Masiva
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Asignará la misma hora a todo el crew de <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsHoraBulkOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">
+              Hora de Llamado (HH:MM)
+            </label>
+            <input
+              type="text"
+              value={bulkHora}
+              onChange={(e) => setBulkHora(e.target.value)}
+              placeholder="Ej: 07:00"
+              className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm font-mono font-bold focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+            />
+
+            <div className="flex gap-2.5 pt-4 mt-4 border-t border-neutral-100">
+              <button
+                type="button"
+                disabled={isHoraBulkSaving}
+                onClick={() => setIsHoraBulkOpen(false)}
+                className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isHoraBulkSaving}
+                onClick={handleBulkSetHora}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {isHoraBulkSaving ? "Guardando..." : "Aplicar a Todos"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: ASIGNACIÓN MASIVA DE PDR (SHOTLIST) ───── */}
+      {isPdrBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-orange-600" />
+                  Asignar Varios Planos (PDR)
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Selecciona las tomas del shotlist para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsPdrBulkOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {availablePdrShotlists.length === 0 ? (
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 text-center text-sm text-orange-700 font-medium">
+                ✅ No hay tomas del shotlist disponibles para asignar (todas las de este proyecto ya fueron usadas).
+              </div>
+            ) : (
+              <>
+                {/* Barra de búsqueda + contador */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      value={pdrBulkSearch}
+                      onChange={(e) => setPdrBulkSearch(e.target.value)}
+                      placeholder="Buscar por escena, plano o descripción..."
+                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                    />
+                    {pdrBulkSearch && (
+                      <button
+                        onClick={() => setPdrBulkSearch("")}
+                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        title="Limpiar búsqueda"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPdrShotlistIds(
+                          new Set(availablePdrShotlists.map((s) => Number(s.id)))
+                        );
+                      }}
+                      className="text-xs font-bold text-orange-700 hover:text-orange-900 cursor-pointer"
+                    >
+                      Seleccionar todos ({availablePdrShotlists.length})
+                    </button>
+                    <span className="text-xs font-semibold text-neutral-500">
+                      {selectedPdrShotlistIds.size} seleccionados
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lista vertical de tomas */}
+                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                  {availablePdrShotlists.map((s) => {
+                    const isSelected = selectedPdrShotlistIds.has(Number(s.id));
+                    const plano = String(s.plano || "").toUpperCase();
+                    const isReusable = plano === "ES";
+                    return (
+                      <label
+                        key={s.id}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                          isSelected ? "bg-orange-50/70" : "hover:bg-neutral-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            setSelectedPdrShotlistIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(Number(s.id));
+                              else next.delete(Number(s.id));
+                              return next;
+                            });
+                          }}
+                          className="w-4 h-4 accent-orange-600 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+                            <span className="font-mono">Esc: {s.esc || "—"} | Plano: {s.plano || "—"}</span>
+                            {isReusable && (
+                              <span className="text-[9px] font-bold bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                                Reusable
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-neutral-500 truncate">
+                            {s.descripcion || "Sin descripción"}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {availablePdrShotlists.length === 0 && pdrBulkSearch && (
+                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                    No se encontraron resultados para "{pdrBulkSearch}".
+                  </div>
+                )}
+
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    disabled={isPdrBulkSaving}
+                    onClick={() => setIsPdrBulkOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPdrBulkSaving || selectedPdrShotlistIds.size === 0}
+                    onClick={handleBulkAssignPdr}
+                    className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isPdrBulkSaving ? "Asignando..." : "Asignar Seleccionados"}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

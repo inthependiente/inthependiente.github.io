@@ -75,6 +75,7 @@ export default function App() {
     locaciones: any[];
     crew: any[];
     shotlist: any[];
+    talento: any[];
     ciudades: any[];
   }>({
     proyectos: [],
@@ -82,6 +83,7 @@ export default function App() {
     locaciones: [],
     crew: [],
     shotlist: [],
+    talento: [],
     ciudades: [],
   });
 
@@ -321,12 +323,23 @@ export default function App() {
       console.error("Exception fetching ciudades lookup:", e);
     }
 
+    // 7. Talento (Reparto) — se usa para el selector múltiple de Cast IDs en Shotlist
+    let talentList: any[] = [];
+    try {
+      const { data, error } = await supabase.from("talento").select("id, nombre, rol, llamado_id").order("nombre", { ascending: true });
+      if (error) console.error("Error fetching talento database lookup:", error);
+      else talentList = data || [];
+    } catch (e) {
+      console.error("Exception fetching talento lookup:", e);
+    }
+
     setLookups({
       proyectos: projs,
       locaciones: locs,
       crew: crewList,
       shotlist: shotlistList,
       llamados: decoratedCalls,
+      talento: talentList,
       ciudades: cities,
     });
   };

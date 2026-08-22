@@ -108,10 +108,8 @@ export interface Shotlist {
   orden: number;
   esc?: string;
   plano?: string;
-  prep?: string;
   descripcion?: string;
   cast_ids?: string;
-  cast_nombres?: string;
   locacion_id?: number | null;
   notas?: string;
   referencia_urls?: string; // Comma-separated URLs
