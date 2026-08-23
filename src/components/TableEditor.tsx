@@ -1281,12 +1281,12 @@ export default function TableEditor({
           </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {["escenas", "talento", "pdr", "shotlist", "proyectos", "llamados", "locaciones", "cliente_agencia", "crew_llamado"].includes(table) && (
             <>
               <button
                 onClick={() => setConfirmModal({ type: "deleteAll", isOpen: true })}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
                 title="Borrar todas las filas de esta tabla"
               >
                 <Trash2 className="w-4 h-4 text-rose-500" />
@@ -1295,7 +1295,7 @@ export default function TableEditor({
               
               <button
                 onClick={() => setConfirmModal({ type: "resetIds", isOpen: true })}
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
                 title="Resetear valor de auto-incremento de ID de esta tabla a 1"
               >
                 <RefreshCcw className="w-4 h-4 text-amber-500 animate-spin-hover" />
@@ -1306,10 +1306,10 @@ export default function TableEditor({
 
           <button
             onClick={onAddClick}
-            className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+            className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
             id={`btn-add-${table}`}
           >
-            <Plus className="w-5 h-5 text-orange-500" />
+            <Plus className="w-4 h-4 text-orange-500" />
             Nueva Entrada
           </button>
 
@@ -1321,10 +1321,10 @@ export default function TableEditor({
                   setCrewBulkSearch("");
                   setIsCrewBulkOpen(true);
                 }}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
                 title="Asignar varios miembros del crew al llamado activo"
               >
-                <Users className="w-5 h-5 text-teal-200" />
+                <Users className="w-4 h-4 text-teal-200" />
                 Asignar Varios
               </button>
 
@@ -1333,10 +1333,10 @@ export default function TableEditor({
                   setBulkHora("");
                   setIsHoraBulkOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
                 title="Asignar la misma Hora Llamado a todo el crew del llamado activo"
               >
-                <Clock className="w-5 h-5 text-indigo-200" />
+                <Clock className="w-4 h-4 text-indigo-200" />
                 Hora Llamado
               </button>
 
@@ -1347,10 +1347,10 @@ export default function TableEditor({
                   setCopyCrewSearch("");
                   setIsCopyCrewOpen(true);
                 }}
-                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
                 title="Copiar la asignación de crew de otro llamado al llamado activo"
               >
-                <Copy className="w-5 h-5 text-sky-200" />
+                <Copy className="w-4 h-4 text-sky-200" />
                 Copiar Crew
               </button>
             </>
@@ -1363,10 +1363,10 @@ export default function TableEditor({
                 setPdrBulkSearch("");
                 setIsPdrBulkOpen(true);
               }}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
               title="Asignar varias tomas del shotlist al llamado activo"
             >
-              <Plus className="w-5 h-5 text-orange-200" />
+              <Plus className="w-4 h-4 text-orange-200" />
               Asignar Varios
             </button>
           )}
@@ -1378,10 +1378,10 @@ export default function TableEditor({
                 setTalentoBulkSearch("");
                 setIsTalentoBulkOpen(true);
               }}
-              className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
               title="Asignar varios talentos (clonando su perfil) al llamado activo"
             >
-              <Plus className="w-5 h-5 text-violet-200" />
+              <Plus className="w-4 h-4 text-violet-200" />
               Asignar Varios
             </button>
           )}
@@ -1393,10 +1393,10 @@ export default function TableEditor({
                 setClienteBulkSearch("");
                 setIsClienteBulkOpen(true);
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
               title="Asignar varios clientes/agencias (clonando su perfil) al llamado activo"
             >
-              <Plus className="w-5 h-5 text-rose-200" />
+              <Plus className="w-4 h-4 text-rose-200" />
               Asignar Varios
             </button>
           )}
