@@ -18,6 +18,9 @@ import {
   RefreshCcw,
   Layers,
   Users,
+  Copy,
+  ChevronUp,
+  ChevronDown,
   X
 } from "lucide-react";
 
@@ -233,6 +236,11 @@ export default function TableEditor({
   const [isHoraBulkOpen, setIsHoraBulkOpen] = useState(false);
   const [bulkHora, setBulkHora] = useState("");
   const [isHoraBulkSaving, setIsHoraBulkSaving] = useState(false);
+  const [isCopyCrewOpen, setIsCopyCrewOpen] = useState(false);
+  const [copyCrewSourceId, setCopyCrewSourceId] = useState<number | "">("");
+  const [copyCrewMode, setCopyCrewMode] = useState<"merge" | "replace">("merge");
+  const [copyCrewSearch, setCopyCrewSearch] = useState("");
+  const [isCopyCrewSaving, setIsCopyCrewSaving] = useState(false);
   const [isPdrBulkOpen, setIsPdrBulkOpen] = useState(false);
   const [selectedPdrShotlistIds, setSelectedPdrShotlistIds] = useState<Set<number>>(new Set());
   const [isPdrBulkSaving, setIsPdrBulkSaving] = useState(false);
@@ -290,6 +298,36 @@ export default function TableEditor({
     );
     return lookups.crew.filter((c) => !assignedIds.has(Number(c.id)));
   }, [table, selectedLlamadoId, data, lookups.crew]);
+
+  // Llamados del mismo proyecto que el llamado activo (excluyendo el activo)
+  // con la cantidad de crew asignado, para el modal de "Copiar Crew"
+  const copyCrewCandidates = React.useMemo(() => {
+    if (table !== "crew_llamado" || !selectedLlamadoId) return [];
+    const matchingLlamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    const proyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
+    if (!proyectoId) return [];
+
+    // Contar filas de crew_llamado por llamado (data contiene todas las filas sin filtrar)
+    const crewCountByLlamado = new Map<number, number>();
+    (data || []).forEach((r) => {
+      const lid = Number(r.llamado_id);
+      crewCountByLlamado.set(lid, (crewCountByLlamado.get(lid) || 0) + 1);
+    });
+
+    const list = lookups.llamados.filter((l) => {
+      if (Number(l.id) === Number(selectedLlamadoId)) return false;
+      return Number(l.proyecto_id) === proyectoId;
+    });
+
+    // Aplicar búsqueda
+    const filtered = copyCrewSearch.trim()
+      ? list.filter((l) => resolveLlamado(Number(l.id)).toLowerCase().includes(copyCrewSearch.toLowerCase()))
+      : list;
+
+    return [...filtered]
+      .sort((a, b) => String(a.fecha || "").localeCompare(String(b.fecha || ""), undefined, { numeric: true }))
+      .map((l) => ({ ...l, crewCount: crewCountByLlamado.get(Number(l.id)) || 0 }));
+  }, [table, selectedLlamadoId, lookups.llamados, data, copyCrewSearch]);
 
   // Filtered list inside the bulk modal by search query
   const filteredUnassignedCrew = React.useMemo(() => {
@@ -612,6 +650,130 @@ export default function TableEditor({
       alert(`Error al actualizar Hora Llamado: ${err.message}`);
     } finally {
       setIsHoraBulkSaving(false);
+    }
+  };
+
+  // Mover una fila de crew_llamado hacia arriba o abajo (reorden dinámico)
+  const handleMoveCrew = async (rowId: number, direction: "up" | "down") => {
+    if (!selectedLlamadoId) return;
+
+    // Filas del llamado activo ya ordenadas según el orden visual actual
+    const activeRows = sortedAndFilteredData.filter(
+      (r) => Number(r.llamado_id) === Number(selectedLlamadoId)
+    );
+
+    const index = activeRows.findIndex((r) => Number(r.id) === Number(rowId));
+    if (index === -1) return;
+
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= activeRows.length) return;
+
+    // Intercambiar en la copia local
+    const reordered = [...activeRows];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(swapIndex, 0, moved);
+
+    // Recalcular orden 1..N para TODAS las filas del llamado (secuencia limpia)
+    try {
+      const updates = reordered.map((row, i) =>
+        supabase
+          .from("crew_llamado")
+          .update({ orden: i + 1 })
+          .eq("id", row.id)
+      );
+      await Promise.all(updates);
+
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error("Error reordenando crew:", err);
+      alert(`Error al reordenar el crew: ${err.message}`);
+    }
+  };
+
+  // Copiar la asignación de crew desde otro llamado hacia el llamado activo
+  const handleCopyCrew = async () => {
+    if (!selectedLlamadoId) return;
+    if (!copyCrewSourceId) {
+      alert("Selecciona un llamado de origen para copiar el crew.");
+      return;
+    }
+    const sourceId = Number(copyCrewSourceId);
+    if (sourceId === Number(selectedLlamadoId)) {
+      alert("El llamado de origen no puede ser el mismo que el destino.");
+      return;
+    }
+    setIsCopyCrewSaving(true);
+    try {
+      // 1. Traer las filas de crew del llamado origen
+      const { data: sourceRows, error: srcError } = await supabase
+        .from("crew_llamado")
+        .select("*")
+        .eq("llamado_id", sourceId);
+      if (srcError) throw srcError;
+
+      if (!sourceRows || sourceRows.length === 0) {
+        alert("El llamado de origen no tiene crew asignado para copiar.");
+        return;
+      }
+
+      const destId = Number(selectedLlamadoId);
+      // 2. En modo "replace", borrar el crew actual del destino
+      if (copyCrewMode === "replace") {
+        const { error: delError } = await supabase
+          .from("crew_llamado")
+          .delete()
+          .eq("llamado_id", destId);
+        if (delError) throw delError;
+      }
+
+      // 3. Calcular el siguiente orden/prioridad del destino y los crew ya presentes
+      const destRows = (data || []).filter((r) => Number(r.llamado_id) === destId);
+      const maxOrden = destRows.length > 0
+        ? Math.max(...destRows.map((d) => Number(d.orden || 0)))
+        : 0;
+      const maxPrioridad = destRows.length > 0
+        ? Math.max(...destRows.map((d) => Number(d.prioridad || 0)))
+        : 0;
+      const existingCrewIds = new Set(destRows.map((r) => Number(r.crew_id)));
+
+      // 4. Construir filas nuevas copiando del origen (conservando notas y hora por crew)
+      let toInsert: any[] = [];
+      sourceRows.forEach((row: any) => {
+        const crewId = Number(row.crew_id);
+        // En modo "merge" no duplicar crew ya asignado en el destino
+        if (copyCrewMode === "merge" && existingCrewIds.has(crewId)) return;
+        toInsert.push({
+          llamado_id: destId,
+          crew_id: crewId,
+          orden: maxOrden + toInsert.length + 1,
+          prioridad: maxPrioridad + toInsert.length + 1,
+          notas: row.notas ?? null,
+          hora_llamado: row.hora_llamado ?? null,
+        });
+      });
+
+      if (toInsert.length === 0) {
+        if (copyCrewMode === "merge") {
+          alert("El llamado de destino ya tiene todo el crew del origen. No hay cambios que aplicar.");
+        } else {
+          alert("El llamado de origen no tiene crew asignado para copiar.");
+        }
+        return;
+      }
+
+      // 5. Insertar en batch
+      const { error: insError } = await supabase.from("crew_llamado").insert(toInsert);
+      if (insError) throw insError;
+
+      setCopyCrewSourceId("");
+      setIsCopyCrewOpen(false);
+      if (onRefresh) onRefresh();
+      alert(`Se copiaron ${toInsert.length} miembro(s) del crew a ${resolveLlamado(destId)}.`);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al copiar el crew: ${err.message}`);
+    } finally {
+      setIsCopyCrewSaving(false);
     }
   };
 
@@ -1132,6 +1294,20 @@ export default function TableEditor({
               >
                 <Clock className="w-5 h-5 text-indigo-200" />
                 Hora Llamado
+              </button>
+
+              <button
+                onClick={() => {
+                  setCopyCrewSourceId("");
+                  setCopyCrewMode("merge");
+                  setCopyCrewSearch("");
+                  setIsCopyCrewOpen(true);
+                }}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm cursor-pointer"
+                title="Copiar la asignación de crew de otro llamado al llamado activo"
+              >
+                <Copy className="w-5 h-5 text-sky-200" />
+                Copiar Crew
               </button>
             </>
           )}
@@ -1660,33 +1836,67 @@ export default function TableEditor({
                     {table === "crew_llamado" && (
                       <>
                         <td className="p-3.5 font-mono text-xs">
-                          <input
-                            key={`${row.id}_${row.orden ?? ""}`}
-                            type="number"
-                            defaultValue={row.orden === undefined || row.orden === null ? "" : row.orden}
-                            autoFocus={row.id === newlyCreatedId}
-                            onFocus={(e) => {
-                              if (row.id === newlyCreatedId) {
-                                e.currentTarget.select();
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (row.id === newlyCreatedId) {
-                                setNewlyCreatedId(null);
-                              }
-                              const val = e.target.value === "" ? null : Number(e.target.value);
-                              if (val !== row.orden) {
-                                handleInlineUpdate(row.id, "orden", val);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                (e.target as HTMLInputElement).blur();
-                              }
-                            }}
-                            className="w-16 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
-                            placeholder="—"
-                          />
+                          <div className="flex items-center gap-1">
+                            <input
+                              key={`${row.id}_${row.orden ?? ""}`}
+                              type="number"
+                              defaultValue={row.orden === undefined || row.orden === null ? "" : row.orden}
+                              autoFocus={row.id === newlyCreatedId}
+                              onFocus={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  e.currentTarget.select();
+                                }
+                              }}
+                              onBlur={(e) => {
+                                if (row.id === newlyCreatedId) {
+                                  setNewlyCreatedId(null);
+                                }
+                                const val = e.target.value === "" ? null : Number(e.target.value);
+                                if (val !== row.orden) {
+                                  handleInlineUpdate(row.id, "orden", val);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                              className="w-12 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                              placeholder="—"
+                            />
+                            <div className="flex flex-col">
+                              {(() => {
+                                const activeCrewRows = sortedAndFilteredData.filter(
+                                  (r) => Number(r.llamado_id) === Number(selectedLlamadoId)
+                                );
+                                const pos = activeCrewRows.findIndex((r) => Number(r.id) === Number(row.id));
+                                const isFirst = pos === 0;
+                                const isLast = pos === activeCrewRows.length - 1;
+                                return (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={isFirst}
+                                      onClick={() => handleMoveCrew(row.id, "up")}
+                                      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-neutral-100 rounded transition-colors leading-none cursor-pointer p-0.5"
+                                      title="Mover arriba"
+                                    >
+                                      <ChevronUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isLast}
+                                      onClick={() => handleMoveCrew(row.id, "down")}
+                                      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-neutral-100 rounded transition-colors leading-none cursor-pointer p-0.5"
+                                      title="Mover abajo"
+                                    >
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </td>
                         <td className="p-3.5 text-xs">
                           <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
@@ -2662,6 +2872,155 @@ export default function TableEditor({
                 className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {isHoraBulkSaving ? "Guardando..." : "Aplicar a Todos"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───── MODAL: COPIAR ASIGNACIÓN DE CREW ───── */}
+      {isCopyCrewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
+                  <Copy className="w-5 h-5 text-sky-600" />
+                  Copiar Asignación de Crew
+                </h3>
+                <p className="text-sm text-neutral-500 mt-0.5">
+                  Copia el crew de otro llamado hacia <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCopyCrewOpen(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Selector de llamado origen */}
+            <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">
+              Llamado de Origen
+            </label>
+            <select
+              value={copyCrewSourceId}
+              onChange={(e) => setCopyCrewSourceId(e.target.value ? Number(e.target.value) : "")}
+              className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm font-semibold text-neutral-800 focus:ring-2 focus:ring-sky-500 focus:outline-hidden mb-1"
+            >
+              <option value="">-- Seleccionar llamado de origen --</option>
+              {copyCrewCandidates.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {resolveLlamado(Number(l.id))} ({l.crewCount} crew)
+                </option>
+              ))}
+            </select>
+
+            {/* Búsqueda dentro de los candidatos */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+              <input
+                type="text"
+                value={copyCrewSearch}
+                onChange={(e) => setCopyCrewSearch(e.target.value)}
+                placeholder="Buscar llamado por campaña o D.O.D..."
+                className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-sky-500 focus:bg-white transition-all"
+              />
+              {copyCrewSearch && (
+                <button
+                  onClick={() => setCopyCrewSearch("")}
+                  className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Modo de copia */}
+            <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 mb-4">
+              <label className="block text-xs font-semibold text-neutral-500 uppercase mb-2">
+                Modo de Copia
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCopyCrewMode("merge")}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer border ${
+                    copyCrewMode === "merge"
+                      ? "bg-sky-600 border-sky-600 text-white shadow-sm"
+                      : "bg-white border-neutral-200 text-neutral-600 hover:border-sky-300 hover:text-sky-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">➕</span> Unir (Merge)
+                  </div>
+                  <div className={`mt-0.5 font-normal ${copyCrewMode === "merge" ? "text-sky-100" : "text-neutral-400"}`}>
+                    Agrega solo el crew que falte en el destino, sin tocar el actual.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCopyCrewMode("replace")}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer border ${
+                    copyCrewMode === "replace"
+                      ? "bg-rose-600 border-rose-600 text-white shadow-sm"
+                      : "bg-white border-neutral-200 text-neutral-600 hover:border-rose-300 hover:text-rose-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">🔄</span> Reemplazar
+                  </div>
+                  <div className={`mt-0.5 font-normal ${copyCrewMode === "replace" ? "text-rose-100" : "text-neutral-400"}`}>
+                    Borra el crew actual del destino y copia todo el del origen.
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Resumen antes de confirmar */}
+            {copyCrewSourceId ? (
+              <div className="bg-sky-50 border border-sky-100 rounded-xl p-3 text-xs text-sky-800 mb-4">
+                {(() => {
+                  const src = copyCrewCandidates.find((l) => Number(l.id) === Number(copyCrewSourceId));
+                  if (!src) return null;
+                  const crewCount = src.crewCount || 0;
+                  if (crewCount === 0) {
+                    return <span>⚠️ El llamado de origen no tiene crew asignado.</span>;
+                  }
+                  return (
+                    <span>
+                      Se {copyCrewMode === "merge" ? "agregarán" : "reemplazarán"} con <strong>{crewCount}</strong>{" "}
+                      miembro(s) de crew de <strong>{resolveLlamado(Number(copyCrewSourceId))}</strong> hacia{" "}
+                      <strong>{resolveLlamado(Number(selectedLlamadoId))}</strong>.
+                    </span>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-xs text-neutral-400 mb-4">
+                Selecciona un llamado de origen para ver el resumen.
+              </div>
+            )}
+
+            <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+              <button
+                type="button"
+                disabled={isCopyCrewSaving}
+                onClick={() => setIsCopyCrewOpen(false)}
+                className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isCopyCrewSaving || !copyCrewSourceId}
+                onClick={handleCopyCrew}
+                className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {isCopyCrewSaving ? "Copiando..." : "Copiar Crew"}
               </button>
             </div>
           </div>
