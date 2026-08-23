@@ -717,7 +717,20 @@ export default function TableEditor({
       }
 
       const destId = Number(selectedLlamadoId);
-      // 2. En modo "replace", borrar el crew actual del destino
+      // 2. Ordenar el origen por su "orden" (los null al final) para respetar el orden relativo
+      const sortedSource = [...sourceRows].sort((a, b) => {
+        const oa = a.orden === null || a.orden === undefined ? Infinity : Number(a.orden);
+        const ob = b.orden === null || b.orden === undefined ? Infinity : Number(b.orden);
+        if (oa !== ob) return oa - ob;
+        return Number(a.id) - Number(b.id);
+      });
+
+      // 3. Filas actuales del destino
+      const destRows = (data || []).filter((r) => Number(r.llamado_id) === destId);
+      const destByCrewId = new Map(destRows.map((r) => [Number(r.crew_id), r]));
+      const sourceCrewIds = new Set(sortedSource.map((r) => Number(r.crew_id)));
+
+      // En modo "replace", borrar el crew actual del destino
       if (copyCrewMode === "replace") {
         const { error: delError } = await supabase
           .from("crew_llamado")
@@ -726,49 +739,80 @@ export default function TableEditor({
         if (delError) throw delError;
       }
 
-      // 3. Calcular el siguiente orden/prioridad del destino y los crew ya presentes
-      const destRows = (data || []).filter((r) => Number(r.llamado_id) === destId);
-      const maxOrden = destRows.length > 0
-        ? Math.max(...destRows.map((d) => Number(d.orden || 0)))
-        : 0;
-      const maxPrioridad = destRows.length > 0
-        ? Math.max(...destRows.map((d) => Number(d.prioridad || 0)))
-        : 0;
-      const existingCrewIds = new Set(destRows.map((r) => Number(r.crew_id)));
-
-      // 4. Construir filas nuevas copiando del origen (conservando notas y hora por crew)
-      let toInsert: any[] = [];
-      sourceRows.forEach((row: any) => {
-        const crewId = Number(row.crew_id);
-        // En modo "merge" no duplicar crew ya asignado en el destino
-        if (copyCrewMode === "merge" && existingCrewIds.has(crewId)) return;
-        toInsert.push({
-          llamado_id: destId,
-          crew_id: crewId,
-          orden: maxOrden + toInsert.length + 1,
-          prioridad: maxPrioridad + toInsert.length + 1,
-          notas: row.notas ?? null,
-          hora_llamado: row.hora_llamado ?? null,
-        });
+      // 4. Valores "ocupados" = los de las filas del destino que NO serán tocadas
+      //    (en replace ya no queda ninguna porque se borró todo)
+      const usedOrden = new Set<number>();
+      const usedPrioridad = new Set<number>();
+      destRows.forEach((r) => {
+        if (copyCrewMode === "replace") return;
+        if (sourceCrewIds.has(Number(r.crew_id))) return; // será actualizada
+        if (r.orden !== null && r.orden !== undefined) usedOrden.add(Number(r.orden));
+        if (r.prioridad !== null && r.prioridad !== undefined) usedPrioridad.add(Number(r.prioridad));
       });
 
-      if (toInsert.length === 0) {
-        if (copyCrewMode === "merge") {
-          alert("El llamado de destino ya tiene todo el crew del origen. No hay cambios que aplicar.");
-        } else {
-          alert("El llamado de origen no tiene crew asignado para copiar.");
-        }
-        return;
-      }
+      // Devuelve el valor deseado si está libre; si no, el siguiente valor libre (renormalizar solo conflictos)
+      const nextFree = (used: Set<number>, desired: number | null): number | null => {
+        if (desired === null) return null;
+        let val = desired;
+        while (used.has(val)) val += 1;
+        return val;
+      };
 
-      // 5. Insertar en batch
-      const { error: insError } = await supabase.from("crew_llamado").insert(toInsert);
-      if (insError) throw insError;
+      // 5. Construir operaciones: actualizar filas existentes o insertar filas nuevas
+      const updates: { id: number; payload: any }[] = [];
+      const inserts: any[] = [];
+
+      sortedSource.forEach((row: any) => {
+        const crewId = Number(row.crew_id);
+        const destRow = destByCrewId.get(crewId);
+
+        const desiredOrden = row.orden === null || row.orden === undefined ? null : Number(row.orden);
+        const desiredPrioridad = row.prioridad === null || row.prioridad === undefined ? null : Number(row.prioridad);
+
+        const finalOrden = nextFree(usedOrden, desiredOrden);
+        const finalPrioridad = nextFree(usedPrioridad, desiredPrioridad);
+        if (finalOrden !== null) usedOrden.add(finalOrden);
+        if (finalPrioridad !== null) usedPrioridad.add(finalPrioridad);
+
+        const payload = {
+          orden: finalOrden,
+          prioridad: finalPrioridad,
+          notas: row.notas ?? null,
+          hora_llamado: row.hora_llamado ?? null,
+        };
+
+        if (destRow) {
+          updates.push({ id: destRow.id, payload });
+        } else {
+          inserts.push({ ...payload, llamado_id: destId, crew_id: crewId });
+        }
+      });
+
+      // 6. Ejecutar en batch (copiando los valores exactos de orden/prioridad del origen)
+      if (updates.length > 0) {
+        await Promise.all(
+          updates.map((u) =>
+            supabase.from("crew_llamado").update(u.payload).eq("id", u.id)
+          )
+        );
+      }
+      if (inserts.length > 0) {
+        const { error: insError } = await supabase.from("crew_llamado").insert(inserts);
+        if (insError) throw insError;
+      }
 
       setCopyCrewSourceId("");
       setIsCopyCrewOpen(false);
       if (onRefresh) onRefresh();
-      alert(`Se copiaron ${toInsert.length} miembro(s) del crew a ${resolveLlamado(destId)}.`);
+
+      if (copyCrewMode === "replace") {
+        alert(`Se reemplazó el crew de ${resolveLlamado(destId)} con ${sortedSource.length} miembro(s) del origen.`);
+      } else {
+        const parts: string[] = [];
+        if (updates.length > 0) parts.push(`${updates.length} actualizado(s)`);
+        if (inserts.length > 0) parts.push(`${inserts.length} agregado(s)`);
+        alert(`Crew copiado hacia ${resolveLlamado(destId)}: ${parts.join(", ") || "sin cambios"}.`);
+      }
     } catch (err: any) {
       console.error(err);
       alert(`Error al copiar el crew: ${err.message}`);
@@ -2992,9 +3036,13 @@ export default function TableEditor({
                   }
                   return (
                     <span>
-                      Se {copyCrewMode === "merge" ? "agregarán" : "reemplazarán"} con <strong>{crewCount}</strong>{" "}
+                      Se {copyCrewMode === "merge" ? "sincronizarán" : "reemplazarán"} <strong>{crewCount}</strong>{" "}
                       miembro(s) de crew de <strong>{resolveLlamado(Number(copyCrewSourceId))}</strong> hacia{" "}
-                      <strong>{resolveLlamado(Number(selectedLlamadoId))}</strong>.
+                      <strong>{resolveLlamado(Number(selectedLlamadoId))}</strong>,{" "}
+                      copiando también su <strong>orden</strong> y <strong>prioridad</strong>{" "}
+                      {copyCrewMode === "merge"
+                        ? "(actualizando los que ya existan y agregando los que falten)."
+                        : "(reemplazando todo el crew del destino)."}
                     </span>
                   );
                 })()}
