@@ -85,8 +85,11 @@ export default function FormModal({
     } else {
       // Set table-specific defaults
       const defaults: any = {};
-      if (table === "escenas" || table === "shotlist" || table === "crew" || table === "talento" || table === "pdr") {
+      if (table === "escenas" || table === "shotlist" || table === "crew" || table === "pdr") {
         defaults.orden = 1;
+      }
+      if (table === "talento") {
+        defaults.id_personaje = 1;
       }
       if (table === "cliente_agencia") {
         defaults.tipo = "Cliente";
@@ -1263,12 +1266,12 @@ export default function FormModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Orden (vacío)</label>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">ID Personaje</label>
                   <input
                     required
                     type="number"
-                    name="orden"
-                    value={formValues.orden === undefined ? "" : formValues.orden}
+                    name="id_personaje"
+                    value={formValues.id_personaje === undefined ? "" : formValues.id_personaje}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                     placeholder="Ej: 1"
@@ -1472,12 +1475,12 @@ export default function FormModal({
                         ? lookups.talento.filter((t) => projectLlamadoIds.has(Number(t.llamado_id)))
                         : lookups.talento;
 
-                    const toggleTalent = (talentId: number) => {
+                    const toggleTalent = (personajeId: number) => {
                       const current = new Set(selectedIds);
-                      if (current.has(talentId)) {
-                        current.delete(talentId);
+                      if (current.has(personajeId)) {
+                        current.delete(personajeId);
                       } else {
-                        current.add(talentId);
+                        current.add(personajeId);
                       }
                       setFormValues((prev: any) => ({
                         ...prev,
@@ -1496,12 +1499,12 @@ export default function FormModal({
                         ) : (
                           <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
                             {projectTalents.map((t) => {
-                              const isSelected = selectedIds.includes(Number(t.id));
+                              const isSelected = selectedIds.includes(Number(t.id_personaje));
                               return (
                                 <button
                                   key={t.id}
                                   type="button"
-                                  onClick={() => toggleTalent(Number(t.id))}
+                                  onClick={() => toggleTalent(Number(t.id_personaje))}
                                   className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                                     isSelected
                                       ? "bg-neutral-900 border-neutral-900 text-white"

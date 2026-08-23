@@ -326,7 +326,7 @@ export default function App() {
     // 7. Talento (Reparto) — se usa para el selector múltiple de Cast IDs en Shotlist
     let talentList: any[] = [];
     try {
-      const { data, error } = await supabase.from("talento").select("id, nombre, rol, llamado_id").order("nombre", { ascending: true });
+      const { data, error } = await supabase.from("talento").select("id, nombre, rol, llamado_id, id_personaje").order("nombre", { ascending: true });
       if (error) console.error("Error fetching talento database lookup:", error);
       else talentList = data || [];
     } catch (e) {

@@ -468,8 +468,8 @@ export default function TableEditor({
     setIsTalentoBulkSaving(true);
     try {
       const activeLlamadoRows = data.filter((r) => Number(r.llamado_id) === Number(selectedLlamadoId));
-      const maxOrden = activeLlamadoRows.length > 0
-        ? Math.max(...activeLlamadoRows.map((d) => Number(d.orden || 0)))
+      const maxIdPersonaje = activeLlamadoRows.length > 0
+        ? Math.max(...activeLlamadoRows.map((d) => Number(d.id_personaje || 0)))
         : 0;
 
       // Map selected keys back to their profile rows
@@ -484,7 +484,7 @@ export default function TableEditor({
           llamado_id: selectedLlamadoId,
           nombre: profile.nombre || "",
           rol: profile.rol || null,
-          orden: maxOrden + 1 + i,
+          id_personaje: maxIdPersonaje + 1 + i,
           llamado_hora: profile.llamado_hora || null,
           locacion_id: profile.locacion_id || null,
           en_set: profile.en_set || null,
@@ -1024,7 +1024,7 @@ export default function TableEditor({
       .filter(Boolean)
       .map(Number)
       .filter((n: number) => !isNaN(n))
-      .map((id: number) => lookups.talento.find((t) => Number(t.id) === id))
+      .map((id: number) => lookups.talento.find((t) => Number(t.id_personaje) === id))
       .filter(Boolean);
   };
 
@@ -1570,7 +1570,7 @@ export default function TableEditor({
             <table className="w-full text-left border-collapse relative">
               <thead>
                 <tr className="bg-neutral-900 text-white font-condensed font-bold text-sm tracking-wide sticky top-0 uppercase z-10">
-                  {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && <th className="p-3.5 pl-6 w-20">ID</th>}
+                  {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && table !== "talento" && <th className="p-3.5 pl-6 w-20">ID</th>}
                   
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
@@ -1642,7 +1642,7 @@ export default function TableEditor({
 
                   {table === "talento" && (
                     <>
-                      <th className="p-3.5">Orden</th>
+                      <th className="p-3.5">ID</th>
                       <th className="p-3.5">Nombre</th>
                       <th className="p-3.5">Llamado / En Set / Status</th>
                       <th className="p-3.5">Notas</th>
@@ -1706,7 +1706,7 @@ export default function TableEditor({
                     onDrop={table === "pdr" ? () => handleDrop(index) : undefined}
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
-                    {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && (
+                    {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && table !== "talento" && (
                       <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
                         <div className="flex items-center gap-1.5">
                           #{row.id}
@@ -2049,7 +2049,7 @@ export default function TableEditor({
                     {/* ───── TABLA: TALENTO (REPARTO) ───── */}
                     {table === "talento" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">{row.orden}º</td>
+                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">{row.id_personaje}</td>
                         <td className="p-3.5">
                           <div className="font-bold text-neutral-900">{row.nombre}</div>
                           <div className="text-xs text-indigo-600 font-bold uppercase">{row.rol || "Actor Principal"}</div>

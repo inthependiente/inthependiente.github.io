@@ -84,7 +84,7 @@ export interface ClienteAgencia {
 export interface Talento {
   id?: number;
   llamado_id: number;
-  orden?: number;
+  id_personaje?: number; // identificador del personaje; se usa como valor en shotlist.cast_ids
   nombre: string;
   rol?: string;
   llamado_hora?: string;

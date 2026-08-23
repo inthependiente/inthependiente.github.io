@@ -1115,7 +1115,7 @@ async function loadAgenciaCliente() {
 //  TALENTO — todos los campos editables
 // ═══════════════════════════════════════════════════
 async function loadTalento() {
-  const rows  = await fetchSupabase('talento', { llamado_id: LLAMADO_ID }, 'orden',
+  const rows  = await fetchSupabase('talento', { llamado_id: LLAMADO_ID }, 'id_personaje',
     '*, locaciones(locacion)');
   const tbody = document.getElementById('tbody-talento');
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
@@ -1125,7 +1125,7 @@ async function loadTalento() {
     return `
     <tr class="${rowBg(i)} text-[11px]">
       <td class="border border-neutral-300 px-1 py-[2px] text-center">
-        ${editableSpan('talento', r.id, 'orden', (r.orden||'').toString(), `tal-ord-${r.id}`)}
+        ${editableSpan('talento', r.id, 'id_personaje', (r.id_personaje||'').toString(), `tal-ord-${r.id}`)}
       </td>
       <td class="border border-neutral-300 px-1 py-[2px]">
         ${editableSpan('talento', r.id, 'nombre', r.nombre||'', `tal-nom-${r.id}`)}
