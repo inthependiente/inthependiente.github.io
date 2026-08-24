@@ -412,6 +412,53 @@ export default function TableEditor({
     }
   };
 
+  const handleDuplicatePdrRow = async (row: any) => {
+    if (table !== "pdr") return;
+
+    const shotlistRow = lookups.shotlist.find((s) => Number(s.id) === Number(row.shotlist_id));
+    if (String(shotlistRow?.plano || "").trim().toUpperCase() !== "ES") return;
+
+    setIsProcessing(true);
+    try {
+      const sourceOrden = Number(row.orden || 0);
+      const rowsToShift = (data || [])
+        .filter((item) =>
+          Number(item.llamado_id) === Number(row.llamado_id) &&
+          Number(item.orden || 0) > sourceOrden
+        )
+        .sort((a, b) => Number(b.orden || 0) - Number(a.orden || 0));
+
+      for (const item of rowsToShift) {
+        const { error } = await supabase
+          .from("pdr")
+          .update({ orden: Number(item.orden || 0) + 1 })
+          .eq("id", item.id);
+        if (error) throw error;
+      }
+
+      const { data: insertedData, error } = await supabase
+        .from("pdr")
+        .insert([{
+          llamado_id: row.llamado_id,
+          shotlist_id: row.shotlist_id,
+          orden: sourceOrden + 1,
+          duracion_min: row.duracion_min || 0,
+        }])
+        .select();
+      if (error) throw error;
+
+      if (insertedData?.length) {
+        setNewlyCreatedId(insertedData[0].id);
+      }
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error al duplicar fila de PDR: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Unique talent "base" profiles available for the active llamado:
   // - Belong to the active llamado's project
   // - Dedup by normalized nombre (a talent may have one row per llamado)
@@ -2435,6 +2482,18 @@ export default function TableEditor({
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+                        )}
+
+                        {table === "pdr" && String(lookups.shotlist.find((s) => Number(s.id) === Number(row.shotlist_id))?.plano || "").trim().toUpperCase() === "ES" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicatePdrRow(row)}
+                            disabled={isProcessing}
+                            className="p-2 text-orange-600 hover:bg-white hover:text-orange-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Duplicar plano ES"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
                         )}
 
                         {/* Edit Button */}
