@@ -137,14 +137,38 @@ export default function TableEditor({
         return;
       }
 
-      const maxOrden = data && data.length > 0 
-        ? Math.max(...data.map(d => Number(d.orden || 0))) 
+      const activePdrRows = (data || []).filter((item) =>
+        Number(item.llamado_id) === Number(defaultLlamadoId)
+      );
+      const maxOrden = activePdrRows.length > 0
+        ? Math.max(...activePdrRows.map((item) => Number(item.orden || 0)))
         : 0;
+      const requestedOrden = quickAddPdrOrden.trim() === ""
+        ? maxOrden + 1
+        : Number(quickAddPdrOrden);
+
+      if (!Number.isInteger(requestedOrden) || requestedOrden < 1) {
+        alert("La posición debe ser un número entero positivo o quedar vacía para insertar al final.");
+        return;
+      }
+
+      const newOrden = Math.min(requestedOrden, maxOrden + 1);
+      const rowsToShift = activePdrRows
+        .filter((item) => Number(item.orden || 0) >= newOrden)
+        .sort((a, b) => Number(b.orden || 0) - Number(a.orden || 0));
+
+      for (const item of rowsToShift) {
+        const { error } = await supabase
+          .from("pdr")
+          .update({ orden: Number(item.orden || 0) + 1 })
+          .eq("id", item.id);
+        if (error) throw error;
+      }
 
       const newRow = {
         llamado_id: defaultLlamadoId,
         shotlist_id: Number(quickAddPdrShotlistId),
-        orden: maxOrden + 1,
+        orden: newOrden,
         duracion_min: 0
       };
 
@@ -156,6 +180,7 @@ export default function TableEditor({
       }
 
       setQuickAddPdrShotlistId("");
+  setQuickAddPdrOrden("");
 
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -223,6 +248,7 @@ export default function TableEditor({
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [quickAddPdrShotlistId, setQuickAddPdrShotlistId] = useState<number | "">("");
+  const [quickAddPdrOrden, setQuickAddPdrOrden] = useState("");
   const [modalFeedback, setModalFeedback] = useState<{
     success: boolean;
     title: string;
@@ -1701,6 +1727,7 @@ export default function TableEditor({
                       <th className="p-3.5 w-16">Orden</th>
                       <th className="p-3.5">Llamado</th>
                       <th className="p-3.5">Toma del Shotlist</th>
+                      <th className="p-3.5 w-28 text-center">Posición</th>
                       <th className="p-3.5 w-40 text-center">Referencia</th>
                       <th className="p-3.5">Minutos</th>
                     </>
@@ -2618,10 +2645,24 @@ export default function TableEditor({
                       </div>
                     </td>
 
-                    {/* 4. Referencia empty cell */}
+                    {/* 4. Posición opcional; vacío inserta al final */}
+                    <td className="p-1 border border-neutral-200 bg-white text-xs">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={quickAddPdrOrden}
+                        onChange={(e) => setQuickAddPdrOrden(e.target.value)}
+                        className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-700 p-2 rounded text-center"
+                        placeholder="Final"
+                        title="Posición de inserción; vacío para insertar al final"
+                      />
+                    </td>
+
+                    {/* 5. Referencia empty cell */}
                     <td className="p-1 border border-neutral-200 bg-white" />
 
-                    {/* 5. Minutos empty cell */}
+                    {/* 6. Minutos empty cell */}
                     <td className="p-1 border border-neutral-200 bg-white" />
                     
                     {/* Actions column empty placeholder */}
@@ -2630,6 +2671,7 @@ export default function TableEditor({
                 )}
                 {table === "crew_llamado" && (
                   <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                        <td className="p-1 border border-neutral-200 bg-white" />
                     {/* 1. Orden column showing a clean green Plus button in the first position as per reference */}
                     <td className="p-2.5 border border-neutral-200 bg-white text-center">
                       <button
