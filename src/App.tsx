@@ -352,7 +352,6 @@ export default function App() {
       
       const tablesSortedByIdAsc: DbTable[] = [
         "locaciones",
-        "escenas",
         "crew",
         "crew_llamado",
         "cliente_agencia",
@@ -362,6 +361,10 @@ export default function App() {
 
       if (tablesSortedByIdAsc.includes(activeTable)) {
         query = query.order("id", { ascending: true });
+      } else if (activeTable === "escenas") {
+        query = query
+          .order("orden", { ascending: true, nullsFirst: false })
+          .order("id", { ascending: true });
       } else if (activeTable === "pdr") {
         query = query.order("orden", { ascending: true });
       } else {
