@@ -17,6 +17,7 @@ interface FormModalProps {
     shotlist: any[];
     talento: any[];
     ciudades: any[];
+    hospitales: any[];
   };
 }
 
@@ -112,7 +113,7 @@ export default function FormModal({
     let parsedValue: any = value;
     if (type === "number") {
       parsedValue = value === "" ? "" : Number(value);
-    } else if (name === "proyecto_id" || name === "llamado_id" || name === "locacion_id" || name === "crew_id" || name === "shotlist_id" || name === "ciudad_id") {
+    } else if (name === "proyecto_id" || name === "llamado_id" || name === "locacion_id" || name === "crew_id" || name === "shotlist_id" || name === "ciudad_id" || name === "hospital_id") {
       parsedValue = value === "" ? null : Number(value);
     }
 
@@ -319,6 +320,7 @@ export default function FormModal({
       talento: "Talento",
       pdr: "Entrada PDR (Plan de Rodaje)",
       shotlist: "Plano Shotlist",
+      hospitales: "Centro Médico",
     };
     return `${action} ${labels[table] || table}`;
   };
@@ -773,23 +775,50 @@ export default function FormModal({
                   />
                 </div>
                 <hr className="col-span-2 border-neutral-100 my-2" />
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Centro Médico Cercano</label>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Centro Médico Cercano (Hospital)</label>
+                  <select
+                    name="hospital_id"
+                    value={formValues.hospital_id ?? ""}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-white font-medium cursor-pointer"
+                  >
+                    <option value="">-- Seleccionar Hospital / Centro Médico --</option>
+                    {(lookups.hospitales || []).map((h: any) => (
+                      <option key={h.id} value={h.id}>
+                        {h.hospital}
+                        {h.direccion_hosp ? ` — ${h.direccion_hosp}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    El nombre, dirección y URL del mapa se toman del catálogo de Hospitales (gestionado en el panel "Hospitales"). Si no existe, créalo primero allí.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* ───── TABLA: HOSPITALES ───── */}
+            {table === "hospitales" && (
+              <>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Centro Médico / Hospital *</label>
                   <input
+                    required
                     type="text"
-                    name="centro_medico"
-                    value={formValues.centro_medico || ""}
+                    name="hospital"
+                    value={formValues.hospital || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                     placeholder="Ej: Hospital Clínico Universidad"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Dirección Centro Médico</label>
                   <input
                     type="text"
-                    name="direccion_med"
-                    value={formValues.direccion_med || ""}
+                    name="direccion_hosp"
+                    value={formValues.direccion_hosp || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                     placeholder="Ej: Av. Alameda 456"
@@ -799,8 +828,8 @@ export default function FormModal({
                   <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Url Mapa Centro Médico (Google Maps)</label>
                   <input
                     type="text"
-                    name="url_med"
-                    value={formValues.url_med || ""}
+                    name="ubicacion_hosp"
+                    value={formValues.ubicacion_hosp || ""}
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
                     placeholder="Ej: https://maps.google.com/..."

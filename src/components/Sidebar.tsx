@@ -12,7 +12,8 @@ import {
   Timer, 
   Camera,
   Layers,
-  Database
+  Database,
+  HeartPulse
 } from "lucide-react";
 
 interface SidebarProps {
@@ -93,6 +94,13 @@ export default function Sidebar({ activeTable, onTableChange, counts }: SidebarP
       description: "Planos y storyboard",
       icon: Camera,
       color: "bg-pink-50 text-pink-600 border-pink-200",
+    },
+    {
+      value: "hospitales",
+      label: "Centros médicos",
+      description: "Catálogo de centros médicos",
+      icon: HeartPulse,
+      color: "bg-red-50 text-red-600 border-red-200",
     },
   ];
 

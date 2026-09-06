@@ -66,6 +66,7 @@ export default function App() {
     talento: 0,
     pdr: 0,
     shotlist: 0,
+    hospitales: 0,
   });
 
   // Global relational lookup caches for dropdown menus
@@ -77,6 +78,7 @@ export default function App() {
     shotlist: any[];
     talento: any[];
     ciudades: any[];
+    hospitales: any[];
   }>({
     proyectos: [],
     llamados: [],
@@ -85,6 +87,7 @@ export default function App() {
     shotlist: [],
     talento: [],
     ciudades: [],
+    hospitales: [],
   });
 
   // Form Modal controls
@@ -204,6 +207,7 @@ export default function App() {
       "talento",
       "pdr",
       "shotlist",
+      "hospitales",
     ];
     
     try {
@@ -333,6 +337,16 @@ export default function App() {
       console.error("Exception fetching talento lookup:", e);
     }
 
+    // 8. Hospitales (catálogo global de centros médicos) — selector en Locaciones
+    let hospList: any[] = [];
+    try {
+      const { data, error } = await supabase.from("hospitales").select("id, hospital, direccion_hosp, ubicacion_hosp").order("hospital", { ascending: true });
+      if (error) console.error("Error fetching hospitales database lookup:", error);
+      else hospList = data || [];
+    } catch (e) {
+      console.error("Exception fetching hospitales lookup:", e);
+    }
+
     setLookups({
       proyectos: projs,
       locaciones: locs,
@@ -341,6 +355,7 @@ export default function App() {
       llamados: decoratedCalls,
       talento: talentList,
       ciudades: cities,
+      hospitales: hospList,
     });
   };
 
@@ -356,7 +371,8 @@ export default function App() {
         "crew_llamado",
         "cliente_agencia",
         "talento",
-        "shotlist"
+        "shotlist",
+        "hospitales",
       ];
 
       if (tablesSortedByIdAsc.includes(activeTable)) {

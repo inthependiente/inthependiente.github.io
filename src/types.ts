@@ -32,9 +32,15 @@ export interface Locaciones {
   locacion: string;
   direccion_loc?: string;
   url_loc?: string;
-  centro_medico?: string;
-  direccion_med?: string;
-  url_med?: string;
+  hospital_id?: number | null;
+  created_at?: string;
+}
+
+export interface Hospitales {
+  id?: number;
+  hospital: string;
+  direccion_hosp?: string;
+  ubicacion_hosp?: string;
   created_at?: string;
 }
 
@@ -125,4 +131,5 @@ export type DbTable =
   | "cliente_agencia"
   | "talento"
   | "pdr"
-  | "shotlist";
+  | "shotlist"
+  | "hospitales";

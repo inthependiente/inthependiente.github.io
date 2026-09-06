@@ -1051,7 +1051,7 @@ async function loadClima(lat, lng, fechaStr) {
 // ═══════════════════════════════════════════════════
 async function loadCronograma() {
   const rows  = await fetchSupabase('escenas', { llamado_id: LLAMADO_ID }, 'orden',
-    '*, locaciones(id, locacion, direccion_loc, url_loc, centro_medico, direccion_med, url_med)');
+    '*, locaciones(id, locacion, direccion_loc, url_loc, hospital_id, hospitales(hospital, direccion_hosp, ubicacion_hosp))');
   const tbody = document.getElementById('tbody-cronograma');
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-neutral-400 italic py-3 border">Sin datos</td></tr>`; return; }
 
@@ -1059,6 +1059,7 @@ async function loadCronograma() {
     const loc  = r.locaciones || {};
     const locId = loc.id || 0;
     const wId  = `cron-${r.id}`;
+    const hosp = loc.hospitales || {};
     return `
     <tr class="align-top border-neutral-400 ${rowBg(i)}">
       <td class="border px-1 py-1 content-center">
@@ -1083,9 +1084,11 @@ async function loadCronograma() {
         ${urlEditable('locaciones', locId, 'url_loc', loc.url_loc||'', 'Ubicación', `loc-url-${r.id}`)}
       </td>
       <td class="border px-1 py-1 leading-none content-center text-center font-bold text-[12px]">
-        <div>${editableSpan('locaciones', locId, 'centro_medico', loc.centro_medico||'', `loc-med-${r.id}`)}</div>
-        <div class="text-[10px] text-gray-500">${editableSpan('locaciones', locId, 'direccion_med', loc.direccion_med||'', `loc-dmed-${r.id}`)}</div>
-        ${urlEditable('locaciones', locId, 'url_med', loc.url_med||'', 'Ubicación', `loc-umed-${r.id}`)}
+        ${hosp.hospital ? `
+          <div>🏥 ${hosp.hospital}</div>
+          <div class="text-[10px] text-gray-500">${hosp.direccion_hosp||''}</div>
+          ${hosp.ubicacion_hosp ? `<a href="${hosp.ubicacion_hosp}" target="_blank" class="bg-blue-600 text-white font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors inline-flex items-center gap-1">${cursorSparkles} Ubicación</a>` : ''}
+        ` : `<span class="text-neutral-300 italic text-[10px] font-normal">Sin definir</span>`}
       </td>
     </tr>`;
   }).join('');

@@ -39,6 +39,7 @@ interface TableEditorProps {
     shotlist: any[];
     talento: any[];
     ciudades: any[];
+    hospitales: any[];
   };
   selectedProjectId: number | null;
   setSelectedProjectId: (id: number | null) => void;
@@ -1072,6 +1073,11 @@ export default function TableEditor({
     return parent ? parent.locacion : `Locación #${id}`;
   };
 
+  const resolveHospital = (id: number | null | undefined) => {
+    if (!id) return null;
+    return lookups.hospitales.find((h) => h.id === id) || null;
+  };
+
   const resolveCrewName = (id: number) => {
     const parent = lookups.crew.find((c) => c.id === id);
     return parent ? `${parent.nombre} [${parent.cargo || "S/C"}]` : `Crew #${id}`;
@@ -1143,6 +1149,10 @@ export default function TableEditor({
       if (key === "locacion_id" && typeof val === "number") {
         return resolveLocacion(val).toLowerCase().includes(query);
       }
+      if (key === "hospital_id" && typeof val === "number") {
+        const hosp = resolveHospital(val);
+        return hosp ? String(hosp.hospital).toLowerCase().includes(query) : false;
+      }
       if (key === "crew_id" && typeof val === "number") {
         return resolveCrewName(val).toLowerCase().includes(query);
       }
@@ -1209,6 +1219,7 @@ export default function TableEditor({
       talento: "Talento",
       pdr: "Plan de Rodaje",
       shotlist: "Shotlist",
+      hospitales: "Centros Médicos",
     };
     return titles[table] || table;
   };
@@ -1355,7 +1366,7 @@ export default function TableEditor({
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          {["escenas", "talento", "pdr", "shotlist", "proyectos", "llamados", "locaciones", "cliente_agencia", "crew_llamado"].includes(table) && (
+          {["escenas", "talento", "pdr", "shotlist", "proyectos", "llamados", "locaciones", "cliente_agencia", "crew_llamado", "hospitales"].includes(table) && (
             <>
               <button
                 onClick={() => setConfirmModal({ type: "deleteAll", isOpen: true })}
@@ -1674,6 +1685,13 @@ export default function TableEditor({
                     </>
                   )}
 
+                  {table === "hospitales" && (
+                    <>
+                      <th className="p-3.5">Hospital / Centro Médico</th>
+                      <th className="p-3.5">Dirección / Link Google Maps</th>
+                    </>
+                  )}
+
                   {table === "escenas" && (
                     <>
                       <th className="p-3.5 w-16">Orden</th>
@@ -1907,8 +1925,41 @@ export default function TableEditor({
                           )}
                         </td>
                         <td className="p-3.5 text-xs">
-                          <div className="font-semibold text-red-700">🏥 {row.centro_medico || "Sin definir"}</div>
-                          <div className="text-neutral-400 truncate">{row.direccion_med || "-"}</div>
+                          {(() => {
+                            const hosp = resolveHospital(row.hospital_id);
+                            return hosp ? (
+                              <>
+                                <div className="font-semibold text-red-700">🏥 {hosp.hospital}</div>
+                                {hosp.direccion_hosp && (
+                                  <div className="text-neutral-400 truncate">{hosp.direccion_hosp}</div>
+                                )}
+                                {hosp.ubicacion_hosp && (
+                                  <a href={hosp.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
+                                    <MapPin className="w-3 h-3 flex-shrink-0" /> Abrir en Google Maps
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-neutral-400 italic">Sin hospital asignado</span>
+                            );
+                          })()}
+                        </td>
+                      </>
+                    )}
+
+                    {/* ───── TABLA: HOSPITALES ───── */}
+                    {table === "hospitales" && (
+                      <>
+                        <td className="p-3.5 font-bold text-neutral-900">
+                          <div className="font-semibold text-red-700">🏥 {row.hospital || "Sin nombre"}</div>
+                        </td>
+                        <td className="p-3.5 text-xs max-w-xs">
+                          <div className="text-neutral-600 font-medium truncate">{row.direccion_hosp || "Sin dirección"}</div>
+                          {row.ubicacion_hosp && (
+                            <a href={row.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
+                              <MapPin className="w-3 h-3 flex-shrink-0" /> Abrir en Google Maps
+                            </a>
+                          )}
                         </td>
                       </>
                     )}
