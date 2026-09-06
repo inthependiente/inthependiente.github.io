@@ -1085,7 +1085,7 @@ async function loadCronograma() {
       </td>
       <td class="border px-1 py-1 leading-none content-center text-center font-bold text-[12px]">
         ${hosp.hospital ? `
-          <div>🏥 ${hosp.hospital}</div>
+          <div>${hosp.hospital}</div>
           <div class="text-[10px] text-gray-500">${hosp.direccion_hosp||''}</div>
           ${hosp.ubicacion_hosp ? `<a href="${hosp.ubicacion_hosp}" target="_blank" class="bg-blue-600 text-white font-semibold m-1 px-1 py-1 rounded hover:bg-blue-700 transition-colors inline-flex items-center gap-1">${cursorSparkles} Ubicación</a>` : ''}
         ` : `<span class="text-neutral-300 italic text-[10px] font-normal">Sin definir</span>`}
