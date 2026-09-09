@@ -1022,9 +1022,9 @@ async function loadClima(lat, lng, fechaStr) {
     const p = fechaStr.toString().split('-');
     const fechaISO = `${p[0]}-${p[1]}-${p[2].slice(0,2)}`;
     
-    // Fallback to Santiago coordinates if not provided
-    const latitude = (lat !== undefined && lat !== null) ? lat : -33.4489;
-    const longitude = (lng !== undefined && lng !== null) ? lng : -70.6693;
+    // Fallback to Santa Cruz coordinates if not provided
+    const latitude = (lat !== undefined && lat !== null) ? lat : -17.7863;
+    const longitude = (lng !== undefined && lng !== null) ? lng : -63.1812;
     const timezone = 'auto';
 
     const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 16,
