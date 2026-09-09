@@ -1028,21 +1028,61 @@ async function loadClima(lat, lng, fechaStr) {
     const timezone = 'auto';
 
     const params = new URLSearchParams({ latitude, longitude, timezone, forecast_days: 16,
-      daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' });
+      daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
+      hourly: 'precipitation_probability,weathercode' });
     const dataFc = await (await fetch(`https://api.open-meteo.com/v1/forecast?${params}`)).json();
     const idx = dataFc.daily.time.findIndex(t => t === fechaISO);
     if (idx === -1) return;
+
+    // Pico de probabilidad de lluvia de todo el día (00:00-23:00) de la fecha
+    const probOp = (dataFc.hourly?.precipitation_probability||[]).filter((_, i) =>
+      dataFc.hourly.time[i].slice(0,10) === fechaISO);
+    const lluviaPct = probOp.length ? Math.max(...probOp) : 0;
     const wmoDesc = {0:'Despejado',1:'Mayormente despejado',2:'Parcialmente nublado',3:'Nublado',45:'Neblina',48:'Neblina con escarcha',51:'Llovizna ligera',53:'Llovizna moderada',55:'Llovizna densa',61:'Lluvia ligera',63:'Lluvia moderada',65:'Lluvia intensa',80:'Chubascos ligeros',81:'Chubascos moderados',82:'Chubascos violentos',95:'Tormenta eléctrica',96:'Tormenta con granizo'};
     const wmoIcon = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️'};
-    const wmo = dataFc.daily.weathercode[idx];
-    set('hdr-clima',    wmoDesc[wmo]||`Código ${wmo}`);
+    const wmoPeak = dataFc.daily.weathercode[idx];
+    const wmoH = dataFc.hourly?.weathercode||[];
+    const wmoT = dataFc.hourly?.time||[];
+
+    // Condición dominante del día: moda de códigos entre 06:00-20:00
+    const codesOp = [];
+    for (let i=0;i<wmoT.length;i++){
+      if (wmoT[i].slice(0,10) !== fechaISO) continue;
+      const h = wmoT[i].slice(11,13);
+      if (h >= '06' && h <= '20') codesOp.push(wmoH[i]);
+    }
+    const freq = {}; let moda = null, maxN = -1;
+    codesOp.forEach(c => freq[c] = (freq[c]||0)+1);
+    Object.keys(freq).forEach(c => { if (freq[c] > maxN) { maxN = freq[c]; moda = Number(c); } });
+
+    // Evento más severo del día y la franja horaria en que ocurre
+    const esSevero = c => [51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99].includes(c);
+    const banda = hh => (hh < 6 ? 'de madrugada' : hh < 12 ? 'por la mañana' : hh < 19 ? 'por la tarde' : 'por la noche');
+    let horaPico = null;
+    for (let i=0;i<wmoT.length;i++){
+      if (wmoT[i].slice(0,10) === fechaISO && wmoH[i] === wmoPeak) { horaPico = Number(wmoT[i].slice(11,13)); break; }
+    }
+
+    let climaTxt, iconoClima;
+    if (moda != null) {
+      climaTxt = wmoDesc[moda] || `Código ${moda}`;
+      iconoClima = wmoIcon[moda] || '🌡️';
+      if (esSevero(wmoPeak) && !esSevero(moda)) {
+        const extra = (wmoDesc[wmoPeak]||`Código ${wmoPeak}`) + (horaPico != null ? ' ' + banda(horaPico) : '');
+        climaTxt += ' · ' + ' (' + extra + ')';
+      }
+    } else {
+      climaTxt = wmoDesc[wmoPeak] || `Código ${wmoPeak}`;
+      iconoClima = wmoIcon[wmoPeak] || '🌡️';
+    }
+    set('hdr-clima', climaTxt);
     set('hdr-tmax',     Math.round(dataFc.daily.temperature_2m_max[idx])+'°');
     set('hdr-tmin',     Math.round(dataFc.daily.temperature_2m_min[idx])+'°');
-    set('hdr-lluvia',   (dataFc.daily.precipitation_probability_max[idx]??0)+'%');
+    set('hdr-lluvia',   lluviaPct+'%');
     set('hdr-amanecer', dataFc.daily.sunrise[idx].split('T')[1].slice(0,5));
     set('hdr-atardecer',dataFc.daily.sunset[idx].split('T')[1].slice(0,5));
     const ic = document.getElementById('hdr-clima-icono');
-    if (ic) ic.outerHTML = `<span id="hdr-clima-icono" class="text-sm leading-none inline-block mr-1 ml-1">${wmoIcon[wmo]||'🌡️'}</span>`;
+    if (ic) ic.outerHTML = `<span id="hdr-clima-icono" class="text-sm leading-none inline-block mr-1 ml-1">${iconoClima}</span>`;
   } catch(e) { console.warn('Clima error:', e); }
 }
 
