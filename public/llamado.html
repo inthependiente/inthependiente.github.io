@@ -1219,19 +1219,22 @@ async function loadCrew() {
   const container = document.getElementById('crew-container');
   if (!flatRows.length) { container.innerHTML = `<div class="col-span-2 text-center text-neutral-400 italic py-3">Sin datos</div>`; return; }
 
-  // Agrupar por departamento
-  const depts = {}, order = [];
+  // Normalizar el departamento a minúsculas al agrupar, para que valores con
+  // distinta capitalización en la BD (p.ej. 'Luces / grip' vs 'Luces / Grip')
+  // caigan en el mismo bloque en vez de ocultarse/duplicarse.
+  const normDept = (s) => (s || '').trim().toLowerCase();
+
+  const depts = {};
   flatRows.forEach(r => {
-    const dept = (r.departamento||'Otros').trim();
-    if (!depts[dept]) { depts[dept] = []; order.push(dept); }
-    depts[dept].push(r);
+    const dept = normDept(r.departamento) || 'otros';
+    (depts[dept] = depts[dept] || []).push(r);
   });
 
-  // Ordenar departamentos según DEPT_ORDER; los no listados van al final
+  // Ordenar departamentos: DEPT_ORDER (en minúsculas) primero, luego el resto
+  // alfabéticamente.
   const sorted = [
-    ...DEPT_ORDER.filter(d => order.some(o => o.toLowerCase() === d.toLowerCase()))
-                 .map(d => order.find(o => o.toLowerCase() === d.toLowerCase())),
-    ...order.filter(o => !DEPT_ORDER.some(d => d.toLowerCase() === o.toLowerCase())),
+    ...DEPT_ORDER.filter(d => depts[d]),
+    ...Object.keys(depts).filter(d => !DEPT_ORDER.includes(d)).sort(),
   ];
 
   const mitad = Math.ceil(flatRows.length / 2);
