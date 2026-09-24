@@ -77,6 +77,23 @@
       vertical-align: middle;
     }
     .save-btn:hover { background: #0ea89e; }
+
+    /* ── Logo cliente: preservar proporción original + margen interno en su caja ── */
+    #hdr-bg-cliente {
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    #hdr-logo-cliente {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      object-position: center;
+      flex: none;
+      min-width: 0;
+    }
   </style>
 </head>
 
@@ -110,7 +127,7 @@
       <!-- Cliente / Campaña -->
       <div class="col-span-7">
         <div class="h-18 flex items-center justify-center" id="hdr-bg-cliente">
-          <img src="" class="h-full" id="hdr-logo-cliente">
+          <img src="" id="hdr-logo-cliente" alt="Logo Cliente">
         </div>
         <div class="h-12 flex items-center justify-center" id="hdr-bg-campana">
           <span class="font-semibold text-[24px] uppercase text-white" id="hdr-campana">—</span>
@@ -448,6 +465,33 @@
           }
         }
         const customStyles = allCSSRules.join('\n');
+
+        // ── Normalize client logo on the CLONE ──
+        // Inline styles take precedence over any stylesheet, so the PDF is
+        // guaranteed to render the logo with its original proportions, fully
+        // contained inside its box and with the same inner margin as on screen.
+        const origLogoCliente = document.getElementById('hdr-logo-cliente');
+        const cloneLogoCliente = clone.querySelector('#hdr-logo-cliente');
+        if (cloneLogoCliente) {
+          cloneLogoCliente.style.display = 'block';
+          cloneLogoCliente.style.width = 'auto';
+          cloneLogoCliente.style.height = 'auto';
+          cloneLogoCliente.style.maxWidth = '100%';
+          cloneLogoCliente.style.maxHeight = '100%';
+          cloneLogoCliente.style.objectFit = 'contain';
+          cloneLogoCliente.style.objectPosition = 'center';
+          cloneLogoCliente.style.flex = 'none';
+          cloneLogoCliente.style.minWidth = '0';
+          const nw = origLogoCliente ? origLogoCliente.naturalWidth : 0;
+          const nh = origLogoCliente ? origLogoCliente.naturalHeight : 0;
+          if (nw > 0 && nh > 0) cloneLogoCliente.style.aspectRatio = `${nw} / ${nh}`;
+
+          const cloneBoxCliente = clone.querySelector('#hdr-bg-cliente');
+          if (cloneBoxCliente) {
+            cloneBoxCliente.style.padding = '8px';
+            cloneBoxCliente.style.boxSizing = 'border-box';
+          }
+        }
         
         // Build complete standalone HTML for Puppeteer
         // Tailwind CDN processes the clone and generates all needed classes
@@ -459,6 +503,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     ${customStyles}
+    /* Logo cliente: proporción original + margen interno (idéntico a pantalla) */
+    #hdr-bg-cliente { padding: 8px; box-sizing: border-box; }
+    #hdr-logo-cliente {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      object-position: center;
+      flex: none;
+      min-width: 0;
+    }
     @page { size: letter; margin: 5mm; }
     html { margin: 0; padding: 0; background: white; }
     body { margin: 0; padding: 0; background: white; font-family: 'Barlow', sans-serif; font-size: 10px; }
