@@ -1745,7 +1745,6 @@ export default function TableEditor({
                       <th className="p-3.5 w-16">Orden</th>
                       <th className="p-3.5">Llamado</th>
                       <th className="p-3.5">Toma del Shotlist</th>
-                      <th className="p-3.5 w-28 text-center">Posición</th>
                       <th className="p-3.5 w-40 text-center">Referencia</th>
                       <th className="p-3.5">Minutos</th>
                     </>
@@ -2648,7 +2647,7 @@ export default function TableEditor({
                 )}
                 {table === "pdr" && (
                   <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
-                    {/* 1. Orden column showing a clean green Plus button in the first position as per reference */}
+                    {/* 1. Orden: botón de alta */}
                     <td className="p-2.5 border border-neutral-200 bg-white text-center">
                       <button
                         type="button"
@@ -2696,24 +2695,24 @@ export default function TableEditor({
                       </div>
                     </td>
 
-                    {/* 4. Posición opcional; vacío inserta al final */}
-                    <td className="p-1 border border-neutral-200 bg-white text-xs">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={quickAddPdrOrden}
-                        onChange={(e) => setQuickAddPdrOrden(e.target.value)}
-                        className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-700 p-2 rounded text-center"
-                        placeholder="Final"
-                        title="Posición de inserción; vacío para insertar al final"
-                      />
+                    {/* 4. Referencia: posición opcional de inserción (vacío inserta al final) */}
+                    <td className="p-1 border border-neutral-200 bg-white text-xs w-50">
+                      <div className="flex items-center gap-1 pl-1">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={quickAddPdrOrden}
+                          onChange={(e) => setQuickAddPdrOrden(e.target.value)}
+                          className="w-24 bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-700 p-1.5 rounded text-center"
+                          placeholder="Final"
+                          title="Posición de inserción; vacío para insertar al final"
+                          aria-label="Posición de inserción en el PDR"
+                        />
+                      </div>
                     </td>
 
-                    {/* 5. Referencia empty cell */}
-                    <td className="p-1 border border-neutral-200 bg-white" />
-
-                    {/* 6. Minutos empty cell */}
+                    {/* 5. Minutos empty cell */}
                     <td className="p-1 border border-neutral-200 bg-white" />
                     
                     {/* Actions column empty placeholder */}
