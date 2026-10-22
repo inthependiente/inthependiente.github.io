@@ -62,7 +62,8 @@ export default function TableEditor({
 }: TableEditorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  // Se guarda el id (no el índice) porque los índices cambian al filtrar/buscar.
+  const [draggedRowId, setDraggedRowId] = useState<number | null>(null);
   const [crewSortMode, setCrewSortMode] = useState<"id" | "dept">("id");
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
@@ -138,50 +139,32 @@ export default function TableEditor({
         return;
       }
 
-      const activePdrRows = (data || []).filter((item) =>
-        Number(item.llamado_id) === Number(defaultLlamadoId)
-      );
-      const maxOrden = activePdrRows.length > 0
-        ? Math.max(...activePdrRows.map((item) => Number(item.orden || 0)))
-        : 0;
-      const requestedOrden = quickAddPdrOrden.trim() === ""
-        ? maxOrden + 1
-        : Number(quickAddPdrOrden);
-
-      if (!Number.isInteger(requestedOrden) || requestedOrden < 1) {
-        alert("La posición debe ser un número entero positivo o quedar vacía para insertar al final.");
-        return;
+      // Posición vacía = al final. El recorte al rango válido lo hace el RPC.
+      let requestedPosition: number | null = null;
+      if (quickAddPdrOrden.trim() !== "") {
+        requestedPosition = Number(quickAddPdrOrden);
+        if (!Number.isInteger(requestedPosition) || requestedPosition < 1) {
+          alert("La posición debe ser un número entero positivo o quedar vacía para insertar al final.");
+          return;
+        }
       }
 
-      const newOrden = Math.min(requestedOrden, maxOrden + 1);
-      const rowsToShift = activePdrRows
-        .filter((item) => Number(item.orden || 0) >= newOrden)
-        .sort((a, b) => Number(b.orden || 0) - Number(a.orden || 0));
-
-      for (const item of rowsToShift) {
-        const { error } = await supabase
-          .from("pdr")
-          .update({ orden: Number(item.orden || 0) + 1 })
-          .eq("id", item.id);
-        if (error) throw error;
-      }
-
-      const newRow = {
-        llamado_id: defaultLlamadoId,
-        shotlist_id: Number(quickAddPdrShotlistId),
-        orden: newOrden,
-        duracion_min: 0
-      };
-
-      const { data: insertedData, error } = await supabase.from("pdr").insert([newRow]).select();
+      const { data: insertedData, error } = await supabase.rpc("pdr_insert_row", {
+        p_llamado_id: defaultLlamadoId,
+        p_shotlist_id: Number(quickAddPdrShotlistId),
+        p_position: requestedPosition,
+        p_source_row_id: null,
+      });
       if (error) throw error;
 
-      if (insertedData && insertedData.length > 0) {
-        setNewlyCreatedId(insertedData[0].id);
+      // RETURNS public.pdr → objeto; SETOF devolvería array (se cubren ambos).
+      const inserted = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+      if (inserted?.id) {
+        setNewlyCreatedId(Number(inserted.id));
       }
 
       setQuickAddPdrShotlistId("");
-  setQuickAddPdrOrden("");
+      setQuickAddPdrOrden("");
 
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -447,35 +430,33 @@ export default function TableEditor({
 
     setIsProcessing(true);
     try {
-      const sourceOrden = Number(row.orden || 0);
-      const rowsToShift = (data || [])
-        .filter((item) =>
-          Number(item.llamado_id) === Number(row.llamado_id) &&
-          Number(item.orden || 0) > sourceOrden
-        )
-        .sort((a, b) => Number(b.orden || 0) - Number(a.orden || 0));
+      // La copia va justo después del original. La posición se calcula con el
+      // orden visual actual del llamado; el RPC la recorta al rango válido.
+      const orderKey = (r: any) =>
+        r.orden === null || r.orden === undefined ? Infinity : Number(r.orden);
+      const siblings = (data || [])
+        .filter((item) => Number(item.llamado_id) === Number(row.llamado_id))
+        .sort((a, b) => {
+          const oa = orderKey(a);
+          const ob = orderKey(b);
+          if (oa !== ob) return oa - ob;
+          return Number(a.id) - Number(b.id);
+        });
+      const sourceIdx = siblings.findIndex((item) => Number(item.id) === Number(row.id));
+      const position = sourceIdx === -1 ? null : sourceIdx + 2;
 
-      for (const item of rowsToShift) {
-        const { error } = await supabase
-          .from("pdr")
-          .update({ orden: Number(item.orden || 0) + 1 })
-          .eq("id", item.id);
-        if (error) throw error;
-      }
-
-      const { data: insertedData, error } = await supabase
-        .from("pdr")
-        .insert([{
-          llamado_id: row.llamado_id,
-          shotlist_id: row.shotlist_id,
-          orden: sourceOrden + 1,
-          duracion_min: row.duracion_min || 0,
-        }])
-        .select();
+      // Una sola llamada: copia shotlist_id, duracion_min y status del origen.
+      const { data: insertedData, error } = await supabase.rpc("pdr_insert_row", {
+        p_llamado_id: Number(row.llamado_id),
+        p_shotlist_id: null,
+        p_position: position,
+        p_source_row_id: Number(row.id),
+      });
       if (error) throw error;
 
-      if (insertedData?.length) {
-        setNewlyCreatedId(insertedData[0].id);
+      const inserted = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+      if (inserted?.id) {
+        setNewlyCreatedId(Number(inserted.id));
       }
       if (onRefresh) onRefresh();
     } catch (err: any) {
@@ -960,44 +941,80 @@ export default function TableEditor({
     }
   };
 
-  const handleDragStart = (idx: number) => {
-    setDraggedIndex(idx);
+  const handleDragStart = (rowId: number) => {
+    setDraggedRowId(rowId);
   };
 
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
-  const handleDrop = async (idx: number) => {
-    if (draggedIndex === null || draggedIndex === idx) return;
+  // El arrastre se identifica por id, no por índice: los índices dependen del
+  // buscador y del filtro de llamado activo.
+  const handleDrop = async (targetRowId: number) => {
+    const sourceRowId = draggedRowId;
+    setDraggedRowId(null);
 
-    const items = [...filteredData];
-    const [draggedItem] = items.splice(draggedIndex, 1);
-    items.splice(idx, 0, draggedItem);
+    if (sourceRowId === null || Number(sourceRowId) === Number(targetRowId)) return;
 
-    setDraggedIndex(null);
+    const sourceRow = (data || []).find((r) => Number(r.id) === Number(sourceRowId));
+    const llamadoId = Number(sourceRow?.llamado_id ?? selectedLlamadoId);
+
+    if (!Number.isFinite(llamadoId)) {
+      alert("No se pudo determinar el llamado de la fila arrastrada.");
+      return;
+    }
+
+    const orderKey = (r: any) =>
+      r.orden === null || r.orden === undefined ? Infinity : Number(r.orden);
+
+    // El RPC exige TODAS las filas del llamado, no solo las visibles.
+    const orderedIds = (data || [])
+      .filter((r) => Number(r.llamado_id) === llamadoId)
+      .sort((a, b) => {
+        const oa = orderKey(a);
+        const ob = orderKey(b);
+        if (oa !== ob) return oa - ob;
+        return Number(a.id) - Number(b.id);
+      })
+      .map((r) => Number(r.id));
+
+    const sourceIdx = orderedIds.indexOf(Number(sourceRowId));
+    const targetIdx = orderedIds.indexOf(Number(targetRowId));
+
+    if (sourceIdx === -1 || targetIdx === -1) {
+      alert("La fila de destino no pertenece al mismo llamado.");
+      return;
+    }
+
+    // Semántica conservada del arrastre: al bajar, la fila queda después del
+    // destino; al subir, antes.
+    const withoutSource = orderedIds.filter((id) => id !== Number(sourceRowId));
+    const insertAt =
+      sourceIdx < targetIdx
+        ? withoutSource.indexOf(Number(targetRowId)) + 1
+        : withoutSource.indexOf(Number(targetRowId));
+
+    const nextIds = [...withoutSource];
+    nextIds.splice(insertAt, 0, Number(sourceRowId));
 
     try {
-      const updates = items.map((item, index) => {
-        const newOrder = index + 1;
-        return supabase
-          .from("pdr")
-          .update({ orden: newOrder })
-          .eq("id", item.id);
+      const { error } = await supabase.rpc("pdr_reorder_rows", {
+        p_llamado_id: llamadoId,
+        p_ordered_ids: nextIds,
       });
 
-      await Promise.all(updates);
+      if (error) throw error;
 
-      if (onRefresh) {
-        onRefresh();
-      }
+      if (onRefresh) onRefresh();
     } catch (err: any) {
-      console.error("Error setting order:", err);
+      console.error("Error reordenando el PDR:", err);
+      alert(`No se pudo reordenar el PDR: ${err.message}`);
     }
   };
 
   const handleDragEnd = () => {
-    setDraggedIndex(null);
+    setDraggedRowId(null);
   };
 
   const getFileStoragePathFromUrl = (url: string) => {
@@ -1789,12 +1806,12 @@ export default function TableEditor({
                     className={`hover:bg-neutral-50/70 transition-colors ${
                       table === "pdr" ? "cursor-grab active:cursor-grabbing bg-white border-l-2 border-transparent hover:border-orange-500" : ""
                     } ${
-                      table === "pdr" && draggedIndex === index ? "opacity-40 bg-neutral-105" : ""
+                      table === "pdr" && draggedRowId !== null && Number(draggedRowId) === Number(row.id) ? "opacity-40 bg-neutral-105" : ""
                     }`}
                     draggable={table === "pdr"}
-                    onDragStart={table === "pdr" ? () => handleDragStart(index) : undefined}
-                    onDragOver={table === "pdr" ? (e) => handleDragOver(e, index) : undefined}
-                    onDrop={table === "pdr" ? () => handleDrop(index) : undefined}
+                    onDragStart={table === "pdr" ? () => handleDragStart(row.id) : undefined}
+                    onDragOver={table === "pdr" ? handleDragOver : undefined}
+                    onDrop={table === "pdr" ? () => handleDrop(row.id) : undefined}
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
                     {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && table !== "talento" && (
