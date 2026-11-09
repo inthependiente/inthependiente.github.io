@@ -1253,18 +1253,18 @@ export default function TableEditor({
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-hidden flex flex-col bg-neutral-50/50 animate-fade-in">
+    <div className="flex-1 p-5 space-y-4 overflow-hidden flex flex-col bg-canvas animate-fade-in">
       
       {/* Active working context panel */}
-      <div className="bg-neutral-900 border border-neutral-800 text-white rounded-2xl p-4 shrink-0 shadow-sm flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+      <div className="bg-surface border border-hairline rounded-xl px-4 py-3 shrink-0 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         <div className="flex flex-wrap items-center gap-6">
           {/* Working Project Context */}
           <div className="flex items-center gap-2.5">
-            <div className={`p-1.5 rounded-lg border ${selectedProjectId ? 'bg-orange-500/10 border-orange-500/40 text-orange-400 font-bold' : 'bg-neutral-800 border-neutral-700 text-neutral-400'}`}>
+            <div className={`p-1.5 rounded-lg border ${selectedProjectId ? 'bg-brand-subtle border-brand-border text-brand-content font-bold' : 'bg-subtle border-hairline text-content-muted'}`}>
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold mb-0.5">Proyecto de Trabajo</div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-content-muted font-bold mb-0.5">Proyecto de Trabajo</div>
               <div className="text-xs font-semibold">
                 <select
                   value={selectedProjectId || ""}
@@ -1278,11 +1278,11 @@ export default function TableEditor({
                       setSelectedLlamadoId(null);
                     }
                   }}
-                  className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-orange-500 cursor-pointer min-w-[140px] max-w-[200px]"
+                  className="bg-surface border border-hairline-strong text-content text-xs font-medium rounded-md px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand cursor-pointer min-w-[140px] max-w-[200px] transition-colors"
                 >
-                  <option value="" className="text-neutral-400 bg-neutral-900">-- Mostrar Todos --</option>
+                  <option value="" className="bg-surface text-content-muted">-- Mostrar Todos --</option>
                   {lookups.proyectos?.map(p => (
-                    <option key={p.id} value={p.id} className="text-white bg-neutral-900">
+                    <option key={p.id} value={p.id} className="bg-surface text-content">
                       {p.campana || `Proyecto #${p.id}`}
                     </option>
                   ))}
@@ -1295,7 +1295,7 @@ export default function TableEditor({
                   setSelectedProjectId(null);
                   setSelectedLlamadoId(null);
                 }}
-                className="ml-2 text-neutral-400 hover:text-rose-400 font-bold text-[9px] uppercase tracking-wider bg-neutral-800/80 hover:bg-neutral-800 px-2 py-1 rounded transition-colors cursor-pointer"
+                className="btn btn-xs btn-ghost ml-2 hover:text-danger-content hover:bg-danger-subtle"
                 title="Quitar filtro de proyecto"
               >
                 Limpiar
@@ -1304,15 +1304,15 @@ export default function TableEditor({
           </div>
 
           {/* Vertical divider */}
-          <div className="hidden md:block w-px h-8 bg-neutral-800" />
+          <div className="hidden md:block w-px h-8 bg-hairline" />
 
           {/* Working Call Sheet Context */}
           <div className="flex items-center gap-2.5">
-            <div className={`p-1.5 rounded-lg border ${selectedLlamadoId ? 'bg-teal-500/10 border-teal-500/40 text-teal-400 font-bold' : 'bg-neutral-800 border-neutral-700 text-neutral-400'}`}>
+            <div className={`p-1.5 rounded-lg border ${selectedLlamadoId ? 'bg-success-subtle border-success-border text-success font-bold' : 'bg-subtle border-hairline text-content-muted'}`}>
               <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-widest font-mono text-neutral-400 font-bold mb-0.5">Llamado Activo</div>
+              <div className="text-[10px] uppercase tracking-widest font-mono text-content-muted font-bold mb-0.5">Llamado Activo</div>
               <div className="text-xs font-semibold">
                 <select
                   value={selectedLlamadoId || ""}
@@ -1330,16 +1330,16 @@ export default function TableEditor({
                       setSelectedLlamadoId(null);
                     }
                   }}
-                  className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-teal-500 cursor-pointer min-w-[140px] max-w-[240px]"
+                  className="bg-subtle border border-hairline text-content-secondary text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-success cursor-pointer min-w-[140px] max-w-[240px]"
                 >
-                  <option value="" className="text-neutral-400 bg-neutral-900">-- Seleccionar --</option>
+                  <option value="" className="bg-surface text-content-muted">-- Seleccionar --</option>
                   {(lookups.llamados || [])
                     .filter(l => !selectedProjectId || l.proyecto_id === selectedProjectId)
                     .map(l => {
                       const proj = lookups.proyectos?.find(p => p.id === l.proyecto_id);
                       const projLabel = proj ? proj.campana : `Proy #${l.proyecto_id}`;
                       return (
-                        <option key={l.id} value={l.id} className="text-white bg-neutral-900">
+                        <option key={l.id} value={l.id} className="bg-surface text-content">
                           {l.fecha} ({l.d_o_d || "Día único"}) [{projLabel}]
                         </option>
                       );
@@ -1351,7 +1351,7 @@ export default function TableEditor({
             {selectedLlamadoId && (
               <button
                 onClick={() => setSelectedLlamadoId(null)}
-                className="ml-2 text-neutral-400 hover:text-rose-400 font-bold text-[9px] uppercase tracking-wider bg-neutral-800/80 hover:bg-neutral-800 px-2 py-1 rounded transition-colors cursor-pointer"
+                className="btn btn-xs btn-ghost ml-2 hover:text-danger-content hover:bg-danger-subtle"
                 title="Quitar filtro de llamado"
               >
                 Limpiar
@@ -1363,7 +1363,7 @@ export default function TableEditor({
         {/* Warning Badge if no active filter */}
         <div className="text-right flex items-center gap-2">
           {(!selectedProjectId || !selectedLlamadoId) && (
-            <span className="text-xs text-orange-400 font-medium inline-flex items-center gap-1.5">
+            <span className="text-xs text-brand-content font-medium inline-flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>Para filtrar sub-tablas, activa un proyecto/llamado en sus secciones.</span>
             </span>
@@ -1374,10 +1374,10 @@ export default function TableEditor({
       {/* Header section with buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
         <div>
-          <h2 className="font-condensed font-extrabold text-3xl text-neutral-800 uppercase tracking-tight">
+          <h2 className="font-semibold text-xl text-content tracking-tight">
             {getTableTitle()}
           </h2>
-          <p className="text-sm text-neutral-500">
+          <p className="text-xs text-content-muted mt-0.5">
             Mostrando {filteredData.length} de {data.length} registros en total.
           </p>
         </div>
@@ -1387,19 +1387,19 @@ export default function TableEditor({
             <>
               <button
                 onClick={() => setConfirmModal({ type: "deleteAll", isOpen: true })}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                className="btn btn-sm btn-danger"
                 title="Borrar todas las filas de esta tabla"
               >
-                <Trash2 className="w-4 h-4 text-rose-500" />
+                <Trash2 className="w-4 h-4 text-danger" />
                 Borrar todo
               </button>
               
               <button
                 onClick={() => setConfirmModal({ type: "resetIds", isOpen: true })}
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-xs hover:shadow-sm"
+                className="btn btn-sm btn-warning"
                 title="Resetear valor de auto-incremento de ID de esta tabla a 1"
               >
-                <RefreshCcw className="w-4 h-4 text-amber-500 animate-spin-hover" />
+                <RefreshCcw className="w-4 h-4 text-warning animate-spin-hover" />
                 Resetear IDs
               </button>
             </>
@@ -1407,10 +1407,10 @@ export default function TableEditor({
 
           <button
             onClick={onAddClick}
-            className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+            className="btn btn-sm btn-primary"
             id={`btn-add-${table}`}
           >
-            <Plus className="w-4 h-4 text-orange-500" />
+            <Plus className="w-4 h-4" />
             Nueva Entrada
           </button>
 
@@ -1422,10 +1422,10 @@ export default function TableEditor({
                   setCrewBulkSearch("");
                   setIsCrewBulkOpen(true);
                 }}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+                className="btn btn-sm btn-secondary"
                 title="Asignar varios miembros del crew al llamado activo"
               >
-                <Users className="w-4 h-4 text-teal-200" />
+                <Users className="w-4 h-4" />
                 Asignar Varios
               </button>
 
@@ -1434,10 +1434,10 @@ export default function TableEditor({
                   setBulkHora("");
                   setIsHoraBulkOpen(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+                className="btn btn-sm btn-secondary"
                 title="Asignar la misma Hora Llamado a todo el crew del llamado activo"
               >
-                <Clock className="w-4 h-4 text-indigo-200" />
+                <Clock className="w-4 h-4" />
                 Hora Llamado
               </button>
 
@@ -1448,10 +1448,10 @@ export default function TableEditor({
                   setCopyCrewSearch("");
                   setIsCopyCrewOpen(true);
                 }}
-                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+                className="btn btn-sm btn-secondary"
                 title="Copiar la asignación de crew de otro llamado al llamado activo"
               >
-                <Copy className="w-4 h-4 text-sky-200" />
+                <Copy className="w-4 h-4" />
                 Copiar Crew
               </button>
             </>
@@ -1464,10 +1464,10 @@ export default function TableEditor({
                 setPdrBulkSearch("");
                 setIsPdrBulkOpen(true);
               }}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+              className="btn btn-sm btn-primary"
               title="Asignar varias tomas del shotlist al llamado activo"
             >
-              <Plus className="w-4 h-4 text-orange-200" />
+              <Plus className="w-4 h-4" />
               Asignar Varios
             </button>
           )}
@@ -1479,10 +1479,10 @@ export default function TableEditor({
                 setTalentoBulkSearch("");
                 setIsTalentoBulkOpen(true);
               }}
-              className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+              className="btn btn-sm btn-secondary"
               title="Asignar varios talentos (clonando su perfil) al llamado activo"
             >
-              <Plus className="w-4 h-4 text-violet-200" />
+              <Plus className="w-4 h-4" />
               Asignar Varios
             </button>
           )}
@@ -1494,10 +1494,10 @@ export default function TableEditor({
                 setClienteBulkSearch("");
                 setIsClienteBulkOpen(true);
               }}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-xs cursor-pointer"
+              className="btn btn-sm btn-secondary"
               title="Asignar varios clientes/agencias (clonando su perfil) al llamado activo"
             >
-              <Plus className="w-4 h-4 text-rose-200" />
+              <Plus className="w-4 h-4" />
               Asignar Varios
             </button>
           )}
@@ -1505,30 +1505,30 @@ export default function TableEditor({
       </div>
 
       {/* Search Input Card */}
-      <div className="bg-white rounded-xl shadow-xs border border-neutral-200 p-4 shrink-0">
+      <div className="bg-surface rounded-xl shadow-xs border border-hairline p-4 shrink-0">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-neutral-400" />
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-content-muted" />
             <input
               type="text"
               placeholder={`Buscar por ID, nombre, campaña o cualquier campo en la tabla ${table}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-subtle border border-hairline-strong rounded-lg text-sm text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
             />
           </div>
 
           {(table === "crew" || table === "crew_llamado") && (
-            <div className="flex items-center gap-2.5 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-neutral-200">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider shrink-0">Ordenar por:</span>
-              <div className="inline-flex rounded-lg bg-neutral-100 p-0.5">
+            <div className="flex items-center gap-2.5 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-hairline">
+              <span className="text-xs font-bold text-content-muted uppercase tracking-wider shrink-0">Ordenar por:</span>
+              <div className="inline-flex rounded-lg bg-subtle p-0.5">
                 <button
                   type="button"
                   onClick={() => setCrewSortMode("id")}
                   className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                     crewSortMode === "id"
-                      ? "bg-white text-neutral-900 shadow-xs"
-                      : "text-neutral-500 hover:text-neutral-900"
+                      ? "bg-surface text-content shadow-xs"
+                      : "text-content-muted hover:text-content"
                   }`}
                 >
                   {table === "crew_llamado" ? "NUM" : "ID (Asc)"}
@@ -1538,8 +1538,8 @@ export default function TableEditor({
                   onClick={() => setCrewSortMode("dept")}
                   className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
                     crewSortMode === "dept"
-                      ? "bg-white text-neutral-900 shadow-xs"
-                      : "text-neutral-500 hover:text-neutral-900"
+                      ? "bg-surface text-content shadow-xs"
+                      : "text-content-muted hover:text-content"
                   }`}
                 >
                   Departamento
@@ -1552,10 +1552,10 @@ export default function TableEditor({
 
       {/* Column visibility control for Shotlist */}
       {table === "shotlist" && (
-        <div className="bg-white rounded-xl shadow-xs border border-neutral-200 p-4 shrink-0">
+        <div className="bg-surface rounded-xl shadow-xs border border-hairline p-4 shrink-0">
           <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-neutral-500 uppercase tracking-wider">
-              <Layers className="w-3.5 h-3.5 text-neutral-400" />
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-content-muted uppercase tracking-wider">
+              <Layers className="w-3.5 h-3.5 text-content-muted" />
               <span>Columnas Visibles de Shotlist (Haz clic para alternar):</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1575,10 +1575,8 @@ export default function TableEditor({
                     key={col.key}
                     type="button"
                     onClick={() => setVisibleColumns(prev => ({ ...prev, [col.key]: !prev[col.key] }))}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border cursor-pointer ${
-                      isVisible
-                        ? "bg-neutral-900 border-neutral-900 text-white"
-                        : "bg-neutral-50 border-neutral-200 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
+                    className={`btn btn-sm ${
+                      isVisible ? "btn-primary" : "btn-secondary"
                     }`}
                   >
                     <span className="mr-1">{isVisible ? "✓" : "+"}</span>
@@ -1592,19 +1590,19 @@ export default function TableEditor({
       )}
 
       {/* Main Database Table Display */}
-      <div className="flex-1 bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-0">
+      <div className="flex-1 bg-surface border border-hairline rounded-xl overflow-hidden flex flex-col min-h-0">
         {["crew_llamado", "cliente_agencia", "pdr"].includes(table) && !selectedLlamadoId ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto my-auto animate-fade-in shadow-xs">
-            <div className="p-3.5 bg-teal-50 border border-teal-100 rounded-full text-teal-600 mb-4 animate-bounce">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto my-auto animate-fade-in">
+            <div className="p-3 bg-success-subtle border border-success-border rounded-lg text-success mb-4">
               <Calendar className="w-8 h-8" />
             </div>
-            <h4 className="font-condensed font-extrabold text-xl text-neutral-800 uppercase tracking-tight">Debes seleccionar un Llamado</h4>
-            <p className="text-neutral-500 text-sm mt-1.5 max-w-md mb-6 font-sans">
+            <h4 className="font-semibold text-xl text-content uppercase tracking-tight">Debes seleccionar un Llamado</h4>
+            <p className="text-content-muted text-sm mt-1.5 max-w-md mb-6 font-sans">
               Para ver, agregar o editar <strong>{getTableTitle()}</strong>, primero debes seleccionar sobre cuál Hoja de Llamado de Rodaje vas a trabajar.
             </p>
             
-            <div className="w-full max-w-md space-y-3 bg-neutral-50 p-6 rounded-2xl border border-neutral-200 shadow-xs text-left font-sans">
-              <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
+            <div className="w-full max-w-md space-y-3 bg-subtle p-5 rounded-lg border border-hairline text-left">
+              <label className="block text-xs font-bold text-content-muted uppercase tracking-wider mb-1">
                 Elegir un llamado rápido:
               </label>
               <select
@@ -1619,17 +1617,17 @@ export default function TableEditor({
                     }
                   }
                 }}
-                className="w-full pl-3 pr-10 py-3 bg-white border border-neutral-350 rounded-xl text-sm font-semibold text-neutral-700 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 transition-all cursor-pointer shadow-xs"
+                className="w-full pl-3 pr-10 py-3 bg-surface border border-hairline-strong rounded-xl text-sm font-semibold text-content-secondary focus:outline-hidden focus:ring-2 focus:ring-brand transition-all cursor-pointer shadow-xs"
                 defaultValue=""
               >
-                <option value="">-- Selecciona un llamado de la lista --</option>
+                <option className="bg-surface text-content" value="">-- Selecciona un llamado de la lista --</option>
                 {lookups.llamados
                   .filter(l => !selectedProjectId || l.proyecto_id === selectedProjectId)
                   .map(l => {
                     const proj = lookups.proyectos.find(p => p.id === l.proyecto_id);
                     const nameStr = proj ? proj.campana : `Proyecto #${l.proyecto_id}`;
                     return (
-                      <option key={l.id} value={l.id}>
+                      <option className="bg-surface text-content" key={l.id} value={l.id}>
                         {l.fecha} ({l.d_o_d || "Día único"}) [Proy: {nameStr}]
                       </option>
                     );
@@ -1638,11 +1636,11 @@ export default function TableEditor({
               </select>
               
               {selectedProjectId ? (
-                <div className="text-xs text-neutral-450 mt-2">
-                  Filtrando llamados del proyecto <span className="font-bold text-orange-500">{resolveProject(selectedProjectId)}</span>.
+                <div className="text-xs text-content-muted mt-2">
+                  Filtrando llamados del proyecto <span className="font-medium text-brand-content">{resolveProject(selectedProjectId)}</span>.
                 </div>
               ) : (
-                <div className="text-xs text-neutral-450 mt-2">
+                <div className="text-xs text-content-muted mt-2">
                   Mostrando todos los llamados disponibles de todos los proyectos.
                 </div>
               )}
@@ -1650,9 +1648,9 @@ export default function TableEditor({
           </div>
         ) : filteredData.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-            <HelpCircle className="w-12 h-12 text-neutral-300 mb-3" />
-            <h4 className="font-bold text-lg text-neutral-700">No se encontraron registros</h4>
-            <p className="text-neutral-500 text-sm max-w-sm mt-1">
+            <HelpCircle className="w-12 h-12 text-content-subtle mb-3" />
+            <h4 className="font-bold text-lg text-content-secondary">No se encontraron registros</h4>
+            <p className="text-content-muted text-sm max-w-sm mt-1">
               {searchQuery 
                 ? "Prueba cambiando tu búsqueda o limpiando el filtro actual." 
                 : "No existen filas en esta tabla todavía. Crea una entrada presionando el botón 'Nueva Entrada' de arriba."}
@@ -1660,7 +1658,7 @@ export default function TableEditor({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="mt-4 px-4 py-2 border border-neutral-300 text-xs font-semibold text-neutral-600 rounded-lg hover:bg-neutral-50"
+                className="btn btn-sm btn-secondary mt-4"
               >
                 Limpiar Búsqueda
               </button>
@@ -1670,13 +1668,13 @@ export default function TableEditor({
           <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse relative">
               <thead>
-                <tr className="bg-neutral-900 text-white font-condensed font-bold text-sm tracking-wide sticky top-0 uppercase z-10">
+                <tr className="bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] sticky top-0 uppercase z-10 border-b border-hairline">
                   {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && table !== "talento" && <th className="p-3.5 pl-6 w-20">ID</th>}
                   
                   {/* Dynamic headers depending on table */}
                   {table === "proyectos" && (
                     <>
-                      <th className="p-3.5 w-32 text-orange-400">Trabajar</th>
+                      <th className="p-3.5 w-32">Trabajar</th>
                       <th className="p-3.5">Campaña</th>
                       <th className="p-3.5">Productora</th>
                       <th className="p-3.5">Colores de Marca</th>
@@ -1685,7 +1683,7 @@ export default function TableEditor({
 
                   {table === "llamados" && (
                     <>
-                      <th className="p-3.5 w-36 text-teal-400">Trabajar</th>
+                      <th className="p-3.5 w-36">Trabajar</th>
                       <th className="p-3.5">Proyecto Relacionado</th>
                       <th className="p-3.5">Fecha / D.O.D</th>
                       <th className="p-3.5 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Hora / Ciudad</th>
@@ -1770,28 +1768,28 @@ export default function TableEditor({
                   {table === "shotlist" && (
                     <>
                       {visibleColumns.proyecto_id && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Proyecto</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em]">Proyecto</th>
                       )}
                       {visibleColumns.esc && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Esc</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] w-24 text-center">Esc</th>
                       )}
                       {visibleColumns.plano && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-24 text-center">Plano</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] w-24 text-center">Plano</th>
                       )}
                       {visibleColumns.descripcion && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed min-w-[14rem]">Descripción</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] min-w-[14rem]">Descripción</th>
                       )}
                       {visibleColumns.cast_ids && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-40 text-center">Cast IDs</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] w-40 text-center">Cast IDs</th>
                       )}
                       {visibleColumns.locacion_id && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed">Locación</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em]">Locación</th>
                       )}
                       {visibleColumns.notas && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-40 text-center">Notas</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] w-40 text-center">Notas</th>
                       )}
                       {visibleColumns.referencia_urls && (
-                        <th className="p-2 border border-neutral-200 bg-neutral-900 text-white font-condensed w-48 text-center">Referencia</th>
+                        <th className="p-2 border border-hairline bg-thead text-thead-content font-medium text-[11px] tracking-[0.06em] w-48 text-center">Referencia</th>
                       )}
                     </>
                   )}
@@ -1799,14 +1797,14 @@ export default function TableEditor({
                   <th className="p-3.5 pr-6 w-36 text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100 font-sans text-neutral-700 text-sm">
+              <tbody className="divide-y divide-hairline font-sans text-content-secondary text-sm">
                 {sortedAndFilteredData.map((row, index) => (
                   <tr 
                     key={`${table}_${row.id}`} 
-                    className={`hover:bg-neutral-50/70 transition-colors ${
-                      table === "pdr" ? "cursor-grab active:cursor-grabbing bg-white border-l-2 border-transparent hover:border-orange-500" : ""
+                    className={`hover:bg-subtle transition-colors ${
+                      table === "pdr" ? "cursor-grab active:cursor-grabbing bg-surface border-l-2 border-transparent hover:border-brand-border" : ""
                     } ${
-                      table === "pdr" && draggedRowId !== null && Number(draggedRowId) === Number(row.id) ? "opacity-40 bg-neutral-105" : ""
+                      table === "pdr" && draggedRowId !== null && Number(draggedRowId) === Number(row.id) ? "opacity-40 bg-subtle" : ""
                     }`}
                     draggable={table === "pdr"}
                     onDragStart={table === "pdr" ? () => handleDragStart(row.id) : undefined}
@@ -1815,7 +1813,7 @@ export default function TableEditor({
                     onDragEnd={table === "pdr" ? handleDragEnd : undefined}
                   >
                     {table !== "crew_llamado" && table !== "shotlist" && table !== "pdr" && table !== "talento" && (
-                      <td className="p-3.5 pl-6 font-mono font-bold text-xs text-neutral-400">
+                      <td className="p-3.5 pl-6 font-mono font-bold text-xs text-content-muted">
                         <div className="flex items-center gap-1.5">
                           #{row.id}
                         </div>
@@ -1836,10 +1834,10 @@ export default function TableEditor({
                                 setSelectedLlamadoId(null);
                               }
                             }}
-                            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                            className={`btn btn-sm ${
                               selectedProjectId === row.id
-                                ? "bg-orange-500 border-orange-500 text-white shadow-xs hover:bg-orange-600"
-                                : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+                                ? "btn-primary"
+                                : "btn-secondary"
                             }`}
                           >
                             <Layers className="w-3.5 h-3.5" />
@@ -1847,21 +1845,21 @@ export default function TableEditor({
                           </button>
                         </td>
                         <td className="p-3.5">
-                          <div className="font-bold text-neutral-900">{row.campana}</div>
+                          <div className="font-bold text-content">{row.campana}</div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <div className="font-semibold text-neutral-600">{row.productora}</div>
-                          <div className="text-neutral-400 truncate max-w-xs">{row.direccion_productora || "Sin dirección"}</div>
+                          <div className="font-semibold text-content-secondary">{row.productora}</div>
+                          <div className="text-content-muted truncate max-w-xs">{row.direccion_productora || "Sin dirección"}</div>
                         </td>
                         <td className="p-3.5">
                           <div className="flex gap-2">
                             {row.color_cliente && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm border border-neutral-200 bg-white" style={{ borderLeftColor: row.color_cliente, borderLeftWidth: "4px" }}>
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm border border-hairline bg-surface" style={{ borderLeftColor: row.color_cliente, borderLeftWidth: "4px" }}>
                                 Cliente: <code className="font-mono">{row.color_cliente}</code>
                               </span>
                             )}
                             {row.color_campana && (
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm border border-neutral-200 bg-white" style={{ borderLeftColor: row.color_campana, borderLeftWidth: "4px" }}>
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm border border-hairline bg-surface" style={{ borderLeftColor: row.color_campana, borderLeftWidth: "4px" }}>
                                 Campaña: <code className="font-mono">{row.color_campana}</code>
                               </span>
                             )}
@@ -1885,45 +1883,45 @@ export default function TableEditor({
                                 }
                               }
                             }}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 border cursor-pointer ${
                               selectedLlamadoId === row.id
-                                ? "bg-teal-600 border-teal-600 text-white shadow-xs hover:bg-teal-700"
-                                : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+                                ? "bg-success-subtle border-success-border text-success-content"
+                                : "bg-surface border-hairline text-content-secondary hover:bg-subtle"
                             }`}
                           >
                             <Calendar className="w-3.5 h-3.5" />
                             <span>{selectedLlamadoId === row.id ? "Activo" : "Seleccionar"}</span>
                           </button>
                         </td>
-                        <td className="p-3.5 font-semibold text-neutral-800">
+                        <td className="p-3.5 font-semibold text-content">
                           {resolveProject(row.proyecto_id)}
                         </td>
                         <td className="p-3.5">
-                          <div className="flex items-center gap-1.5 font-semibold font-mono text-neutral-700">
-                            <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                          <div className="flex items-center gap-1.5 font-semibold font-mono text-content-secondary">
+                            <Calendar className="w-3.5 h-3.5 text-content-muted" />
                             {row.fecha}
                           </div>
-                          <div className="text-xs text-orange-600 font-bold uppercase">{row.d_o_d || "Día único"}</div>
+                          <div className="text-xs text-brand-content font-medium uppercase">{row.d_o_d || "Día único"}</div>
                           {/* <a
                             href={`./llamado.html?id=${row.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline mt-1.5 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-content hover:underline mt-1.5 bg-brand-subtle px-2 py-1 rounded border border-brand-border transition-colors"
                           >
                             <ExternalLink className="w-3 h-3" /> Ver Hoja de Llamado
                           </a> */}
                         </td>
                         <td className="p-3.5 text-xs">
-                          <div className="font-bold text-neutral-700">{row.llamado_hora || "-- : --"}</div>
-                          <div className="text-neutral-500 font-medium">{resolveCiudad(row.ciudad_id)}</div>
+                          <div className="font-bold text-content-secondary">{row.llamado_hora || "-- : --"}</div>
+                          <div className="text-content-muted font-medium">{resolveCiudad(row.ciudad_id)}</div>
                         </td>
-                        <td className="p-3.5 text-xs text-neutral-500">
+                        <td className="p-3.5 text-xs text-content-muted">
                           <div>☕ Desayuno: <span className="font-bold">{row.desayuno || "No especifica"}</span></div>
                           <div>🍽️ Almuerzo: <span className="font-bold">{row.almuerzo || "No especifica"}</span></div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <div className="font-semibold text-neutral-700">📍 {row.lugar_llamado || <span className="text-neutral-400 italic">sin especificar</span>}</div>
-                          <div className="text-neutral-500">🌧️ {row.lluvia_c || <span className="text-neutral-400 italic">—</span>}</div>
+                          <div className="font-semibold text-content-secondary">📍 {row.lugar_llamado || <span className="text-content-muted italic">sin especificar</span>}</div>
+                          <div className="text-content-muted">🌧️ {row.lluvia_c || <span className="text-content-muted italic">—</span>}</div>
                         </td>
                       </>
                     )}
@@ -1931,11 +1929,11 @@ export default function TableEditor({
                     {/* ───── TABLA: LOCACIONES ───── */}
                     {table === "locaciones" && (
                       <>
-                        <td className="p-3.5 font-bold text-neutral-900">{row.locacion}</td>
+                        <td className="p-3.5 font-bold text-content">{row.locacion}</td>
                         <td className="p-3.5 text-xs max-w-xs">
-                          <div className="text-neutral-600 font-medium truncate">{row.direccion_loc || "Sin dirección"}</div>
+                          <div className="text-content-secondary font-medium truncate">{row.direccion_loc || "Sin dirección"}</div>
                           {row.url_loc && (
-                            <a href={row.url_loc} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
+                            <a href={row.url_loc} target="_blank" rel="noreferrer" className="text-info hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
                               <MapPin className="w-3 h-3 flex-shrink-0" /> Abrir en Google Maps
                             </a>
                           )}
@@ -1945,18 +1943,18 @@ export default function TableEditor({
                             const hosp = resolveHospital(row.hospital_id);
                             return hosp ? (
                               <>
-                                <div className="font-semibold text-red-700">🏥 {hosp.hospital}</div>
+                                <div className="font-semibold text-danger-content">🏥 {hosp.hospital}</div>
                                 {hosp.direccion_hosp && (
-                                  <div className="text-neutral-400 truncate">{hosp.direccion_hosp}</div>
+                                  <div className="text-content-muted truncate">{hosp.direccion_hosp}</div>
                                 )}
                                 {hosp.ubicacion_hosp && (
-                                  <a href={hosp.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
+                                  <a href={hosp.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-info hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
                                     <MapPin className="w-3 h-3 flex-shrink-0" /> Abrir en Google Maps
                                   </a>
                                 )}
                               </>
                             ) : (
-                              <span className="text-neutral-400 italic">Sin hospital asignado</span>
+                              <span className="text-content-muted italic">Sin hospital asignado</span>
                             );
                           })()}
                         </td>
@@ -1966,13 +1964,13 @@ export default function TableEditor({
                     {/* ───── TABLA: HOSPITALES ───── */}
                     {table === "hospitales" && (
                       <>
-                        <td className="p-3.5 font-bold text-neutral-900">
-                          <div className="font-semibold text-red-700">🏥 {row.hospital || "Sin nombre"}</div>
+                        <td className="p-3.5 font-bold text-content">
+                          <div className="font-semibold text-danger-content">🏥 {row.hospital || "Sin nombre"}</div>
                         </td>
                         <td className="p-3.5 text-xs max-w-xs">
-                          <div className="text-neutral-600 font-medium truncate">{row.direccion_hosp || "Sin dirección"}</div>
+                          <div className="text-content-secondary font-medium truncate">{row.direccion_hosp || "Sin dirección"}</div>
                           {row.ubicacion_hosp && (
-                            <a href={row.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
+                            <a href={row.ubicacion_hosp} target="_blank" rel="noreferrer" className="text-info hover:underline flex items-center gap-0.5 mt-0.5 font-sans break-all">
                               <MapPin className="w-3 h-3 flex-shrink-0" /> Abrir en Google Maps
                             </a>
                           )}
@@ -1983,21 +1981,21 @@ export default function TableEditor({
                     {/* ───── TABLA: ESCENAS ───── */}
                     {table === "escenas" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">{row.orden}º</td>
+                        <td className="p-3.5 font-mono font-bold text-sm text-content">{row.orden}º</td>
                         <td className="p-3.5 text-xs max-w-xs">
-                          <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
                         <td className="p-3.5">
-                          <div className="font-extrabold text-neutral-900 font-mono text-sm">{row.escena}</div>
+                          <div className="font-extrabold text-content font-mono text-sm">{row.escena}</div>
                           <div className="flex gap-1.5 mt-0.5">
-                            {row.int_ext && <span className="text-[10px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded-sm font-bold">{row.int_ext}</span>}
-                            {row.d_n && <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-sm font-bold">{row.d_n}</span>}
+                            {row.int_ext && <span className="text-[10px] bg-info-subtle text-info-content px-1.5 py-0.5 rounded-sm font-bold">{row.int_ext}</span>}
+                            {row.d_n && <span className="text-[10px] bg-warning-subtle text-warning-content px-1.5 py-0.5 rounded-sm font-bold">{row.d_n}</span>}
                           </div>
                         </td>
                         <td className="p-3.5 text-xs max-w-sm">
-                          <div className="text-neutral-600 truncate font-semibold">{row.descripcion || "Sin descripción"}</div>
-                          <div className="text-orange-700 font-semibold mt-1">🎭 Elenco: <span className="text-neutral-500 font-normal">{row.cast_nombres || "Extras / Vacío"}</span></div>
-                          <div className="text-[10px] text-neutral-400 mt-0.5">📍 Loc: {resolveLocacion(row.locacion_id)}</div>
+                          <div className="text-content-secondary truncate font-semibold">{row.descripcion || "Sin descripción"}</div>
+                          <div className="text-brand-content font-semibold mt-1">🎭 Elenco: <span className="text-content-muted font-normal">{row.cast_nombres || "Extras / Vacío"}</span></div>
+                          <div className="text-[10px] text-content-muted mt-0.5">📍 Loc: {resolveLocacion(row.locacion_id)}</div>
                         </td>
                       </>
                     )}
@@ -2005,14 +2003,14 @@ export default function TableEditor({
                     {/* ───── TABLA: CREW (PERSONAL) ───── */}
                     {table === "crew" && (
                       <>
-                        <td className="p-3.5 font-bold text-neutral-900">{row.nombre}</td>
+                        <td className="p-3.5 font-bold text-content">{row.nombre}</td>
                         <td className="p-3.5 text-xs">
-                          <span className="font-bold text-neutral-700 uppercase bg-neutral-100 px-2 py-1 rounded-sm tracking-wide mr-1.5">{row.departamento || "Cámara"}</span>
-                          <span className="text-neutral-600 font-medium">{row.cargo || "Asistente"}</span>
+                          <span className="font-bold text-content-secondary uppercase bg-subtle px-2 py-1 rounded-sm tracking-wide mr-1.5">{row.departamento || "Cámara"}</span>
+                          <span className="text-content-secondary font-medium">{row.cargo || "Asistente"}</span>
                         </td>
-                        <td className="p-3.5 text-xs font-mono font-semibold text-neutral-600">{row.celular || "Sin celular"}</td>
+                        <td className="p-3.5 text-xs font-mono font-semibold text-content-secondary">{row.celular || "Sin celular"}</td>
                         <td>
-                          <div className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">{row.llamado_hora || "Sin definir"}</div>
+                          <div className="p-3.5 text-xs font-mono font-bold text-content-secondary bg-subtle px-2 py-1 rounded inline-block">{row.llamado_hora || "Sin definir"}</div>
                         </td>
                       </>
                     )}
@@ -2046,7 +2044,7 @@ export default function TableEditor({
                                   (e.target as HTMLInputElement).blur();
                                 }
                               }}
-                              className="w-12 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                              className="w-12 px-1.5 py-0.5 text-center font-bold text-content bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                               placeholder="—"
                             />
                             <div className="flex flex-col">
@@ -2063,7 +2061,7 @@ export default function TableEditor({
                                       type="button"
                                       disabled={isFirst}
                                       onClick={() => handleMoveCrew(row.id, "up")}
-                                      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-neutral-100 rounded transition-colors leading-none cursor-pointer p-0.5"
+                                      className="text-content-muted hover:text-content disabled:opacity-25 disabled:cursor-not-allowed hover:bg-subtle rounded transition-colors leading-none cursor-pointer p-0.5"
                                       title="Mover arriba"
                                     >
                                       <ChevronUp className="w-3.5 h-3.5" />
@@ -2072,7 +2070,7 @@ export default function TableEditor({
                                       type="button"
                                       disabled={isLast}
                                       onClick={() => handleMoveCrew(row.id, "down")}
-                                      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-neutral-100 rounded transition-colors leading-none cursor-pointer p-0.5"
+                                      className="text-content-muted hover:text-content disabled:opacity-25 disabled:cursor-not-allowed hover:bg-subtle rounded transition-colors leading-none cursor-pointer p-0.5"
                                       title="Mover abajo"
                                     >
                                       <ChevronDown className="w-3.5 h-3.5" />
@@ -2084,26 +2082,26 @@ export default function TableEditor({
                           </div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
                         <td className="p-1">
                           <select
                             value={row.crew_id || ""}
                             onChange={(e) => handleInlineUpdate(row.id, "crew_id", e.target.value ? Number(e.target.value) : null)}
-                            className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer animate-fade-in"
+                            className="w-full bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-semibold text-content p-2 rounded cursor-pointer animate-fade-in"
                           >
-                            <option value="">-- Seleccionar Crew --</option>
+                            <option className="bg-surface text-content" value="">-- Seleccionar Crew --</option>
                             {[...lookups.crew]
                               .sort((a, b) => a.id - b.id)
                               .map((c) => (
-                                <option key={c.id} value={c.id}>
+                                <option className="bg-surface text-content" key={c.id} value={c.id}>
                                   {c.nombre} [{c.cargo || "S/C"}]
                                 </option>
                               ))}
                           </select>
                         </td>
                         <td className="p-3.5">
-                          <span className="font-bold text-neutral-700 uppercase bg-neutral-100 px-2 py-1 rounded-sm tracking-wide text-xs">
+                          <span className="font-bold text-content-secondary uppercase bg-subtle px-2 py-1 rounded-sm tracking-wide text-xs">
                             {lookups.crew.find((c) => c.id === row.crew_id)?.departamento || "Cámara"}
                           </span>
                         </td>
@@ -2123,7 +2121,7 @@ export default function TableEditor({
                                 (e.target as HTMLInputElement).blur();
                               }
                             }}
-                            className="w-16 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            className="w-16 px-1.5 py-0.5 text-center font-bold text-content bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                             placeholder="—"
                           />
                         </td>
@@ -2143,7 +2141,7 @@ export default function TableEditor({
                                 (e.target as HTMLInputElement).blur();
                               }
                             }}
-                            className="w-full max-w-[140px] px-1.5 py-0.5 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            className="w-full max-w-[140px] px-1.5 py-0.5 text-xs text-content-secondary bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                             placeholder="—"
                           />
                         </td>
@@ -2163,7 +2161,7 @@ export default function TableEditor({
                                 (e.target as HTMLInputElement).blur();
                               }
                             }}
-                            className="w-20 px-1.5 py-0.5 text-center font-mono font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                            className="w-20 px-1.5 py-0.5 text-center font-mono font-bold text-content-secondary bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                             placeholder="—"
                           />
                         </td>
@@ -2174,15 +2172,15 @@ export default function TableEditor({
                     {table === "cliente_agencia" && (
                       <>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
                         <td className="p-3.5">
-                          <span className="text-[10px] bg-rose-50 text-rose-700 font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider mr-2">{row.tipo}</span>
-                          <span className="font-bold text-neutral-900">{row.nombre}</span>
+                          <span className="text-[10px] bg-danger-subtle text-danger-content font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider mr-2">{row.tipo}</span>
+                          <span className="font-bold text-content">{row.nombre}</span>
                         </td>
-                        <td className="p-3.5 text-xs font-semibold text-neutral-600">{row.empresa || "Sin empresa"}</td>
+                        <td className="p-3.5 text-xs font-semibold text-content-secondary">{row.empresa || "Sin empresa"}</td>
                         <td>
-                          <div className="p-3.5 text-xs font-mono font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded inline-block">{row.horario_loc || "Sin definir"}</div>
+                          <div className="p-3.5 text-xs font-mono font-bold text-content-secondary bg-subtle px-2 py-1 rounded inline-block">{row.horario_loc || "Sin definir"}</div>
                         </td>
                       </>
                     )}
@@ -2190,24 +2188,24 @@ export default function TableEditor({
                     {/* ───── TABLA: TALENTO (REPARTO) ───── */}
                     {table === "talento" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">{row.id_personaje}</td>
+                        <td className="p-3.5 font-mono font-bold text-sm text-content">{row.id_personaje}</td>
                         <td className="p-3.5">
-                          <div className="font-bold text-neutral-900">{row.nombre}</div>
-                          <div className="text-xs text-indigo-600 font-bold uppercase">{row.rol || "Actor Principal"}</div>
+                          <div className="font-bold text-content">{row.nombre}</div>
+                          <div className="text-xs text-brand-content font-medium uppercase">{row.rol || "Actor Principal"}</div>
                         </td>
                         <td className="p-3.5 text-xs">
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-center gap-1.5 text-xs font-semibold">
-                              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider shrink-0">Llamado:</span>
-                              <span className="font-mono font-bold text-neutral-800 bg-neutral-50 px-1.5 py-0.5 rounded">{row.llamado_hora || "Sin definir"}</span>
+                              <span className="text-[10px] text-content-muted font-bold uppercase tracking-wider shrink-0">Llamado:</span>
+                              <span className="font-mono font-bold text-content bg-subtle px-1.5 py-0.5 rounded">{row.llamado_hora || "Sin definir"}</span>
                             </div>
-                            <div>🎬 En Set: <span className="font-bold text-violet-600">{row.en_set || "No especifica"}</span></div>
-                            <div>📋 Status: <span className="bg-amber-100 text-amber-800 px-1 py-0.5 rounded-sm font-mono font-extrabold text-[10px] ml-1">{row.w_status || "S/W"}</span></div>
+                            <div>🎬 En Set: <span className="font-medium text-brand-content">{row.en_set || "No especifica"}</span></div>
+                            <div>📋 Status: <span className="bg-warning-subtle text-warning-content px-1 py-0.5 rounded-sm font-mono font-extrabold text-[10px] ml-1">{row.w_status || "S/W"}</span></div>
                           </div>
                         </td>
-                        <td className="p-3.5 text-xs text-neutral-500 max-w-xs">
+                        <td className="p-3.5 text-xs text-content-muted max-w-xs">
                           <div className="italic">{row.notas || "Sin restricciones dietarias / notas"}</div>
-                          <div className="text-[10px] text-neutral-400 mt-0.5">Asociado a {resolveLlamado(row.llamado_id)}</div>
+                          <div className="text-[10px] text-content-muted mt-0.5">Asociado a {resolveLlamado(row.llamado_id)}</div>
                         </td>
                       </>
                     )}
@@ -2215,24 +2213,24 @@ export default function TableEditor({
                     {/* ───── TABLA: PDR (RODAJE) ───── */}
                     {table === "pdr" && (
                       <>
-                        <td className="p-3.5 font-mono font-bold text-sm text-neutral-800">
+                        <td className="p-3.5 font-mono font-bold text-sm text-content">
                           <div className="flex items-center gap-1.5">
-                            <GripVertical className="w-3.5 h-3.5 text-neutral-300 hover:text-neutral-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                            <GripVertical className="w-3.5 h-3.5 text-content-subtle hover:text-content-muted shrink-0 cursor-grab active:cursor-grabbing" />
                             <span>{row.orden}º</span>
                           </div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-neutral-100 text-neutral-700 px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
                         </td>
                         <td className="p-1 text-xs">
                           <div className="flex items-center gap-1">
-                            <CornerDownRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-1.5" />
+                            <CornerDownRight className="w-3.5 h-3.5 text-content-muted shrink-0 ml-1.5" />
                             <select
                               value={row.shotlist_id || ""}
                               onChange={(e) => handleInlineUpdate(row.id, "shotlist_id", e.target.value ? Number(e.target.value) : null)}
-                              className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-800 p-2 rounded cursor-pointer max-w-md"
+                              className="bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-semibold text-content p-2 rounded cursor-pointer max-w-md"
                             >
-                              <option value="">-- Seleccionar Toma/Plano --</option>
+                              <option className="bg-surface text-content" value="">-- Seleccionar Toma/Plano --</option>
                               {[...(() => {
                                 const matchingLlamado = lookups.llamados.find(l => Number(l.id) === Number(row.llamado_id));
                                 const rowProyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
@@ -2246,21 +2244,21 @@ export default function TableEditor({
                                   return (a.plano || "").localeCompare(b.plano || "", undefined, { numeric: true, sensitivity: "base" });
                                 })
                                 .map((s) => (
-                                  <option key={s.id} value={s.id}>
+                                  <option className="bg-surface text-content" key={s.id} value={s.id}>
                                     Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
                                   </option>
                                 ))}
                             </select>
                           </div>
                         </td>
-                        <td className="p-2 border-l border-r border-neutral-100 bg-white w-40">
+                        <td className="p-2 border-l border-r border-hairline bg-surface w-40">
                           {(() => {
                             const shotlistRow = lookups.shotlist.find((s) => s.id === row.shotlist_id);
                             const refUrls = shotlistRow?.referencia_urls ? shotlistRow.referencia_urls.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
                             return refUrls.length > 0 ? (
                               <div className="flex flex-col gap-1 max-h-24 overflow-y-auto p-0.5">
                                 {refUrls.map((url: string, i: number) => (
-                                  <div key={i} className="relative aspect-video bg-neutral-50 border border-neutral-200 rounded overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                                  <div key={i} className="relative aspect-video bg-subtle border border-hairline rounded overflow-hidden shadow-xs">
                                     <img
                                       src={url}
                                       alt={`Ref ${i + 1}`}
@@ -2271,7 +2269,7 @@ export default function TableEditor({
                                 ))}
                               </div>
                             ) : (
-                              <div className="text-center py-1.5 text-[10px] text-neutral-405 italic">
+                              <div className="text-center py-1.5 text-[10px] text-content-muted italic">
                                 Sin Referencias
                               </div>
                             );
@@ -2303,9 +2301,9 @@ export default function TableEditor({
                                   (e.target as HTMLInputElement).blur();
                                 }
                               }}
-                              className="w-16 px-1.5 py-0.5 text-center font-bold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded focus:bg-white focus:ring-1 focus:ring-neutral-800 focus:outline-hidden"
+                              className="w-16 px-1.5 py-0.5 text-center font-bold text-content bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                             />
-                            <span className="text-neutral-500 font-semibold font-sans">min</span>
+                            <span className="text-content-muted font-semibold font-sans">min</span>
                           </div>
                         </td>
                       </>
@@ -2316,15 +2314,15 @@ export default function TableEditor({
                       <>
                         {/* 1. Proyecto ID */}
                         {visibleColumns.proyecto_id && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             <select
                               value={row.proyecto_id || ""}
                               onChange={(e) => handleInlineUpdate(row.id, "proyecto_id", e.target.value ? Number(e.target.value) : null)}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-neutral-850 text-xs font-bold p-1 rounded text-neutral-850"
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-brand text-xs font-bold p-1 rounded text-content-secondary"
                             >
-                              <option value="">-- Proy --</option>
+                              <option className="bg-surface text-content" value="">-- Proy --</option>
                               {lookups.proyectos.map((p) => (
-                                <option key={p.id} value={p.id}>
+                                <option className="bg-surface text-content" key={p.id} value={p.id}>
                                   {p.campana || p.id}
                                 </option>
                               ))}
@@ -2334,7 +2332,7 @@ export default function TableEditor({
 
                         {/* 2. Escena */}
                         {visibleColumns.esc && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             <input
                               type="text"
                               defaultValue={row.esc || ""}
@@ -2355,7 +2353,7 @@ export default function TableEditor({
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-extrabold text-neutral-850 p-1 text-center rounded text-neutral-850"
+                              className="w-full bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-extrabold text-content-secondary p-1 text-center rounded text-content-secondary"
                               placeholder="—"
                             />
                           </td>
@@ -2363,7 +2361,7 @@ export default function TableEditor({
 
                         {/* 3. Plano */}
                         {visibleColumns.plano && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             <input
                               type="text"
                               defaultValue={row.plano || ""}
@@ -2375,7 +2373,7 @@ export default function TableEditor({
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-850 p-1 text-center rounded"
+                              className="w-full bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-bold text-content-secondary p-1 text-center rounded"
                               placeholder="—"
                             />
                           </td>
@@ -2383,7 +2381,7 @@ export default function TableEditor({
 
                         {/* 4. Descripción de la Toma */}
                         {visibleColumns.descripcion && (
-                          <td className="p-1 border border-neutral-200 bg-white min-w-[14rem]">
+                          <td className="p-1 border border-hairline bg-surface min-w-[14rem]">
                             <textarea
                               rows={2}
                               defaultValue={row.descripcion || ""}
@@ -2392,7 +2390,7 @@ export default function TableEditor({
                                   handleInlineUpdate(row.id, "descripcion", e.target.value);
                                 }
                               }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-700 p-1 rounded resize-none leading-relaxed"
+                              className="w-full bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-semibold text-content-secondary p-1 rounded resize-none leading-relaxed"
                               placeholder="Descripción..."
                             />
                           </td>
@@ -2400,19 +2398,19 @@ export default function TableEditor({
 
                         {/* 5. Cast IDs */}
                         {visibleColumns.cast_ids && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             {(() => {
                               const talents = resolveCastIds(row.cast_ids);
                               return talents.length > 0 ? (
                                 <div className="flex flex-wrap gap-1 justify-center">
                                   {talents.map((t: any) => (
-                                    <span key={t.id} className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-md">
+                                    <span key={t.id} className="text-[10px] font-bold bg-brand-subtle text-brand-content border border-brand-border px-1.5 py-0.5 rounded-md">
                                       {t.nombre}
                                     </span>
                                   ))}
                                 </div>
                               ) : (
-                                <div className="text-[10px] text-neutral-400 italic text-center">—</div>
+                                <div className="text-[10px] text-content-muted italic text-center">—</div>
                               );
                             })()}
                           </td>
@@ -2420,15 +2418,15 @@ export default function TableEditor({
 
                         {/* 6. Locación */}
                         {visibleColumns.locacion_id && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             <select
                               value={row.locacion_id || ""}
                               onChange={(e) => handleInlineUpdate(row.id, "locacion_id", e.target.value ? Number(e.target.value) : null)}
-                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-neutral-850 text-xs p-1 rounded text-neutral-855"
+                              className="w-full bg-transparent border-0 focus:ring-1 focus:ring-brand text-xs p-1 rounded text-content-secondary"
                             >
-                              <option value="">-- Loc --</option>
+                              <option className="bg-surface text-content" value="">-- Loc --</option>
                               {lookups.locaciones.map((l) => (
-                                <option key={l.id} value={l.id}>
+                                <option className="bg-surface text-content" key={l.id} value={l.id}>
                                   {l.locacion}
                                 </option>
                               ))}
@@ -2438,7 +2436,7 @@ export default function TableEditor({
 
                         {/* 7. Notas */}
                         {visibleColumns.notas && (
-                          <td className="p-1 border border-neutral-200 bg-white">
+                          <td className="p-1 border border-hairline bg-surface">
                             <input
                               type="text"
                               defaultValue={row.notas || ""}
@@ -2450,7 +2448,7 @@ export default function TableEditor({
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") e.currentTarget.blur();
                               }}
-                              className="w-full bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-semibold text-neutral-500 p-1 rounded"
+                              className="w-full bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-semibold text-content-muted p-1 rounded"
                               placeholder="Notas..."
                             />
                           </td>
@@ -2458,16 +2456,16 @@ export default function TableEditor({
 
                         {/* 8. Referencia con subida directa y vista storyboard stacked */}
                         {visibleColumns.referencia_urls && (
-                          <td className="p-2 border border-neutral-200 bg-white w-48">
+                          <td className="p-2 border border-hairline bg-surface w-48">
                             <div className="flex flex-col gap-2">
                               {(() => {
                                 const urls = row.referencia_urls ? row.referencia_urls.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
                                 return (
                                   <>
                                     {urls.length > 0 ? (
-                                      <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto p-0.5 border border-dashed border-neutral-100 rounded-lg">
+                                      <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto p-0.5 border border-dashed border-hairline rounded-lg">
                                         {urls.map((url: string, i: number) => (
-                                          <div key={i} className="relative group aspect-video bg-neutral-50 border border-neutral-200 rounded-md overflow-hidden shadow-xs">
+                                          <div key={i} className="relative group aspect-video bg-subtle border border-hairline rounded-md overflow-hidden shadow-xs">
                                             <img
                                               src={url}
                                               alt={`Ref ${i + 1}`}
@@ -2483,7 +2481,7 @@ export default function TableEditor({
                                                 const newUrls = urls.filter((_, idx) => idx !== i).join(",");
                                                 await handleInlineUpdate(row.id, "referencia_urls", newUrls === "" ? null : newUrls);
                                               }}
-                                              className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white p-1 rounded shadow-md cursor-pointer transition-transform duration-100 group-hover:scale-105 animate-fade-in"
+                                              className="absolute top-1 right-1 bg-danger-solid hover:bg-danger-solid-hover text-on-danger p-1 rounded shadow-md cursor-pointer transition-transform duration-100 group-hover:scale-105 animate-fade-in"
                                               title="Eliminar de Referencias"
                                             >
                                               <Trash2 className="w-2.5 h-2.5" />
@@ -2492,20 +2490,20 @@ export default function TableEditor({
                                         ))}
                                       </div>
                                     ) : (
-                                      <div className="text-center py-2.5 bg-neutral-50/50 border border-dashed border-neutral-200 rounded-lg text-[10px] text-neutral-400 italic">
+                                      <div className="text-center py-2.5 bg-subtle border border-dashed border-hairline rounded-lg text-[10px] text-content-muted italic">
                                         Sin Referencias
                                       </div>
                                     )}
 
                                     <div className="relative">
                                       {isUploadingRowId === row.id ? (
-                                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-neutral-500 font-bold bg-neutral-50 border border-neutral-200 py-1 rounded">
-                                          <span className="w-2.5 h-2.5 border-2 border-t-transparent border-neutral-600 rounded-full animate-spin"></span>
+                                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-content-muted font-bold bg-subtle border border-hairline py-1 rounded">
+                                          <span className="w-2.5 h-2.5 border-2 border-t-transparent border-hairline rounded-full animate-spin"></span>
                                           <span>Subiendo...</span>
                                         </div>
                                       ) : (
-                                        <label className="flex items-center justify-center gap-1 px-2 py-1 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded text-[10px] font-bold text-neutral-700 cursor-pointer transition-colors w-full">
-                                          <Camera className="w-3 h-3 text-orange-500 shrink-0" />
+                                        <label className="flex items-center justify-center gap-1 px-2 py-1 bg-subtle hover:bg-subtle border border-hairline rounded text-[10px] font-bold text-content-secondary cursor-pointer transition-colors w-full">
+                                          <Camera className="w-3 h-3 text-brand-content shrink-0" />
                                           <span>Subir Foto</span>
                                           <input
                                             type="file"
@@ -2564,14 +2562,14 @@ export default function TableEditor({
                     )}
 
                     <td className="p-3.5 pr-6 text-center select-none">
-                      <div className="inline-flex items-center gap-1.5 bg-neutral-100/50 p-1 rounded-xl">
+                      <div className="inline-flex items-center gap-1.5 bg-subtle p-1 rounded-xl">
                         {/* Ver Hoja de Llamado */}
                         {table === "llamados" && (
                           <a
                             href={`./llamado.html?id=${row.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-2 text-indigo-600 hover:bg-white rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                            className="btn btn-sm btn-ghost btn-icon text-brand-content"
                             title="Ver Hoja de Llamado"
                           >
                             <ExternalLink className="w-4 h-4" />
@@ -2583,7 +2581,7 @@ export default function TableEditor({
                             type="button"
                             onClick={() => handleDuplicatePdrRow(row)}
                             disabled={isProcessing}
-                            className="p-2 text-orange-600 hover:bg-white hover:text-orange-700 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn btn-sm btn-ghost btn-icon text-brand-content disabled:cursor-not-allowed"
                             title="Duplicar plano ES"
                           >
                             <Copy className="w-4 h-4" />
@@ -2593,7 +2591,7 @@ export default function TableEditor({
                         {/* Edit Button */}
                         <button
                           onClick={() => onEditClick(row)}
-                          className="p-2 text-neutral-600 hover:bg-white hover:text-neutral-900 rounded-lg transition-colors cursor-pointer"
+                          className="btn btn-sm btn-ghost btn-icon"
                           title="Editar"
                         >
                           <Edit className="w-4 h-4" />
@@ -2602,15 +2600,15 @@ export default function TableEditor({
                         {/* Delete Button with double tap verification state */}
                         <button
                           onClick={() => handleDeleteTrigger(row.id)}
-                          className={`p-2 rounded-lg transition-all cursor-pointer ${
+                          className={`btn btn-sm btn-icon ${
                             confirmDeleteId === row.id
-                              ? "bg-red-500 text-white animate-shake"
-                              : "text-neutral-400 hover:bg-white hover:text-red-600"
+                              ? "btn-destructive"
+                              : "btn-ghost hover:text-danger-content"
                           }`}
                           title={confirmDeleteId === row.id ? "¡Pulsa de nuevo para borrar!" : "Eliminar"}
                         >
                           {confirmDeleteId === row.id ? (
-                            <AlertTriangle className="w-4 h-4 animate-bounce" />
+                            <AlertTriangle className="w-4 h-4" />
                           ) : (
                             <Trash2 className="w-4 h-4" />
                           )}
@@ -2620,77 +2618,77 @@ export default function TableEditor({
                   </tr>
                 ))}
                 {table === "shotlist" && (
-                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                  <tr className="bg-subtle hover:bg-hover border-t border-hairline animate-fade-in">
                     {/* 1. Proyecto column showing a clean green Plus button in the first position as per reference */}
                     {visibleColumns.proyecto_id && (
-                      <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                      <td className="p-2.5 border border-hairline bg-surface text-center">
                         <button
                           type="button"
                           onClick={handleQuickAddShotlist}
-                          className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95"
+                          className="flex items-center justify-center w-8 h-8 bg-success hover:bg-success/85 text-on-brand rounded-md cursor-pointer transition-colors duration-150"
                           title="Añadir nueva fila"
                         >
-                          <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                          <Plus className="w-4 h-4 text-on-brand stroke-[3px]" />
                         </button>
                       </td>
                     )}
 
                     {/* All other columns with plain empty white cells */}
                     {visibleColumns.esc && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.plano && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.descripcion && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.cast_ids && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.locacion_id && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.notas && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     {visibleColumns.referencia_urls && (
-                      <td className="p-1 border border-neutral-200 bg-white" />
+                      <td className="p-1 border border-hairline bg-surface" />
                     )}
                     
                     {/* Actions column empty placeholder */}
-                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                    <td className="p-3.5 pr-6 text-center select-none bg-subtle border border-hairline" />
                   </tr>
                 )}
                 {table === "pdr" && (
-                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
+                  <tr className="bg-subtle hover:bg-hover border-t border-hairline animate-fade-in">
                     {/* 1. Orden: botón de alta */}
-                    <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                    <td className="p-2.5 border border-hairline bg-surface text-center">
                       <button
                         type="button"
                         onClick={handleQuickAddPdr}
-                        className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95 mx-auto"
+                        className="flex items-center justify-center w-8 h-8 bg-success hover:bg-success/85 text-on-brand rounded-md cursor-pointer transition-colors duration-150 mx-auto"
                         title="Añadir nueva fila"
                       >
-                        <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                        <Plus className="w-4 h-4 text-on-brand stroke-[3px]" />
                       </button>
                     </td>
 
                     {/* 2. Llamado empty cell placeholder */}
-                    <td className="p-1 border border-neutral-200 bg-white text-xs text-center font-mono font-bold text-neutral-400">
+                    <td className="p-1 border border-hairline bg-surface text-xs text-center font-mono font-bold text-content-muted">
                       Nuevo
                     </td>
 
                     {/* 3. Toma del Shotlist dropdown select */}
-                    <td className="p-1 border border-neutral-200 bg-white text-xs">
+                    <td className="p-1 border border-hairline bg-surface text-xs">
                       <div className="flex items-center gap-1">
-                        <CornerDownRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 ml-1.5" />
+                        <CornerDownRight className="w-3.5 h-3.5 text-content-muted shrink-0 ml-1.5" />
                         <select
                           value={quickAddPdrShotlistId}
                           onChange={(e) => setQuickAddPdrShotlistId(e.target.value ? Number(e.target.value) : "")}
-                          className="bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-[#059669] p-2 rounded cursor-pointer max-w-md w-full"
+                          className="bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-bold text-[#059669] p-2 rounded cursor-pointer max-w-md w-full"
                         >
-                          <option value="">-- Seleccionar Toma/Plano a añadir --</option>
+                          <option className="bg-surface text-content" value="">-- Seleccionar Toma/Plano a añadir --</option>
                           {[...(() => {
                             const matchingLlamado = lookups.llamados.find(l => Number(l.id) === Number(selectedLlamadoId));
                             const rowProyectoId = matchingLlamado ? Number(matchingLlamado.proyecto_id) : null;
@@ -2704,7 +2702,7 @@ export default function TableEditor({
                               return (a.plano || "").localeCompare(b.plano || "", undefined, { numeric: true, sensitivity: "base" });
                             })
                             .map((s) => (
-                              <option key={s.id} value={s.id}>
+                              <option className="bg-surface text-content" key={s.id} value={s.id}>
                                 Esc: {s.esc || "—"} | Plano: {s.plano || "—"} ({s.descripcion ? (s.descripcion.length > 40 ? s.descripcion.substring(0, 40) + "..." : s.descripcion) : "Sin descripción"})
                               </option>
                             ))}
@@ -2713,7 +2711,7 @@ export default function TableEditor({
                     </td>
 
                     {/* 4. Referencia: posición opcional de inserción (vacío inserta al final) */}
-                    <td className="p-1 border border-neutral-200 bg-white text-xs w-50">
+                    <td className="p-1 border border-hairline bg-surface text-xs w-50">
                       <div className="flex items-center gap-1 pl-1">
                         <input
                           type="number"
@@ -2721,7 +2719,7 @@ export default function TableEditor({
                           step="1"
                           value={quickAddPdrOrden}
                           onChange={(e) => setQuickAddPdrOrden(e.target.value)}
-                          className="w-24 bg-transparent border-0 hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-800 text-xs font-bold text-neutral-700 p-1.5 rounded text-center"
+                          className="w-24 bg-transparent border-0 hover:bg-subtle focus:bg-surface focus:ring-1 focus:ring-brand text-xs font-bold text-content-secondary p-1.5 rounded text-center"
                           placeholder="Final"
                           title="Posición de inserción; vacío para insertar al final"
                           aria-label="Posición de inserción en el PDR"
@@ -2730,35 +2728,35 @@ export default function TableEditor({
                     </td>
 
                     {/* 5. Minutos empty cell */}
-                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-hairline bg-surface" />
                     
                     {/* Actions column empty placeholder */}
-                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                    <td className="p-3.5 pr-6 text-center select-none bg-subtle border border-hairline" />
                   </tr>
                 )}
                 {table === "crew_llamado" && (
-                  <tr className="bg-neutral-50/20 hover:bg-neutral-50/40 border-t border-neutral-200 animate-fade-in">
-                        <td className="p-1 border border-neutral-200 bg-white" />
+                  <tr className="bg-subtle hover:bg-hover border-t border-hairline animate-fade-in">
+                        <td className="p-1 border border-hairline bg-surface" />
                     {/* 1. Orden column showing a clean green Plus button in the first position as per reference */}
-                    <td className="p-2.5 border border-neutral-200 bg-white text-center">
+                    <td className="p-2.5 border border-hairline bg-surface text-center">
                       <button
                         type="button"
                         onClick={handleQuickAddCrewLlamado}
-                        className="flex items-center justify-center w-8 h-8 bg-[#059669] hover:bg-[#10b981] text-white rounded-lg shadow-sm cursor-pointer transition-transform duration-100 hover:scale-110 active:scale-95 mx-auto"
+                        className="flex items-center justify-center w-8 h-8 bg-success hover:bg-success/85 text-on-brand rounded-md cursor-pointer transition-colors duration-150 mx-auto"
                         title="Añadir nueva fila"
                       >
-                        <Plus className="w-4 h-4 text-white stroke-[3px]" />
+                        <Plus className="w-4 h-4 text-on-brand stroke-[3px]" />
                       </button>
                     </td>
 
                     {/* All other columns with plain empty white cells */}
-                    <td className="p-1 border border-neutral-200 bg-white" />
-                    <td className="p-1 border border-neutral-200 bg-white" />
-                    <td className="p-1 border border-neutral-200 bg-white" />
-                    <td className="p-1 border border-neutral-200 bg-white" />
+                    <td className="p-1 border border-hairline bg-surface" />
+                    <td className="p-1 border border-hairline bg-surface" />
+                    <td className="p-1 border border-hairline bg-surface" />
+                    <td className="p-1 border border-hairline bg-surface" />
                     
                     {/* Actions column empty placeholder */}
-                    <td className="p-3.5 pr-6 text-center select-none bg-neutral-50/10 border border-neutral-200" />
+                    <td className="p-3.5 pr-6 text-center select-none bg-subtle border border-hairline" />
                   </tr>
                 )}
               </tbody>
@@ -2769,20 +2767,20 @@ export default function TableEditor({
 
       {/* Dynamic Action & Maintenance Modal for Bulk DB Reset Operations */}
       {confirmModal && confirmModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-md w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             {confirmModal.type === "deleteAll" && (
               <div className="space-y-4 animate-scale-up">
-                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-rose-600">
+                <div className="w-12 h-12 bg-danger-subtle rounded-full flex items-center justify-center text-danger">
                   <Trash2 className="w-6 h-6 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">¿Borrar todos los registros?</h3>
-                  <p className="text-sm text-neutral-500 mt-1">
-                    Se borrarán todos los campos de la tabla <span className="font-bold text-neutral-800">'{table}'</span>. Esta acción no se puede deshacer.
+                  <h3 className="text-lg font-bold text-content uppercase tracking-tight">¿Borrar todos los registros?</h3>
+                  <p className="text-sm text-content-muted mt-1">
+                    Se borrarán todos los campos de la tabla <span className="font-bold text-content">'{table}'</span>. Esta acción no se puede deshacer.
                   </p>
                 </div>
-                <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-750 font-medium">
+                <div className="bg-danger-subtle border border-danger-border rounded-xl p-3.5 text-xs text-danger-content font-medium">
                   ⚠️ Advertencia: Todos los datos vinculados a esta tabla se perderán permanentemente.
                 </div>
                 <div className="flex gap-2.5 pt-2">
@@ -2790,7 +2788,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -2798,7 +2796,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isProcessing}
                     onClick={handleDeleteAll}
-                    className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn btn-destructive flex-1"
                   >
                     {isProcessing ? "Borrando..." : "Sí, borrar todo"}
                   </button>
@@ -2808,16 +2806,16 @@ export default function TableEditor({
 
             {confirmModal.type === "resetIds" && (
               <div className="space-y-4 animate-scale-up">
-                <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
+                <div className="w-12 h-12 bg-warning-subtle rounded-full flex items-center justify-center text-warning">
                   <RefreshCcw className="w-6 h-6 animate-spin" style={{ animationDuration: "3s" }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">¿Proceder Reset de ID?</h3>
-                  <p className="text-sm text-neutral-500 mt-1">
-                    Se intentará reiniciar la secuencia auto-numérica de la tabla <span className="font-bold text-neutral-800">'{table}'</span> para que los nuevos registros comiencen desde el ID 1.
+                  <h3 className="text-lg font-bold text-content uppercase tracking-tight">¿Proceder Reset de ID?</h3>
+                  <p className="text-sm text-content-muted mt-1">
+                    Se intentará reiniciar la secuencia auto-numérica de la tabla <span className="font-bold text-content">'{table}'</span> para que los nuevos registros comiencen desde el ID 1.
                   </p>
                 </div>
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5 text-xs text-amber-700 font-medium">
+                <div className="bg-warning-subtle border border-warning-border rounded-xl p-3.5 text-xs text-warning-content font-medium">
                   💡 Consejo: Es ideal hacerlo inmediatamente después de borrar todos los datos para evitar conflictos de clave primaria duplicada.
                 </div>
                 <div className="flex gap-2.5 pt-2">
@@ -2825,7 +2823,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -2833,7 +2831,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isProcessing}
                     onClick={handleResetIds}
-                    className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                    className="btn btn-warning flex-1"
                   >
                     {isProcessing ? "Procesando..." : "Reiniciar ID a 1"}
                   </button>
@@ -2844,40 +2842,40 @@ export default function TableEditor({
             {confirmModal.type === "sqlExplanation" && modalFeedback && (
               <div className="space-y-4 animate-scale-up">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  modalFeedback.success ? "bg-teal-50 text-teal-600" : "bg-neutral-100 text-indigo-600"
+                  modalFeedback.success ? "bg-success-subtle text-success-content" : "bg-brand-subtle text-brand-content"
                 }`}>
                   {modalFeedback.success ? (
                     <RefreshCcw className="w-6 h-6" />
                   ) : (
-                    <HelpCircle className="w-6 h-6 text-indigo-600" />
+                    <HelpCircle className="w-6 h-6 text-brand-content" />
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight">
+                  <h3 className="text-lg font-bold text-content uppercase tracking-tight">
                     {modalFeedback.title}
                   </h3>
-                  <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+                  <p className="text-sm text-content-muted mt-1 leading-relaxed">
                     {modalFeedback.message}
                   </p>
                 </div>
 
                 {modalFeedback.sqlStatement && (
                   <div className="space-y-2 pt-1">
-                    <div className="bg-neutral-900 text-teal-400 font-mono text-xs p-4 rounded-xl border border-neutral-800 overflow-x-auto relative group">
-                      <div className="text-[9px] text-neutral-500 uppercase tracking-widest mb-1 select-none">Comando de SQL:</div>
+                    <div className="bg-code-bg text-code-content font-mono text-[11px] p-3 rounded-lg border border-hairline overflow-x-auto relative group">
+                      <div className="text-[9px] text-code-content/50 uppercase tracking-[0.14em] mb-1.5 select-none">Comando de SQL:</div>
                       <code>{modalFeedback.sqlStatement}</code>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(modalFeedback.sqlStatement || "");
                         }}
-                        className="absolute right-2 top-2 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-300 text-[10px] px-2.5 py-1 rounded-md border border-neutral-700 transition-all font-sans cursor-pointer no-print font-bold"
+                        className="absolute right-2 top-2 bg-white/10 hover:bg-white/20 active:scale-95 text-code-content text-[10px] px-2 py-1 rounded border border-white/15 transition-colors cursor-pointer no-print font-medium"
                         title="Copiar comando SQL"
                       >
                         Copiar
                       </button>
                     </div>
-                    <p className="text-[11px] text-neutral-500 leading-normal">
-                      Pega esta instrucción en la consola <span className="font-semibold text-neutral-800">"SQL Editor"</span> de Supabase para forzar manualmente el reinicio de la secuencia del contador autoincrementable.
+                    <p className="text-[11px] text-content-muted leading-normal">
+                      Pega esta instrucción en la consola <span className="font-semibold text-content">"SQL Editor"</span> de Supabase para forzar manualmente el reinicio de la secuencia del contador autoincrementable.
                     </p>
                   </div>
                 )}
@@ -2889,7 +2887,7 @@ export default function TableEditor({
                       setConfirmModal(null);
                       setModalFeedback(null);
                     }}
-                    className="w-full px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-sm font-bold transition-all shadow-md focus:outline-hidden cursor-pointer"
+                    className="btn btn-primary btn-block"
                   >
                     Entendido
                   </button>
@@ -2902,21 +2900,21 @@ export default function TableEditor({
 
       {/* ───── MODAL: ASIGNACIÓN MASIVA DE CREW ───── */}
       {isCrewBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-5xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-5xl w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Users className="w-5 h-5 text-teal-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Users className="w-5 h-5 text-success" />
                   Asignar Varios Crew
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Selecciona el personal para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Selecciona el personal para <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsCrewBulkOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -2924,7 +2922,7 @@ export default function TableEditor({
             </div>
 
             {unassignedCrew.length === 0 ? (
-              <div className="bg-teal-50 border border-teal-100 rounded-xl p-6 text-center text-sm text-teal-700 font-medium">
+              <div className="bg-success-subtle border border-success-border rounded-xl p-6 text-center text-sm text-success-content font-medium">
                 ✅ Todo el personal del crew ya está asignado a este llamado.
               </div>
             ) : (
@@ -2932,18 +2930,18 @@ export default function TableEditor({
                 {/* Barra de búsqueda + contador */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-content-muted" />
                     <input
                       type="text"
                       value={crewBulkSearch}
                       onChange={(e) => setCrewBulkSearch(e.target.value)}
                       placeholder="Buscar por nombre, cargo o departamento..."
-                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                      className="w-full pl-8 pr-8 py-2 bg-subtle border border-hairline-strong rounded-lg text-xs text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
                     />
                     {crewBulkSearch && (
                       <button
                         onClick={() => setCrewBulkSearch("")}
-                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        className="absolute right-2 top-2 text-content-muted hover:text-content-secondary cursor-pointer"
                         title="Limpiar búsqueda"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -2958,25 +2956,25 @@ export default function TableEditor({
                           new Set(filteredUnassignedCrew.map((c) => Number(c.id)))
                         );
                       }}
-                      className="text-xs font-bold text-teal-700 hover:text-teal-900 cursor-pointer"
+                      className="btn btn-xs btn-ghost -ml-1.5 hover:text-content"
                     >
                       Seleccionar todos ({filteredUnassignedCrew.length})
                     </button>
-                    <span className="text-xs font-semibold text-neutral-500">
+                    <span className="text-xs font-semibold text-content-muted">
                       {selectedCrewIds.size} seleccionados
                     </span>
                   </div>
                 </div>
 
                 {/* Grid de 3 columnas compacto */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl p-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 max-h-[55vh] overflow-y-auto border border-hairline rounded-xl p-1.5">
                   {filteredUnassignedCrew.map((c) => {
                     const isSelected = selectedCrewIds.has(Number(c.id));
                     return (
                       <label
                         key={c.id}
                         className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                          isSelected ? "bg-teal-50/80 ring-1 ring-teal-200" : "hover:bg-neutral-50"
+                          isSelected ? "bg-success-subtle ring-1 ring-success-border" : "hover:bg-subtle"
                         }`}
                         title={`${c.nombre} — ${c.cargo || "Sin cargo"} (${c.departamento || "Sin depto"})`}
                       >
@@ -2994,8 +2992,8 @@ export default function TableEditor({
                           className="w-3.5 h-3.5 accent-teal-600 cursor-pointer shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold text-neutral-800 truncate">{c.nombre}</div>
-                          <div className="text-[10px] text-neutral-500 truncate">
+                          <div className="text-xs font-bold text-content truncate">{c.nombre}</div>
+                          <div className="text-[10px] text-content-muted truncate">
                             {c.cargo || "Sin cargo"} · {c.departamento || "Sin depto"}
                           </div>
                         </div>
@@ -3005,17 +3003,17 @@ export default function TableEditor({
                 </div>
 
                 {filteredUnassignedCrew.length === 0 && (
-                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                  <div className="text-center text-xs text-content-muted italic py-6">
                     No se encontraron resultados para "{crewBulkSearch}".
                   </div>
                 )}
 
-                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-hairline">
                   <button
                     type="button"
                     disabled={isCrewBulkSaving}
                     onClick={() => setIsCrewBulkOpen(false)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -3023,7 +3021,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isCrewBulkSaving || selectedCrewIds.size === 0}
                     onClick={handleBulkAssignCrew}
-                    className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn btn-primary flex-1"
                   >
                     {isCrewBulkSaving ? "Asignando..." : "Asignar Seleccionados"}
                   </button>
@@ -3036,28 +3034,28 @@ export default function TableEditor({
 
       {/* ───── MODAL: HORA LLAMADO MASIVA ───── */}
       {isHoraBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-sm w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-brand-content" />
                   Hora Llamado Masiva
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Asignará la misma hora a todo el crew de <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Asignará la misma hora a todo el crew de <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsHoraBulkOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">
+            <label className="block text-xs font-semibold text-content-muted uppercase mb-1">
               Hora de Llamado (HH:MM)
             </label>
             <input
@@ -3065,15 +3063,15 @@ export default function TableEditor({
               value={bulkHora}
               onChange={(e) => setBulkHora(e.target.value)}
               placeholder="Ej: 07:00"
-              className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm font-mono font-bold focus:ring-2 focus:ring-neutral-800 focus:outline-hidden"
+              className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-mono font-bold focus:ring-2 focus:ring-brand focus:outline-hidden"
             />
 
-            <div className="flex gap-2.5 pt-4 mt-4 border-t border-neutral-100">
+            <div className="flex gap-2.5 pt-4 mt-4 border-t border-hairline">
               <button
                 type="button"
                 disabled={isHoraBulkSaving}
                 onClick={() => setIsHoraBulkOpen(false)}
-                className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                className="btn btn-secondary flex-1"
               >
                 Cancelar
               </button>
@@ -3081,7 +3079,7 @@ export default function TableEditor({
                 type="button"
                 disabled={isHoraBulkSaving}
                 onClick={handleBulkSetHora}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn-primary flex-1"
               >
                 {isHoraBulkSaving ? "Guardando..." : "Aplicar a Todos"}
               </button>
@@ -3092,21 +3090,21 @@ export default function TableEditor({
 
       {/* ───── MODAL: COPIAR ASIGNACIÓN DE CREW ───── */}
       {isCopyCrewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-2xl w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Copy className="w-5 h-5 text-sky-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Copy className="w-5 h-5 text-info" />
                   Copiar Asignación de Crew
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Copia el crew de otro llamado hacia <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Copia el crew de otro llamado hacia <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsCopyCrewOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -3114,17 +3112,17 @@ export default function TableEditor({
             </div>
 
             {/* Selector de llamado origen */}
-            <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">
+            <label className="block text-xs font-semibold text-content-muted uppercase mb-1">
               Llamado de Origen
             </label>
             <select
               value={copyCrewSourceId}
               onChange={(e) => setCopyCrewSourceId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full border border-neutral-300 rounded-lg p-2.5 text-sm font-semibold text-neutral-800 focus:ring-2 focus:ring-sky-500 focus:outline-hidden mb-1"
+              className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-semibold text-content focus:ring-2 focus:ring-info focus:outline-hidden mb-1"
             >
-              <option value="">-- Seleccionar llamado de origen --</option>
+              <option className="bg-surface text-content" value="">-- Seleccionar llamado de origen --</option>
               {copyCrewCandidates.map((l) => (
-                <option key={l.id} value={l.id}>
+                <option className="bg-surface text-content" key={l.id} value={l.id}>
                   {resolveLlamado(Number(l.id))} ({l.crewCount} crew)
                 </option>
               ))}
@@ -3132,18 +3130,18 @@ export default function TableEditor({
 
             {/* Búsqueda dentro de los candidatos */}
             <div className="relative mb-3">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-content-muted" />
               <input
                 type="text"
                 value={copyCrewSearch}
                 onChange={(e) => setCopyCrewSearch(e.target.value)}
                 placeholder="Buscar llamado por campaña o D.O.D..."
-                className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-sky-500 focus:bg-white transition-all"
+                className="w-full pl-8 pr-8 py-2 bg-subtle border border-hairline-strong rounded-lg text-xs text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-info focus:bg-surface transition-all"
               />
               {copyCrewSearch && (
                 <button
                   onClick={() => setCopyCrewSearch("")}
-                  className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                  className="absolute right-2 top-2 text-content-muted hover:text-content-secondary cursor-pointer"
                   title="Limpiar búsqueda"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -3152,8 +3150,8 @@ export default function TableEditor({
             </div>
 
             {/* Modo de copia */}
-            <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 mb-4">
-              <label className="block text-xs font-semibold text-neutral-500 uppercase mb-2">
+            <div className="bg-subtle border border-hairline rounded-xl p-3 mb-4">
+              <label className="block text-xs font-semibold text-content-muted uppercase mb-2">
                 Modo de Copia
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -3162,14 +3160,14 @@ export default function TableEditor({
                   onClick={() => setCopyCrewMode("merge")}
                   className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer border ${
                     copyCrewMode === "merge"
-                      ? "bg-sky-600 border-sky-600 text-white shadow-sm"
-                      : "bg-white border-neutral-200 text-neutral-600 hover:border-sky-300 hover:text-sky-700"
+                      ? "bg-info border-info text-on-info shadow-sm"
+                      : "bg-surface border-hairline text-content-secondary hover:border-info-border hover:text-info-content"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm">➕</span> Unir (Merge)
                   </div>
-                  <div className={`mt-0.5 font-normal ${copyCrewMode === "merge" ? "text-sky-100" : "text-neutral-400"}`}>
+                  <div className={`mt-0.5 font-normal ${copyCrewMode === "merge" ? "text-on-info/80" : "text-content-muted"}`}>
                     Agrega solo el crew que falte en el destino, sin tocar el actual.
                   </div>
                 </button>
@@ -3178,14 +3176,14 @@ export default function TableEditor({
                   onClick={() => setCopyCrewMode("replace")}
                   className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer border ${
                     copyCrewMode === "replace"
-                      ? "bg-rose-600 border-rose-600 text-white shadow-sm"
-                      : "bg-white border-neutral-200 text-neutral-600 hover:border-rose-300 hover:text-rose-700"
+                      ? "bg-danger-solid border-danger-solid text-on-danger shadow-sm"
+                      : "bg-surface border-hairline text-content-secondary hover:border-danger-border hover:text-danger-content"
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm">🔄</span> Reemplazar
                   </div>
-                  <div className={`mt-0.5 font-normal ${copyCrewMode === "replace" ? "text-rose-100" : "text-neutral-400"}`}>
+                  <div className={`mt-0.5 font-normal ${copyCrewMode === "replace" ? "text-on-danger/80" : "text-content-muted"}`}>
                     Borra el crew actual del destino y copia todo el del origen.
                   </div>
                 </button>
@@ -3194,7 +3192,7 @@ export default function TableEditor({
 
             {/* Resumen antes de confirmar */}
             {copyCrewSourceId ? (
-              <div className="bg-sky-50 border border-sky-100 rounded-xl p-3 text-xs text-sky-800 mb-4">
+              <div className="bg-info-subtle border border-info-border rounded-xl p-3 text-xs text-info-content mb-4">
                 {(() => {
                   const src = copyCrewCandidates.find((l) => Number(l.id) === Number(copyCrewSourceId));
                   if (!src) return null;
@@ -3216,17 +3214,17 @@ export default function TableEditor({
                 })()}
               </div>
             ) : (
-              <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-xs text-neutral-400 mb-4">
+              <div className="bg-subtle border border-hairline rounded-xl p-3 text-xs text-content-muted mb-4">
                 Selecciona un llamado de origen para ver el resumen.
               </div>
             )}
 
-            <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+            <div className="flex gap-2.5 pt-4 mt-3 border-t border-hairline">
               <button
                 type="button"
                 disabled={isCopyCrewSaving}
                 onClick={() => setIsCopyCrewOpen(false)}
-                className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                className="btn btn-secondary flex-1"
               >
                 Cancelar
               </button>
@@ -3234,7 +3232,7 @@ export default function TableEditor({
                 type="button"
                 disabled={isCopyCrewSaving || !copyCrewSourceId}
                 onClick={handleCopyCrew}
-                className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="btn btn-primary flex-1"
               >
                 {isCopyCrewSaving ? "Copiando..." : "Copiar Crew"}
               </button>
@@ -3245,21 +3243,21 @@ export default function TableEditor({
 
       {/* ───── MODAL: ASIGNACIÓN MASIVA DE PDR (SHOTLIST) ───── */}
       {isPdrBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-2xl w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-orange-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-brand-content" />
                   Asignar Varios Planos (PDR)
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Selecciona las tomas del shotlist para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Selecciona las tomas del shotlist para <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsPdrBulkOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -3267,7 +3265,7 @@ export default function TableEditor({
             </div>
 
             {availablePdrShotlists.length === 0 ? (
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 text-center text-sm text-orange-700 font-medium">
+              <div className="bg-brand-subtle border border-brand-border rounded-xl p-6 text-center text-sm text-brand-content font-medium">
                 ✅ No hay tomas del shotlist disponibles para asignar (todas las de este proyecto ya fueron usadas).
               </div>
             ) : (
@@ -3275,18 +3273,18 @@ export default function TableEditor({
                 {/* Barra de búsqueda + contador */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-content-muted" />
                     <input
                       type="text"
                       value={pdrBulkSearch}
                       onChange={(e) => setPdrBulkSearch(e.target.value)}
                       placeholder="Buscar por escena, plano o descripción..."
-                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                      className="w-full pl-8 pr-8 py-2 bg-subtle border border-hairline-strong rounded-lg text-xs text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
                     />
                     {pdrBulkSearch && (
                       <button
                         onClick={() => setPdrBulkSearch("")}
-                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        className="absolute right-2 top-2 text-content-muted hover:text-content-secondary cursor-pointer"
                         title="Limpiar búsqueda"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -3301,18 +3299,18 @@ export default function TableEditor({
                           new Set(availablePdrShotlists.map((s) => Number(s.id)))
                         );
                       }}
-                      className="text-xs font-bold text-orange-700 hover:text-orange-900 cursor-pointer"
+                      className="btn btn-xs btn-ghost -ml-1.5 hover:text-content"
                     >
                       Seleccionar todos ({availablePdrShotlists.length})
                     </button>
-                    <span className="text-xs font-semibold text-neutral-500">
+                    <span className="text-xs font-semibold text-content-muted">
                       {selectedPdrShotlistIds.size} seleccionados
                     </span>
                   </div>
                 </div>
 
                 {/* Lista vertical de tomas */}
-                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                <div className="max-h-[55vh] overflow-y-auto border border-hairline rounded-xl divide-y divide-hairline">
                   {availablePdrShotlists.map((s) => {
                     const isSelected = selectedPdrShotlistIds.has(Number(s.id));
                     const plano = String(s.plano || "").toUpperCase();
@@ -3321,7 +3319,7 @@ export default function TableEditor({
                       <label
                         key={s.id}
                         className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                          isSelected ? "bg-orange-50/70" : "hover:bg-neutral-50"
+                          isSelected ? "bg-brand-subtle" : "hover:bg-subtle"
                         }`}
                       >
                         <input
@@ -3338,15 +3336,15 @@ export default function TableEditor({
                           className="w-4 h-4 accent-orange-600 cursor-pointer"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+                          <div className="text-sm font-bold text-content flex items-center gap-2">
                             <span className="font-mono">Esc: {s.esc || "—"} | Plano: {s.plano || "—"}</span>
                             {isReusable && (
-                              <span className="text-[9px] font-bold bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                              <span className="text-[9px] font-bold bg-brand-subtle text-brand-content px-1.5 py-0.5 rounded-full uppercase tracking-wide">
                                 Reusable
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-neutral-500 truncate">
+                          <div className="text-xs text-content-muted truncate">
                             {s.descripcion || "Sin descripción"}
                           </div>
                         </div>
@@ -3356,17 +3354,17 @@ export default function TableEditor({
                 </div>
 
                 {availablePdrShotlists.length === 0 && pdrBulkSearch && (
-                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                  <div className="text-center text-xs text-content-muted italic py-6">
                     No se encontraron resultados para "{pdrBulkSearch}".
                   </div>
                 )}
 
-                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-hairline">
                   <button
                     type="button"
                     disabled={isPdrBulkSaving}
                     onClick={() => setIsPdrBulkOpen(false)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -3374,7 +3372,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isPdrBulkSaving || selectedPdrShotlistIds.size === 0}
                     onClick={handleBulkAssignPdr}
-                    className="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn btn-primary flex-1"
                   >
                     {isPdrBulkSaving ? "Asignando..." : "Asignar Seleccionados"}
                   </button>
@@ -3387,21 +3385,21 @@ export default function TableEditor({
 
       {/* ───── MODAL: ASIGNACIÓN MASIVA DE TALENTO (CLONACIÓN) ───── */}
       {isTalentoBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-2xl w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-violet-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-brand-content" />
                   Asignar Varios Talentos
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Clonará los perfiles seleccionados para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Clonará los perfiles seleccionados para <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsTalentoBulkOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -3409,7 +3407,7 @@ export default function TableEditor({
             </div>
 
             {availableTalentoBase.length === 0 ? (
-              <div className="bg-violet-50 border border-violet-100 rounded-xl p-6 text-center text-sm text-violet-700 font-medium">
+              <div className="bg-brand-subtle border border-brand-border rounded-xl p-6 text-center text-sm text-brand-content font-medium">
                 ✅ No hay talentos disponibles para asignar (todos los del proyecto ya están en este llamado).
               </div>
             ) : (
@@ -3417,18 +3415,18 @@ export default function TableEditor({
                 {/* Barra de búsqueda + contador */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-content-muted" />
                     <input
                       type="text"
                       value={talentoBulkSearch}
                       onChange={(e) => setTalentoBulkSearch(e.target.value)}
                       placeholder="Buscar por nombre o rol..."
-                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                      className="w-full pl-8 pr-8 py-2 bg-subtle border border-hairline-strong rounded-lg text-xs text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
                     />
                     {talentoBulkSearch && (
                       <button
                         onClick={() => setTalentoBulkSearch("")}
-                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        className="absolute right-2 top-2 text-content-muted hover:text-content-secondary cursor-pointer"
                         title="Limpiar búsqueda"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -3443,18 +3441,18 @@ export default function TableEditor({
                           new Set(availableTalentoBase.map((t) => String(t.nombre || "").trim().toLowerCase()))
                         );
                       }}
-                      className="text-xs font-bold text-violet-700 hover:text-violet-900 cursor-pointer"
+                      className="btn btn-xs btn-ghost -ml-1.5 hover:text-content"
                     >
                       Seleccionar todos ({availableTalentoBase.length})
                     </button>
-                    <span className="text-xs font-semibold text-neutral-500">
+                    <span className="text-xs font-semibold text-content-muted">
                       {selectedTalentoKeys.size} seleccionados
                     </span>
                   </div>
                 </div>
 
                 {/* Lista vertical de talentos */}
-                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                <div className="max-h-[55vh] overflow-y-auto border border-hairline rounded-xl divide-y divide-hairline">
                   {availableTalentoBase.map((t) => {
                     const key = String(t.nombre || "").trim().toLowerCase();
                     const isSelected = selectedTalentoKeys.has(key);
@@ -3462,7 +3460,7 @@ export default function TableEditor({
                       <label
                         key={key}
                         className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                          isSelected ? "bg-violet-50/70" : "hover:bg-neutral-50"
+                          isSelected ? "bg-brand-subtle" : "hover:bg-subtle"
                         }`}
                       >
                         <input
@@ -3479,8 +3477,8 @@ export default function TableEditor({
                           className="w-4 h-4 accent-violet-600 cursor-pointer"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-neutral-800">{t.nombre}</div>
-                          <div className="text-xs text-neutral-500 truncate">
+                          <div className="text-sm font-bold text-content">{t.nombre}</div>
+                          <div className="text-xs text-content-muted truncate">
                             {t.rol || "Sin rol"} {t.llamado_hora ? `· ${t.llamado_hora}` : ""}
                           </div>
                         </div>
@@ -3490,17 +3488,17 @@ export default function TableEditor({
                 </div>
 
                 {availableTalentoBase.length === 0 && talentoBulkSearch && (
-                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                  <div className="text-center text-xs text-content-muted italic py-6">
                     No se encontraron resultados para "{talentoBulkSearch}".
                   </div>
                 )}
 
-                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-hairline">
                   <button
                     type="button"
                     disabled={isTalentoBulkSaving}
                     onClick={() => setIsTalentoBulkOpen(false)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -3508,7 +3506,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isTalentoBulkSaving || selectedTalentoKeys.size === 0}
                     onClick={handleBulkAssignTalento}
-                    className="flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn btn-primary flex-1"
                   >
                     {isTalentoBulkSaving ? "Clonando..." : "Asignar Seleccionados"}
                   </button>
@@ -3521,21 +3519,21 @@ export default function TableEditor({
 
       {/* ───── MODAL: ASIGNACIÓN MASIVA DE CLIENTE / AGENCIA (CLONACIÓN) ───── */}
       {isClienteBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-neutral-100 transform scale-100 transition-all duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-surface rounded-xl max-w-2xl w-full p-5 shadow-xl border border-hairline transform scale-100 transition-all duration-200">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900 font-condensed uppercase tracking-tight flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-rose-600" />
+                <h3 className="text-lg font-bold text-content uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-danger" />
                   Asignar Varios Clientes / Agencias
                 </h3>
-                <p className="text-sm text-neutral-500 mt-0.5">
-                  Clonará los perfiles seleccionados para <span className="font-bold text-neutral-700">{resolveLlamado(selectedLlamadoId!)}</span>
+                <p className="text-sm text-content-muted mt-0.5">
+                  Clonará los perfiles seleccionados para <span className="font-bold text-content-secondary">{resolveLlamado(selectedLlamadoId!)}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsClienteBulkOpen(false)}
-                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                className="btn btn-sm btn-ghost btn-icon"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -3543,7 +3541,7 @@ export default function TableEditor({
             </div>
 
             {availableClienteBase.length === 0 ? (
-              <div className="bg-rose-50 border border-rose-100 rounded-xl p-6 text-center text-sm text-rose-700 font-medium">
+              <div className="bg-danger-subtle border border-danger-border rounded-xl p-6 text-center text-sm text-danger-content font-medium">
                 ✅ No hay clientes/agencias disponibles para asignar (todos los del proyecto ya están en este llamado).
               </div>
             ) : (
@@ -3551,18 +3549,18 @@ export default function TableEditor({
                 {/* Barra de búsqueda + contador */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-content-muted" />
                     <input
                       type="text"
                       value={clienteBulkSearch}
                       onChange={(e) => setClienteBulkSearch(e.target.value)}
                       placeholder="Buscar por nombre, empresa o tipo..."
-                      className="w-full pl-8 pr-8 py-2 bg-neutral-50 border border-neutral-300 rounded-lg text-xs text-neutral-800 placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-800 focus:bg-white transition-all"
+                      className="w-full pl-8 pr-8 py-2 bg-subtle border border-hairline-strong rounded-lg text-xs text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
                     />
                     {clienteBulkSearch && (
                       <button
                         onClick={() => setClienteBulkSearch("")}
-                        className="absolute right-2 top-2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                        className="absolute right-2 top-2 text-content-muted hover:text-content-secondary cursor-pointer"
                         title="Limpiar búsqueda"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -3577,18 +3575,18 @@ export default function TableEditor({
                           new Set(availableClienteBase.map((r) => String(r.nombre || "").trim().toLowerCase()))
                         );
                       }}
-                      className="text-xs font-bold text-rose-700 hover:text-rose-900 cursor-pointer"
+                      className="btn btn-xs btn-ghost -ml-1.5 hover:text-content"
                     >
                       Seleccionar todos ({availableClienteBase.length})
                     </button>
-                    <span className="text-xs font-semibold text-neutral-500">
+                    <span className="text-xs font-semibold text-content-muted">
                       {selectedClienteKeys.size} seleccionados
                     </span>
                   </div>
                 </div>
 
                 {/* Lista vertical de clientes/agencias */}
-                <div className="max-h-[55vh] overflow-y-auto border border-neutral-200 rounded-xl divide-y divide-neutral-100">
+                <div className="max-h-[55vh] overflow-y-auto border border-hairline rounded-xl divide-y divide-hairline">
                   {availableClienteBase.map((r) => {
                     const key = String(r.nombre || "").trim().toLowerCase();
                     const isSelected = selectedClienteKeys.has(key);
@@ -3596,7 +3594,7 @@ export default function TableEditor({
                       <label
                         key={key}
                         className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                          isSelected ? "bg-rose-50/70" : "hover:bg-neutral-50"
+                          isSelected ? "bg-danger-subtle" : "hover:bg-subtle"
                         }`}
                       >
                         <input
@@ -3613,8 +3611,8 @@ export default function TableEditor({
                           className="w-4 h-4 accent-rose-600 cursor-pointer"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-neutral-800">{r.nombre}</div>
-                          <div className="text-xs text-neutral-500 truncate">
+                          <div className="text-sm font-bold text-content">{r.nombre}</div>
+                          <div className="text-xs text-content-muted truncate">
                             {r.empresa || "Sin empresa"} {r.tipo ? `· ${r.tipo}` : ""}
                           </div>
                         </div>
@@ -3624,17 +3622,17 @@ export default function TableEditor({
                 </div>
 
                 {availableClienteBase.length === 0 && clienteBulkSearch && (
-                  <div className="text-center text-xs text-neutral-400 italic py-6">
+                  <div className="text-center text-xs text-content-muted italic py-6">
                     No se encontraron resultados para "{clienteBulkSearch}".
                   </div>
                 )}
 
-                <div className="flex gap-2.5 pt-4 mt-3 border-t border-neutral-100">
+                <div className="flex gap-2.5 pt-4 mt-3 border-t border-hairline">
                   <button
                     type="button"
                     disabled={isClienteBulkSaving}
                     onClick={() => setIsClienteBulkOpen(false)}
-                    className="flex-1 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                    className="btn btn-secondary flex-1"
                   >
                     Cancelar
                   </button>
@@ -3642,7 +3640,7 @@ export default function TableEditor({
                     type="button"
                     disabled={isClienteBulkSaving || selectedClienteKeys.size === 0}
                     onClick={handleBulkAssignCliente}
-                    className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="btn btn-destructive flex-1"
                   >
                     {isClienteBulkSaving ? "Clonando..." : "Asignar Seleccionados"}
                   </button>

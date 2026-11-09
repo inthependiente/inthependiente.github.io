@@ -4,6 +4,7 @@ import { DbTable, Proyectos, Llamados, Locaciones } from "./types";
 import Sidebar from "./components/Sidebar";
 import TableEditor from "./components/TableEditor";
 import FormModal from "./components/FormModal";
+import ThemeToggle from "./components/ThemeToggle";
 import { 
   LogOut, 
   RefreshCw, 
@@ -555,78 +556,78 @@ export default function App() {
   // ───── GATE SCREEN: AUTHENTICATION LOGIN VIEW ─────
   if (isAuthChecking) {
     return (
-      <div className="min-h-screen bg-neutral-900 flex flex-col items-center justify-center p-6 text-center">
-        <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-        <p className="text-neutral-400 font-sans text-sm animate-pulse">Conectando a bases de datos de LlamadoAPP...</p>
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 text-brand-content animate-spin mb-4" />
+        <p className="text-content-muted text-sm animate-pulse">Conectando a bases de datos de LlamadoAPP...</p>
       </div>
     );
   }
 
   if (!sessionUser) {
     return (
-      <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md border border-neutral-200">
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+        <div className="bg-surface rounded-xl shadow-sm p-8 w-full max-w-md border border-hairline">
           
           <div className="text-center mb-8">
-            <div className="inline-flex bg-neutral-950 p-3 rounded-2xl shadow-lg mb-4">
-              <Video className="w-8 h-8 text-orange-500 animate-bounce" />
+            <div className="inline-flex bg-brand p-3 rounded-lg btn-shadow mb-4">
+              <Video className="w-7 h-7 text-on-brand" />
             </div>
-            <h1 className="font-condensed font-black text-4xl text-neutral-800 tracking-tight leading-none uppercase">
+            <h1 className="font-semibold text-2xl text-content tracking-tight leading-none">
               LlamadoApp inthependiente
             </h1>
-            <p className="text-neutral-400 text-xs uppercase tracking-widest font-mono font-bold mt-1.5">Backend Admin System</p>
+            <p className="text-content-subtle text-[11px] uppercase tracking-[0.14em] font-mono font-medium mt-2">Backend Admin System</p>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-amber-55/10 border border-amber-300/40 rounded-xl p-4 text-center">
-              <span className="text-sm font-semibold text-neutral-800 block mb-1">🔐 Acceso Administrativo</span>
-              <p className="text-neutral-500 text-xs leading-relaxed">
+            <div className="bg-warning-subtle border border-warning-border rounded-lg p-4 text-center">
+              <span className="text-sm font-semibold text-content block mb-1">🔐 Acceso Administrativo</span>
+              <p className="text-content-muted text-xs leading-relaxed">
                 Este panel requiere autenticación para poder editar, crear y borrar registros de Hojas de Llamado, Proyectos y subir Referencias.
               </p>
             </div>
 
             <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Correo Electrónico</label>
+                <label className="block text-xs font-medium text-content-muted mb-1.5">Correo Electrónico</label>
                 <input
                   type="email"
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="admin@ejemplo.com"
-                  className="w-full border border-neutral-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50 font-medium"
+                  className="w-full border border-hairline-strong rounded-lg px-3 py-2 text-sm text-content placeholder-content-subtle focus:ring-2 focus:ring-brand focus:outline-hidden bg-surface transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Contraseña</label>
+                <label className="block text-xs font-medium text-content-muted mb-1.5">Contraseña</label>
                 <input
                   type="password"
                   required
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full border border-neutral-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-neutral-800 focus:outline-hidden bg-neutral-50"
+                  className="w-full border border-hairline-strong rounded-lg px-3 py-2 text-sm text-content placeholder-content-subtle focus:ring-2 focus:ring-brand focus:outline-hidden bg-surface transition-colors"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white font-bold py-3.5 rounded-xl transition-all text-sm shadow-md hover:shadow-lg cursor-pointer"
+                className="btn btn-primary btn-block btn-lg"
               >
                 {isLoggingIn ? "Iniciando sesión..." : "Iniciar Sesión"}
               </button>
             </form>
             
             {notification.text && (
-              <div className="p-3.5 bg-red-50 text-red-600 rounded-lg text-xs break-words text-center border border-red-200">
+              <div className="p-3 bg-danger-subtle text-danger-content rounded-lg text-xs break-words text-center border border-danger-border">
                 {notification.text}
               </div>
             )}
             
             <div className="text-center">
-              <span className="text-[10px] text-neutral-400 font-mono">
+              <span className="text-[10px] text-content-muted font-mono">
                 Desarrollado en entorno seguro • Conexión cifrada TLS
               </span>
             </div>
@@ -639,20 +640,20 @@ export default function App() {
 
   // ───── MAIN WORKSPACE VIEW ─────
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-100 text-neutral-800">
+    <div className="min-h-screen flex flex-col bg-canvas text-content">
       
       {/* Dynamic Floating Toast Alerts */}
       {notification.text && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className={`flex items-center gap-3 p-4 rounded-xl shadow-2xl border text-sm max-w-sm font-semibold transition-all ${
+        <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+          <div className={`flex items-center gap-3 p-3.5 rounded-lg shadow-lg border text-sm max-w-sm font-medium transition-all ${
             notification.mode === "success" 
-              ? "bg-emerald-950 border-emerald-800 text-emerald-300"
-              : "bg-red-950 border-red-800 text-red-300"
+              ? "bg-success-subtle border-success-border text-success-content"
+              : "bg-danger-subtle border-danger-border text-danger-content"
           }`}>
             {notification.mode === "success" ? (
-              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success shrink-0" />
             ) : (
-              <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <XCircle className="w-5 h-5 text-danger shrink-0" />
             )}
             <p className="line-clamp-2">{notification.text}</p>
           </div>
@@ -660,29 +661,31 @@ export default function App() {
       )}
 
       {/* Top Level Quick Action Dashboard Bar */}
-      <header className="bg-neutral-900 text-white p-4 px-6 border-b border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40">
-        <div className="flex items-center gap-4">
+      <header className="bg-surface text-content px-6 py-3 border-b border-hairline flex flex-col md:flex-row items-center justify-between gap-3 sticky top-0 z-40">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 bg-neutral-800 hover:bg-neutral-700 hover:text-white border border-neutral-700 text-neutral-300 rounded-lg transition-colors cursor-pointer flex items-center gap-2 text-xs"
+            className="btn btn-sm btn-secondary"
             title={isSidebarOpen ? "Ocultar panel lateral (más espacio)" : "Mostrar panel lateral"}
           >
-            <Menu className="w-4 h-4 text-orange-500 shrink-0" />
-            <span className="font-bold uppercase tracking-wider text-[10px] hidden sm:inline">
+            <Menu className="w-4 h-4 shrink-0" />
+            <span className="font-medium text-[11px] hidden sm:inline">
               {isSidebarOpen ? "Ocultar Menú" : "Mostrar Menú"}
             </span>
           </button>
-          <div className="flex items-center gap-2 bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-700/60 text-xs">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span className="font-semibold text-neutral-300">Nivel Admin: Total Control</span>
+          <div className="flex items-center gap-2 bg-success-subtle px-2.5 py-1.5 rounded-lg border border-success-border text-xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-success" />
+            <span className="font-medium text-success-content">Nivel Admin: Total Control</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2 bg-neutral-800/50 px-3 py-1.5 rounded-lg text-xs text-neutral-400">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-content-muted">
             <Globe className="w-3.5 h-3.5" />
             <span className="font-mono truncate max-w-xs">{sessionUser.email}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+
           {/* Refresh current table button wrapper */}
           <button
             onClick={() => {
@@ -691,21 +694,21 @@ export default function App() {
               loadAllTableCounts();
             }}
             disabled={isTableLoading}
-            className="p-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700/50 disabled:bg-neutral-800/20 text-neutral-300 disabled:text-neutral-500 rounded-lg transition-colors cursor-pointer flex items-center gap-2 text-xs"
+            className="btn btn-sm btn-secondary"
             title="Refrescar datos locales"
           >
-            <RefreshCw className={`w-4 h-4 shrink-0 ${isTableLoading ? "animate-spin text-orange-500" : ""}`} />
-            <span className="hidden md:inline font-bold uppercase tracking-wider text-[10px]">Actualizar</span>
+            <RefreshCw className={`w-4 h-4 shrink-0 ${isTableLoading ? "animate-spin" : ""}`} />
+            <span className="hidden md:inline font-medium text-[11px]">Actualizar</span>
           </button>
 
           {/* User Signout Button */}
           <button
             onClick={handleLogout}
-            className="bg-neutral-850 hover:bg-red-650 hover:text-white text-neutral-300 font-bold text-xs py-2 px-3 rounded-lg border border-neutral-700 transition-colors flex items-center gap-2 cursor-pointer"
+            className="btn btn-sm btn-danger"
             id="btn-logout"
             title="Cerrar sesión de administrador"
           >
-            <LogOut className="w-4 h-4 text-red-500" />
+            <LogOut className="w-4 h-4" />
             <span>Salir</span>
           </button>
         </div>
@@ -727,9 +730,9 @@ export default function App() {
 
         {/* Central rows management zone */}
         {isTableLoading && tableData.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-neutral-50/50">
-            <Loader2 className="w-10 h-10 text-neutral-700 animate-spin mb-2" />
-            <p className="text-sm text-neutral-500 font-semibold uppercase font-mono tracking-wider">Cargando colección de '{activeTable}'...</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-12 bg-subtle">
+            <Loader2 className="w-10 h-10 text-content-secondary animate-spin mb-2" />
+            <p className="text-sm text-content-muted font-semibold uppercase font-mono tracking-wider">Cargando colección de '{activeTable}'...</p>
           </div>
         ) : (
           <TableEditor
