@@ -15,10 +15,11 @@ import {
   Film, 
   Timer,
   Layers,
-  Database
+  Database,
+  GalleryHorizontal
 } from "lucide-react";
 
-export type AdminView = "tablas" | "invitaciones";
+export type AdminView = "tablas" | "invitaciones" | "storyboard";
 
 interface SidebarProps {
   activeTable: DbTable;
@@ -170,6 +171,41 @@ export default function Sidebar({
                 Invitaciones
               </p>
               <p className="text-[11px] truncate text-content-subtle">Links, accesos y confirmaciones</p>
+            </div>
+          </div>
+        </button>
+
+        <h2 className="text-[10px] font-medium text-content-subtle uppercase px-2.5 mb-1.5 mt-3 tracking-[0.14em]">
+          Producción
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => onViewChange("storyboard")}
+          aria-current={activeView === "storyboard" ? "page" : undefined}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors duration-150 cursor-pointer group ${
+            activeView === "storyboard"
+              ? "bg-brand-subtle border-brand-border text-brand-content"
+              : "bg-transparent border-transparent text-content-secondary hover:bg-subtle hover:text-content"
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <GalleryHorizontal
+              className={`w-4 h-4 shrink-0 ${
+                activeView === "storyboard"
+                  ? "text-brand-content"
+                  : "text-content-subtle group-hover:text-content-muted"
+              }`}
+            />
+            <div className="min-w-0">
+              <p
+                className={`text-[13px] leading-tight truncate ${
+                  activeView === "storyboard" ? "font-medium" : "font-normal"
+                }`}
+              >
+                Storyboard
+              </p>
+              <p className="text-[11px] truncate text-content-subtle">Viñetas, guión y exportación</p>
             </div>
           </div>
         </button>

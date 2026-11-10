@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { DbTable, Proyectos, Llamados, Locaciones } from "./types";
 import Sidebar, { type AdminView } from "./components/Sidebar";
 import InvitacionesPanel from "./components/InvitacionesPanel";
+import StoryboardPanel from "./components/storyboard/StoryboardPanel";
 import TableEditor from "./components/TableEditor";
 import FormModal from "./components/FormModal";
 import ThemeToggle from "./components/ThemeToggle";
@@ -154,6 +155,9 @@ export default function App() {
   const notify = (text: string, mode: "success" | "error" = "success") => {
     setNotification({ text, mode });
   };
+
+  // Cambia al pulsar "Actualizar" en el header: recarga también el panel de Storyboard.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // Etiqueta legible del llamado activo, para encabezar el panel de invitaciones.
   const etiquetaLlamadoActivo = (() => {
@@ -717,6 +721,7 @@ export default function App() {
               fetchCurrentTableData();
               loadLookupCaches();
               loadAllTableCounts();
+              setRefreshToken((valor) => valor + 1);
             }}
             disabled={isTableLoading}
             className="btn btn-sm btn-secondary"
@@ -756,7 +761,15 @@ export default function App() {
         )}
 
         {/* Central rows management zone */}
-        {activeView === "invitaciones" ? (
+        {activeView === "storyboard" ? (
+          <StoryboardPanel
+            selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
+            proyectos={lookups.proyectos}
+            onNotify={notify}
+            refreshToken={refreshToken}
+          />
+        ) : activeView === "invitaciones" ? (
           <InvitacionesPanel
             llamadoId={selectedLlamadoId}
             etiquetaLlamado={etiquetaLlamadoActivo}

@@ -107,6 +107,102 @@ que exigen rol `authenticated`: la anon key no puede leer tokens ni respuestas.
 > Importante: el link personal es la credencial de esa persona. No lo reenvíes a terceros.
 > Si un link se filtra, borra su fila en `crew_invitaciones` y vuelve a generarlo.
 
+### Storyboard (admin)
+
+El admin tiene una entrada **Storyboard** en la barra lateral (sección «Producción»), integrada
+desde el proyecto `storyboard-app` y restilizada con los tokens del panel. Trabaja sobre el
+**proyecto activo** del selector global (`selectedProjectId`), no sobre el llamado.
+
+- **Lista y editor**: un proyecto puede tener varios storyboards (`storyboards.proyecto_id`);
+  cada uno guarda su nombre y dos arreglos JSONB, `panels` y `locutions`.
+- **Viñetas**: se cargan como carpeta de imágenes (`1.jpg`, `2.jpg`, `1A.jpg`) y se ordenan
+  alfabéticamente con `localeCompare({ numeric: true })`. Cada archivo se sube al bucket
+  `storyboards` en `<storyboard_id>/<timestamp>_<archivo>` y su URL pública va al panel.
+  - **Reemplazo individual** desde la miniatura (misma ruta, `version` nueva para invalidar
+    la caché) y **revisión rápida** subiendo varios archivos: se emparejan por nombre de
+    viñeta sin distinguir mayúsculas y se informa cuántos se actualizaron y cuáles fallaron.
+  - **Importar CSV** (viñeta, descripción, locución) y **añadir viñeta** en cualquier posición.
+- **Tabla**: nombre de la viñeta, descripción, locución, mover arriba/abajo, mover a una
+  posición y eliminar (con confirmación, porque también borra el archivo del storage).
+  Las **locuciones van atadas al índice** y no se desplazan al mover o borrar viñetas: es el
+  comportamiento heredado de la app original.
+- **Guardado**: los cambios de texto se escriben con retardo (800 ms) para no lanzar un
+  `update` del JSONB por tecla; el guardado pendiente se vacía al salir del editor, cambiar de
+  proyecto o cerrar la sección, y al pulsar **Guardar**. Las escrituras se encadenan una tras
+  otra y se aplican con **lock optimista** (`update … where id = :id and updated_at = :visto`):
+  si otro usuario guardó antes, el panel avisa y recarga la versión más reciente.
+- **Vista rodaje**: pantalla completa de solo lectura con layouts 1/4/6/20 por página
+  (en móvil, galería y deslizable), lightbox por viñeta e indicadores de página.
+- **Exportar PDF / PPT**: `jspdf` y `pptxgenjs` se cargan con `import()` dinámico solo al
+  exportar, para no engordar el bundle del panel.
+  - El PDF usa las fuentes Barlow Condensed (movidas a `src/components/storyboard/fonts/`) e
+    incrusta cada imagen con **su formato real** (`PNG`/`JPEG`/`WEBP`); forzar JPEG corrompía
+    los PNG.
+  - El PPT se post-procesa con `jszip` para añadir un borde blanco de 4 pt a cada imagen, y usa
+    el `color_cliente` del proyecto en la portada de cada diapositiva.
+- Todo pasa por el cliente Supabase del admin (misma sesión, rol `authenticated`).
+
+#### Borrar un storyboard
+
+El borrado es **todo o nada**: primero se borran los archivos del bucket y solo si no queda
+ninguno se borra la fila. Si algún archivo falla, la fila **no** se toca y el diálogo deja
+reintentar (o borrar la ficha a mano, asumiendo los huérfanos).
+
+- Se abre desde el botón de la tarjeta de la lista o desde el del editor
+  (`BorrarStoryboardDialog.tsx`). Antes de borrar muestra viñetas, archivos, peso total y una
+  barra de progreso.
+- `utils/borrado.ts`:
+  - `recolectarArchivos` lista la carpeta `<storyboard_id>/` **paginando de a 100** (la API de
+    Storage no devuelve más), recorre subcarpetas y suma las rutas declaradas en el JSON
+    (`image_path` y, como respaldo, `image_url`), por si alguna quedó fuera de la carpeta.
+  - `borrarArchivos` borra en lotes de 100; si un lote falla, reintenta archivo por archivo para
+    saber exactamente cuál falló, informa progreso y **verifica releyendo el bucket**.
+  - El aviso final indica cuántos archivos y cuántos MB se liberaron.
+- Las escrituras pendientes del editor se vacían antes de borrar, para que no se reescriba la
+  fila recién eliminada.
+
+**Huérfanos.** Un borrado anterior (o una subida interrumpida) puede dejar carpetas en el bucket
+sin fila en `storyboards`. `scripts/limpiar-storyboards-huerfanos.mjs` las detecta comparando
+`storyboards.id` con las carpetas del bucket:
+
+```bash
+node scripts/limpiar-storyboards-huerfanos.mjs                    # simulación (no borra)
+node scripts/limpiar-storyboards-huerfanos.mjs --confirm --cli    # borra con la sesión de la CLI
+```
+
+Con `--cli` delega en `supabase storage rm -r`; si se prefiere el cliente JS, basta con exportar
+`SUPABASE_ACCESS_TOKEN` con el JWT de un admin y omitir `--cli`. Se ejecutó una vez: liberó
+79,12 MB en tres carpetas (`18/`, `19/`, `20/`) y dejó solo la carpeta viva. Conviene correrlo
+en modo simulación tras limpiar datos a mano.
+
+#### Esquema y seguridad
+
+El esquema quedó versionado en `supabase/migrations/20261110120000_storyboards_esquema.sql`
+(idempotente: se puede aplicar sobre la base actual o sobre un entorno nuevo):
+`create table if not exists`, columnas nuevas con `add column if not exists`, políticas
+recreadas con `drop policy if exists` y el bucket con `on conflict do update`.
+
+| Objeto | Detalle |
+|---|---|
+| `public.storyboards` | `id` (identity), `proyecto_id` (FK → `proyectos` **on delete cascade**), `name`, `panels`/`locutions` (jsonb, `'[]'` por defecto), `created_at`, `updated_at` |
+| `panel_count` | Columna **generada** (`jsonb_array_length(panels)`): la lista muestra el conteo sin bajar los JSONB |
+| `updated_at` | Trigger `storyboards_touch_updated_at` en cada `UPDATE`; es la base del lock optimista |
+| Índice | `storyboards_proyecto_created_idx` sobre `(proyecto_id, created_at desc)` |
+| RLS tabla | `SELECT` para `anon` (link de presentación futuro) y `authenticated`; `INSERT/UPDATE/DELETE` solo `authenticated`. A `anon` se le **revocaron** los grants de escritura |
+| Bucket `storyboards` | Público para lectura, `file_size_limit` de 15 MB y `allowed_mime_types` = jpeg/png/webp/avif |
+| RLS storage | Lectura `anon, authenticated`; **subida, actualización y borrado solo `authenticated`** (antes la anon key podía escribir y borrar) |
+
+- **Optimización de imágenes en el cliente** (`src/components/storyboard/utils/imagenes.ts`):
+  antes de subir, el lado mayor se limita a **1600 px** y se recomprime a JPEG 0,85 cuando la
+  imagen no tiene transparencia (un PNG con alfa se mantiene PNG). Los id de viñeta usan
+  `crypto.randomUUID()`. El aviso de carga informa el ahorro («25,1 MB → 1,9 MB»).
+
+> Pendiente: el link público de presentación (`?mode=presenter`) queda fuera de esta entrega;
+> la vista se abre dentro del panel con **Vista rodaje**.
+
+Para aplicar el esquema en otro entorno: `supabase db push`. Para revisar la seguridad del
+proyecto: `supabase db advisors --linked`.
+
 ### Geolocalización de locaciones
 
 - Los links de Google Maps (`locaciones.url_loc`, `proyectos.map_productora`) se resuelven en
@@ -295,10 +391,14 @@ src/movil/screens/             una pantalla por sección
 src/movil/data/                carga del llamado, clima, confirmación y plan en vivo
 src/movil/lib/                 formato, ICS, params, almacenamiento, PDR, geo/rutas, contactos
 src/movil/lib/timing/          motor de tiempos: hora/zona, cálculo, presentación y tests
+src/App.tsx                    panel admin: auth, tablas, invitaciones y storyboard
+src/components/storyboard/     lista, editor, tabla, vista rodaje, CSV y exportadores
+src/components/storyboard/utils/  pdfGenerator.ts y pptGenerator.ts (import dinámico)
 ```
 
 Los casos de aceptación del motor (estado, desvío, proyección, redondeo y avisos) se ejecutan
 con `npm test`; el type-check y el build siguen siendo `npm run lint` y `npm run build`.
 
-Todas las secciones del menú están implementadas —salvo **Storyboard**, que queda
-deshabilitada— junto con el panel de invitaciones del admin.
+Todas las secciones del menú del admin están implementadas, junto con el panel de invitaciones
+y el de storyboard. En la **app móvil**, la pestaña **Storyboard** sigue visible pero
+deshabilitada, reservada para una fase posterior.
