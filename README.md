@@ -83,7 +83,18 @@ de Llamados y muestra:
   no los tenga (idempotente; avisa cuántos se crearon y nunca cambia los ya existentes).
 - Por persona: estado (`Confirmado` / `Abrió` / `Pendiente` / `Sin link`) con la fecha y hora
   de cada evento, botón **Link** para copiar al portapapeles y **WhatsApp** con un mensaje
-  prellenado (nombre, campaña, hora de llamado y link personal).
+  prellenado por `src/lib/invitaciones.ts`:
+
+  ```
+  Hola (nombre), este es tu llamado para "CAMPAÑA"
+  *Fecha:* DD/MM/AAAA
+  *Hora:* HH:MM
+  *Confirma aquí:* (link)
+  ```
+
+  Cada dato va en su propia línea y `Fecha:`, `Hora:` y `Confirma aquí:` llevan negrita
+  (`*texto*`, la sintaxis de WhatsApp). Si falta la hora, la campaña o el link, esa línea se
+  omite en vez de quedar con un valor vacío.
 - **Exportar CSV** con una fila por persona (estado, fechas y link), con BOM UTF-8 para que
   Excel respete acentos y ñ.
 - Campo editable con la **dirección de la app móvil** que se usa para armar los links
@@ -185,8 +196,7 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
     diferencias de mayúsculas entre «Luces / grip» y «Luces / Grip»), con buscador por nombre o
     cargo y la hora de llamado a la derecha. Al abrir una persona se ven sus datos, su cargo y
     su departamento, y —si tiene teléfono— los botones **Llamar** (`tel:`), **WhatsApp**
-    (`wa.me` con mensaje precargado) y **Guardar contacto** (vCard individual). Al final de la
-    lista, un botón guarda **todo el crew** como un único archivo `.vcf`.
+    (`wa.me` con mensaje precargado) y **Guardar contacto** (vCard individual).
   - **Talento**: misma estructura en una sola lista en orden de personaje, con rol, locación,
     hora en set y estado (`w_status`). No muestra teléfono ni acciones de contacto, tal como se
     definió.
@@ -199,11 +209,25 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
   (`U+202C`). `src/movil/lib/contacto.ts` conserva solo los dígitos, acepta `+591…`, `591…`,
   `00591…` y el `0` inicial, y arma el formato internacional `+591XXXXXXXX`. Si tras normalizar
   no quedan 8 dígitos, la ficha avisa y **no** ofrece Llamar/WhatsApp en vez de marcar mal.
-- La vCard usa `VERSION:3.0` con `N`, `FN`, `ORG`, `TITLE`, `CATEGORIES`, `TEL` y `NOTE`, y
+- La vCard usa `VERSION:3.0` con `N`, `FN`, `TITLE`, `CATEGORIES` y `TEL`, y
   pliega las líneas a 75 **octetos** (no caracteres), por lo que los acentos no rompen el
-  archivo. El `.vcf` se descarga con el atributo `download` en todas las plataformas: Safari
-  en iOS **bloquea** la navegación de nivel superior a `data:`, así que un `data:text/vcard`
-  falla en silencio. El archivo queda en Descargas y al abrirlo se importa a Contactos.
+  archivo. No incluye la productora ni las notas del llamado (ni la hora de llamado que se
+  guardaba en `NOTE`). El teléfono va con un único `TYPE=CELL`: repetir el parámetro
+  (`TYPE=CELL;TYPE=VOICE`) es sintaxis de vCard 4.0 y en iOS produce una línea de teléfono
+  extra vacía.
+- **Guardar contacto siempre descarga el `.vcf`**, en todas las plataformas, con el atributo
+  `download`: Safari en iOS **bloquea** la navegación de nivel superior a `data:`, así que un
+  `data:text/vcard` falla en silencio. El archivo queda en Descargas y al abrirlo se importa a
+  Contactos. Después de descargar, la ficha muestra un aviso con la instrucción para continuar
+  («ábrelo desde la notificación de descarga» en Android, «desde tus descargas» en el resto).
+- **Por qué no se abre el editor de Contactos directamente**: no es posible desde una página
+  web. Chrome para Android inyecta `android.intent.category.BROWSABLE` en todo intent que abre
+  un enlace (`ExternalNavigationHandler.sanitizeQueryIntentActivitiesIntent`, que además limpia
+  `component` y `selector`), y el editor de Contactos declara solo `DEFAULT` para
+  `ACTION_INSERT`; como las categorías del intent deben ser subconjunto de las del filtro, el
+  intent nunca resuelve. Tampoco sirve `navigator.share` con el `.vcf` (Contacts no declara
+  `ACTION_SEND`) ni la Contact Picker API (es de solo lectura). Solo un shell nativo
+  (Capacitor/WebView) podría interceptar el intent y llamar `startActivity` sin esa inyección.
 
 ### Comportamiento
 

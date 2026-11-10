@@ -50,8 +50,6 @@ export interface ContactoVCard {
   cargo?: string | null;
   departamento?: string | null;
   telefono?: Telefono | null;
-  notas?: string | null;
-  organizacion?: string | null;
 }
 
 /** Separa el nombre para el campo N (apellido;nombre). */
@@ -71,12 +69,11 @@ function vcardDe(contacto: ContactoVCard): string[] {
     `FN:${escaparValor(contacto.nombre)}`,
   ];
 
-  if (contacto.organizacion) lineas.push(`ORG:${escaparValor(contacto.organizacion)}`);
   if (contacto.cargo) lineas.push(`TITLE:${escaparValor(contacto.cargo)}`);
   if (contacto.departamento) lineas.push(`CATEGORIES:${escaparValor(contacto.departamento)}`);
-  if (contacto.telefono) lineas.push(`TEL;TYPE=CELL;TYPE=VOICE:${contacto.telefono.e164}`);
-
-  if (contacto.notas) lineas.push(`NOTE:${escaparValor(contacto.notas)}`);
+  // Un solo `TYPE` (un parámetro repetido es vCard 4.0 y iOS lo interpreta como
+  // una línea extra vacía).
+  if (contacto.telefono) lineas.push(`TEL;TYPE=CELL:${contacto.telefono.e164}`);
 
   lineas.push('END:VCARD');
   return lineas;
@@ -86,8 +83,29 @@ export function construirVCard(contacto: ContactoVCard): string {
   return `${vcardDe(contacto).map((linea) => plegarLinea(linea)).join('\r\n')}\r\n`;
 }
 
-export function construirVCardMultiple(contactos: ContactoVCard[]): string {
-  return contactos.map((contacto) => construirVCard(contacto)).join('');
+/** Android muestra la notificación de descarga, así que las instrucciones cambian. */
+function esAndroid(): boolean {
+  return /android/i.test(navigator.userAgent);
+}
+
+/**
+ * Guarda el contacto como .vcf, que es la única vía posible desde la web.
+ *
+ * No se puede abrir el editor de Contactos con un intent `ACTION_INSERT`: Chrome
+ * inyecta `android.intent.category.BROWSABLE` en todo intent que abre una página
+ * (`ExternalNavigationHandler.sanitizeQueryIntentActivitiesIntent`, que además
+ * limpia `component` y `selector`) y el editor de Contactos solo declara
+ * `DEFAULT`, así que el intent nunca resuelve y no se lanza nada.
+ */
+export function guardarContacto(contacto: ContactoVCard, nombreArchivo: string): void {
+  descargarVCard(construirVCard(contacto), nombreArchivo);
+}
+
+/** Cómo continuar después de descargar el .vcf, según la plataforma. */
+export function instruccionImportar(): string {
+  return esAndroid()
+    ? 'Ábrelo desde la notificación de descarga para agregarlo a Contactos.'
+    : 'Ábrelo desde tus descargas para agregarlo a Contactos.';
 }
 
 /**

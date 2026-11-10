@@ -21,7 +21,7 @@ export function ErrorScreen({ mensaje, onRetry }: { mensaje?: string | null; onR
         <AlertTriangle className="h-5 w-5" />
       </span>
       <h1 className="mt-4 text-[15px] font-semibold text-content">No pudimos cargar el llamado</h1>
-      <p className="mx-auto mt-1 max-w-[300px] text-[12px] leading-relaxed text-content-muted">
+      <p className="mx-auto mt-1 max-w-75 text-[12px] leading-relaxed text-content-muted">
         {mensaje ?? 'Revisa tu conexión e inténtalo de nuevo.'}
       </p>
       {onRetry && (
@@ -41,7 +41,7 @@ export function InvalidLinkScreen() {
         <ShieldX className="h-5 w-5" />
       </span>
       <h1 className="mt-4 text-[15px] font-semibold text-content">Enlace no válido</h1>
-      <p className="mx-auto mt-1 max-w-[300px] text-[12px] leading-relaxed text-content-muted">
+      <p className="mx-auto mt-1 max-w-75 text-[12px] leading-relaxed text-content-muted">
         Este enlace personal no existe o fue reemplazado. Pide a producción que te envíe el link
         actualizado.
       </p>
@@ -56,7 +56,7 @@ export function MissingLinkScreen() {
         <Link2 className="h-5 w-5" />
       </span>
       <h1 className="mt-4 text-[15px] font-semibold text-content">Enlace incompleto</h1>
-      <p className="mx-auto mt-1 max-w-[300px] text-[12px] leading-relaxed text-content-muted">
+      <p className="mx-auto mt-1 max-w-75 text-[12px] leading-relaxed text-content-muted">
         Este enlace debe incluir el identificador del llamado. Pide a producción tu link personal y ábrelo
         nuevamente.
       </p>
@@ -74,7 +74,7 @@ export function NotFoundScreen() {
         <SearchX className="h-5 w-5" />
       </span>
       <h1 className="mt-4 text-[15px] font-semibold text-content">Llamado no encontrado</h1>
-      <p className="mx-auto mt-1 max-w-[300px] text-[12px] leading-relaxed text-content-muted">
+      <p className="mx-auto mt-1 max-w-75 text-[12px] leading-relaxed text-content-muted">
         El llamado que buscas no existe o ya no está disponible.
       </p>
     </div>

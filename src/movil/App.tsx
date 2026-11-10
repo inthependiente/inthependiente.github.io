@@ -63,7 +63,7 @@ export default function App() {
   return (
     <div className="min-h-dvh bg-canvas text-content">
       <main
-        className="mx-auto w-full max-w-[520px]"
+        className="mx-auto w-full max-w-130"
         style={{
           paddingBottom: tab === 'locaciones'
             ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom))'

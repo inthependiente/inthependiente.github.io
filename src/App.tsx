@@ -165,6 +165,15 @@ export default function App() {
     return `${proyecto?.campana ?? "Llamado"}${fecha}`;
   })();
 
+  // Campaña y fecha por separado: alimentan el mensaje de WhatsApp de invitación.
+  const llamadoActivo = (() => {
+    if (selectedLlamadoId === null) return null;
+    const llamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    if (!llamado) return null;
+    const proyecto = lookups.proyectos.find((p) => Number(p.id) === Number(llamado.proyecto_id));
+    return { campana: proyecto?.campana ?? null, fecha: llamado.fecha ?? null };
+  })();
+
   // Toast auto-clearing timer
   useEffect(() => {
     if (notification.text) {
@@ -637,7 +646,7 @@ export default function App() {
             </form>
             
             {notification.text && (
-              <div className="p-3 bg-danger-subtle text-danger-content rounded-lg text-xs break-words text-center border border-danger-border">
+              <div className="p-3 bg-danger-subtle text-danger-content rounded-lg text-xs wrap-break-word text-center border border-danger-border">
                 {notification.text}
               </div>
             )}
@@ -751,6 +760,8 @@ export default function App() {
           <InvitacionesPanel
             llamadoId={selectedLlamadoId}
             etiquetaLlamado={etiquetaLlamadoActivo}
+            campana={llamadoActivo?.campana ?? null}
+            fecha={llamadoActivo?.fecha ?? null}
             onNotify={notify}
           />
         ) : isTableLoading && tableData.length === 0 ? (

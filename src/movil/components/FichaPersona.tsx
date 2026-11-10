@@ -7,12 +7,13 @@ interface Props {
   persona: Persona;
   /** Contexto del llamado, para el mensaje de WhatsApp. */
   mensajeWa: string;
-  organizacion?: string | null;
   /** Solo el crew puede guardar el contacto; sin esta prop no se muestra el botón. */
   onGuardarContacto?: () => void;
+  /** Instrucción a mostrar tras descargar la vCard. */
+  avisoContacto?: string | null;
 }
 
-export default function FichaPersona({ persona, mensajeWa, organizacion, onGuardarContacto }: Props) {
+export default function FichaPersona({ persona, mensajeWa, onGuardarContacto, avisoContacto }: Props) {
   return (
     <div className="space-y-3">
       <section className="rounded-xl border border-hairline bg-surface px-4 py-4">
@@ -32,18 +33,13 @@ export default function FichaPersona({ persona, mensajeWa, organizacion, onGuard
           </div>
         </div>
 
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-hairline pt-3">
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-content-subtle">
-              Hora de llamado
-            </p>
-            <p className="font-mono text-[24px] font-semibold leading-none text-content">
-              {persona.hora ?? '—'}
-            </p>
-          </div>
-          {organizacion && (
-            <p className="min-w-0 truncate pb-0.5 text-right text-[10px] text-content-subtle">{organizacion}</p>
-          )}
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-content-subtle">
+            Hora de llamado
+          </p>
+          <p className="font-mono text-[24px] font-semibold leading-none text-content">
+            {persona.hora ?? '—'}
+          </p>
         </div>
       </section>
 
@@ -122,6 +118,15 @@ export default function FichaPersona({ persona, mensajeWa, organizacion, onGuard
               <Contact className="h-4 w-4" />
               Guardar contacto
             </button>
+          )}
+
+          {avisoContacto && (
+            <p
+              role="status"
+              className="rounded-lg border border-hairline bg-subtle px-3 py-2 text-[11px] leading-relaxed text-content-muted"
+            >
+              {avisoContacto}
+            </p>
           )}
         </section>
       )}

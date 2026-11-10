@@ -38,7 +38,7 @@ export default function Sheet({ open, title, onClose, children }: SheetProps) {
         className="overlay-in absolute inset-0 bg-black/45"
       />
 
-      <div className="sheet-panel relative w-full max-w-[520px] rounded-t-2xl border border-hairline bg-elevated shadow-2xl">
+      <div className="sheet-panel relative w-full max-w-130 rounded-t-2xl border border-hairline bg-elevated shadow-2xl">
         <div className="flex justify-center pt-2">
           <span className="h-1 w-10 rounded-full bg-hairline-strong" />
         </div>

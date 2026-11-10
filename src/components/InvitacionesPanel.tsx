@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { mensajeInvitacion } from "../lib/invitaciones";
 import {
   AlertTriangle,
   Check,
@@ -34,6 +35,10 @@ interface FilaPanel {
 interface Props {
   llamadoId: number | null;
   etiquetaLlamado: string | null;
+  /** Campaña del proyecto, para el mensaje de WhatsApp. */
+  campana?: string | null;
+  /** Fecha del llamado (ISO), para el mensaje de WhatsApp. */
+  fecha?: string | null;
   onNotify: (text: string, mode?: "success" | "error") => void;
 }
 
@@ -70,9 +75,13 @@ const whatsappNumero = (valor: string | null) => {
   return digitos.length === 8 ? `591${digitos}` : null;
 };
 
-const primerNombre = (nombre: string) => nombre.trim().split(/\s+/)[0] ?? nombre;
-
-export default function InvitacionesPanel({ llamadoId, etiquetaLlamado, onNotify }: Props) {
+export default function InvitacionesPanel({
+  llamadoId,
+  etiquetaLlamado,
+  campana,
+  fecha,
+  onNotify,
+}: Props) {
   const [filas, setFilas] = useState<FilaPanel[]>([]);
   const [cargando, setCargando] = useState(false);
   const [generando, setGenerando] = useState(false);
@@ -164,16 +173,14 @@ export default function InvitacionesPanel({ llamadoId, etiquetaLlamado, onNotify
     }
   };
 
-  const mensajeWhatsapp = (fila: FilaPanel) => {
-    const url = enlace(fila);
-    const partes = [
-      `Hola ${primerNombre(fila.nombre)},`,
-      etiquetaLlamado ? `este es tu llamado de ${etiquetaLlamado}.` : "este es tu llamado.",
-      fila.hora_llamado ? `Hora de llamado: ${fila.hora_llamado} hrs.` : null,
-      url ? `Confirma tu asistencia aquí: ${url}` : null,
-    ];
-    return partes.filter(Boolean).join(" ");
-  };
+  const mensajeWhatsapp = (fila: FilaPanel) =>
+    mensajeInvitacion({
+      nombre: fila.nombre,
+      campana,
+      fecha,
+      hora: fila.hora_llamado,
+      url: enlace(fila),
+    });
 
   const exportarCsv = () => {
     const cabeceras = [
@@ -540,7 +547,7 @@ function Tarjeta({
 
   return (
     <div className={`rounded-lg border px-3 py-2 ${clases}`}>
-      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-content-muted leading-tight">
+      <p className="text-[10px] font-medium uppercase tracking-widest text-content-muted leading-tight">
         {etiqueta}
       </p>
       <p className={`mt-0.5 font-mono text-lg font-semibold leading-none ${colorValor}`}>{valor}</p>

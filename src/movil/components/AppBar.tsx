@@ -13,7 +13,7 @@ export default function AppBar({ title, onBack }: Props) {
       className="sticky top-0 z-20 border-b border-hairline bg-canvas/90 backdrop-blur"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="mx-auto flex h-11 w-full max-w-[520px] items-center gap-2 px-2">
+      <div className="mx-auto flex h-11 w-full max-w-130 items-center gap-2 px-2">
         {onBack && (
           <button
             type="button"

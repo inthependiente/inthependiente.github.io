@@ -153,7 +153,7 @@ export default function LlamadoScreen({ data, acceso, guardadoEn, error, recarga
         style={{ bottom: 'calc(var(--tabbar-h) + env(safe-area-inset-bottom))' }}
       >
         <div
-          className="mx-auto w-full max-w-[520px] border-t border-hairline bg-canvas/95 px-3 pb-2.5 pt-2 backdrop-blur"
+          className="mx-auto w-full max-w-130 border-t border-hairline bg-canvas/95 px-3 pb-2.5 pt-2 backdrop-blur"
           role="status"
           aria-live="polite"
         >

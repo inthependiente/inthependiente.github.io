@@ -25,7 +25,7 @@ export default function TabBar({ active }: { active: TabKey }) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Secciones del llamado"
     >
-      <div className="mx-auto flex w-full max-w-[520px] items-stretch">
+      <div className="mx-auto flex w-full max-w-130 items-stretch">
         {TABS.map(({ key, label, icon: Icon, bloqueada }) => {
           const activo = key === active;
 

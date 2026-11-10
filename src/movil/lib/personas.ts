@@ -1,4 +1,4 @@
-import type { CrewLlamado, Llamado, LlamadoData, Talento } from '../types';
+import type { CrewLlamado, Llamado, Talento } from '../types';
 import { normalizarTelefono, type Telefono } from './contacto';
 import { normalizarHora } from './format';
 
@@ -153,15 +153,4 @@ export function filtrarPersonas(
 export function mensajeWhatsapp(llamado: Llamado, nombre: string): string {
   const campana = llamado.proyectos?.campana?.trim();
   return campana ? `Hola ${nombre.split(' ')[0]}, te escribo por el llamado de ${campana}.` : `Hola ${nombre.split(' ')[0]}, te escribo por el llamado.`;
-}
-
-export function contactosDeCrew(data: LlamadoData) {
-  return crewAPersonas(data.crew).map((persona) => ({
-    nombre: persona.nombre,
-    cargo: persona.cargo,
-    departamento: persona.departamento,
-    telefono: persona.telefono,
-    notas: [persona.notas, persona.hora ? `Llamado ${persona.hora}` : null].filter(Boolean).join(' · ') || null,
-    organizacion: data.llamado.proyectos?.productora ?? null,
-  }));
 }

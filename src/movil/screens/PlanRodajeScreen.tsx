@@ -1,32 +1,23 @@
 import { useMemo, useState } from 'react';
-import { Clapperboard, MapPin, StickyNote, Users } from 'lucide-react';
+import { ChevronRight, Clapperboard, MapPin, StickyNote, Users } from 'lucide-react';
 import AppBar from '../components/AppBar';
-import Lightbox, { type ImagenLightbox } from '../components/Lightbox';
+import DetallePlano from '../components/DetallePlano';
 import type { LlamadoData } from '../types';
 import { buildTimeline, formatDuracion, type TimelineRow } from '../lib/pdr';
 
-interface LightboxState {
-  imagenes: ImagenLightbox[];
-  indice: number;
-  titulo: string;
-}
-
 export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
-  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+  const [detalle, setDetalle] = useState<number | null>(null);
 
   const timeline = useMemo(
     () => buildTimeline(data.pdr ?? [], data.talento ?? [], data.llamado.llamado_hora),
     [data.pdr, data.talento, data.llamado.llamado_hora],
   );
 
-  const abrirReferencia = (row: TimelineRow, indice: number) => {
-    setLightbox({
-      imagenes: row.referencias,
-      indice,
-      titulo: [row.escena ? `Escena ${row.escena}` : null, `Plano ${row.plano}`]
-        .filter(Boolean)
-        .join(' · '),
-    });
+  const planos = useMemo(() => timeline.rows.filter((row) => !row.especial), [timeline.rows]);
+
+  const abrirPlano = (row: TimelineRow) => {
+    const indice = planos.findIndex((plano) => plano.id === row.id);
+    if (indice >= 0) setDetalle(indice);
   };
 
   return (
@@ -53,7 +44,7 @@ export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
                   </li>
                 ) : (
                   <li key={row.id}>
-                    <TarjetaPlano row={row} onAbrirReferencia={(indice) => abrirReferencia(row, indice)} />
+                    <TarjetaPlano row={row} onAbrir={() => abrirPlano(row)} />
                   </li>
                 ),
               )}
@@ -66,13 +57,12 @@ export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
         )}
       </div>
 
-      {lightbox && (
-        <Lightbox
-          imagenes={lightbox.imagenes}
-          indice={lightbox.indice}
-          titulo={lightbox.titulo}
-          onClose={() => setLightbox(null)}
-          onIndiceChange={(indice) => setLightbox((actual) => (actual ? { ...actual, indice } : actual))}
+      {detalle !== null && planos[detalle] && (
+        <DetallePlano
+          planos={planos}
+          indice={detalle}
+          onClose={() => setDetalle(null)}
+          onIndiceChange={setDetalle}
         />
       )}
     </>
@@ -144,21 +134,29 @@ function FilaEspecial({ row }: { row: TimelineRow }) {
 
 function TarjetaPlano({
   row,
-  onAbrirReferencia,
+  onAbrir,
 }: {
   row: TimelineRow;
-  onAbrirReferencia: (indice: number) => void;
+  onAbrir: () => void;
 }) {
   const tieneMeta = Boolean(row.locacion || row.cast.length || row.notas);
   const tieneReferencias = row.referencias.length > 0;
 
   return (
-    <article className="overflow-hidden rounded-xl border border-hairline bg-surface">
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-haspopup="dialog"
+      className="group block w-full overflow-hidden rounded-xl border border-hairline bg-surface text-left transition-colors active:bg-subtle"
+    >
       <div className="flex items-center gap-2 px-3 pb-1.5 pt-2.5">
         <span className="font-mono text-[15px] font-semibold leading-none text-content">{row.inicio}</span>
 
         {row.escena && <Badge>ESC {row.escena}</Badge>}
         {row.plano && <Badge>PLANO {row.plano}</Badge>}
+
+        <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-content-subtle" aria-hidden />
+        <span className="sr-only">Ver detalle completo</span>
       </div>
 
       <p className="px-3 pb-2 text-[13px] leading-snug text-content">{row.descripcion}</p>
@@ -198,29 +196,25 @@ function TarjetaPlano({
           )}
 
           {tieneReferencias && (
-            <div className="ml-auto flex w-[22%] max-w-[76px] shrink-0 flex-col gap-1.5">
+            <div className="ml-auto flex w-[22%] max-w-19 shrink-0 flex-col gap-1.5">
               {row.referencias.map((referencia, indice) => (
-                <button
+                <div
                   key={`${referencia.url}-${indice}`}
-                  type="button"
-                  onClick={() => onAbrirReferencia(indice)}
-                  className="group relative aspect-square w-full overflow-hidden rounded-lg border border-hairline bg-subtle"
-                  aria-label={`Ampliar referencia ${indice + 1} del plano ${row.plano}`}
+                  className="aspect-square w-full overflow-hidden rounded-lg border border-hairline bg-subtle"
                 >
                   <img
                     src={referencia.url}
                     alt={referencia.alt}
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-200 group-active:scale-105"
+                    className="h-full w-full object-cover"
                   />
-                  <span className="absolute inset-0 bg-black/0 transition-colors group-active:bg-black/10" />
-                </button>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
-    </article>
+    </button>
   );
 }
 
@@ -248,7 +242,7 @@ function EmptyState() {
         <Clapperboard className="h-5 w-5" />
       </span>
       <h2 className="mt-4 text-[14px] font-semibold text-content">Sin plan de rodaje</h2>
-      <p className="mx-auto mt-1 max-w-[260px] text-[12px] leading-relaxed text-content-muted">
+      <p className="mx-auto mt-1 max-w-65 text-[12px] leading-relaxed text-content-muted">
         Producción todavía no cargó los planos de este llamado.
       </p>
     </div>

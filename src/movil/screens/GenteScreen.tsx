@@ -1,15 +1,14 @@
-import { useMemo } from 'react';
-import { Contact, Users } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Users } from 'lucide-react';
 import AppBar from '../components/AppBar';
 import FichaPersona from '../components/FichaPersona';
 import ListaPersonas from '../components/ListaPersonas';
 import type { GenteTab } from '../lib/router';
 import type { LlamadoData } from '../types';
-import { construirVCard, construirVCardMultiple, descargarVCard } from '../lib/contacto';
+import { guardarContacto, instruccionImportar } from '../lib/contacto';
 import { slug } from '../lib/format';
 import {
   agruparCrew,
-  contactosDeCrew,
   crewAPersonas,
   mensajeWhatsapp,
   talentoAPersonas,
@@ -30,6 +29,8 @@ const PESTANAS: { key: GenteTab; label: string }[] = [
 ];
 
 export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
+  const [avisoContacto, setAvisoContacto] = useState<string | null>(null);
+
   const crew = useMemo(() => crewAPersonas(data.crew), [data.crew]);
   const talento = useMemo(() => talentoAPersonas(data.talento), [data.talento]);
 
@@ -42,7 +43,6 @@ export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
     [talento],
   );
 
-  const organizacion = data.llamado.proyectos?.productora ?? null;
   const proyecto = slug(data.llamado.proyectos?.campana ?? 'llamado');
 
   const seleccionada = seleccionadoId
@@ -57,6 +57,32 @@ export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
     window.location.hash = `#/gente/${genteTab}`;
   };
 
+  useEffect(() => {
+    if (!avisoContacto) return;
+    const temporizador = window.setTimeout(() => setAvisoContacto(null), 12000);
+    return () => window.clearTimeout(temporizador);
+  }, [avisoContacto]);
+
+  // El aviso pertenece a una persona concreta: al cambiar de ficha se descarta.
+  useEffect(() => {
+    setAvisoContacto(null);
+  }, [seleccionadoId, genteTab]);
+
+  const guardar = (persona: Persona) => {
+    guardarContacto(
+      {
+        nombre: persona.nombre,
+        cargo: persona.cargo,
+        departamento: persona.departamento,
+        telefono: persona.telefono,
+      },
+      `crew-${slug(persona.nombre)}-${proyecto}`,
+    );
+    setAvisoContacto(
+      `Descargamos el contacto de ${persona.nombre} como archivo .vcf. ${instruccionImportar()}`,
+    );
+  };
+
   if (seleccionada) {
     return (
       <>
@@ -66,27 +92,12 @@ export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
             <FichaPersona
               persona={seleccionada}
               mensajeWa={mensajeWhatsapp(data.llamado, seleccionada.nombre)}
-              organizacion={organizacion}
-              onGuardarContacto={() =>
-                descargarVCard(
-                  construirVCard({
-                    nombre: seleccionada.nombre,
-                    cargo: seleccionada.cargo,
-                    departamento: seleccionada.departamento,
-                    telefono: seleccionada.telefono,
-                    notas:
-                      [seleccionada.notas, seleccionada.hora ? `Llamado ${seleccionada.hora}` : null]
-                        .filter(Boolean)
-                        .join(' · ') || null,
-                    organizacion,
-                  }),
-                  `crew-${slug(seleccionada.nombre)}-${proyecto}`,
-                )
-              }
+              onGuardarContacto={() => guardar(seleccionada)}
+              avisoContacto={avisoContacto}
             />
           ) : (
             // El talento no expone teléfono: la ficha queda sin acciones de contacto.
-            <FichaPersona persona={seleccionada} mensajeWa="" organizacion={organizacion} />
+            <FichaPersona persona={seleccionada} mensajeWa="" />
           )}
         </div>
       </>
@@ -94,11 +105,6 @@ export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
   }
 
   const conTelefono = crew.filter((persona) => persona.telefono).length;
-
-  const guardarTodos = () => {
-    const contactos = contactosDeCrew(data);
-    descargarVCard(construirVCardMultiple(contactos), `crew-${proyecto}`);
-  };
 
   return (
     <>
@@ -122,18 +128,7 @@ export default function GenteScreen({ data, genteTab, seleccionadoId }: Props) {
               tituloVacio="Sin crew asignado"
               detalleVacio="Producción todavía no asignó el equipo de este llamado."
               onAbrir={abrir}
-            >
-              {crew.length > 0 && (
-                <button
-                  type="button"
-                  onClick={guardarTodos}
-                  className="btn btn-secondary btn-lg btn-block mt-4 h-11"
-                >
-                  <Contact className="h-4 w-4" />
-                  Guardar contacto de todo el crew
-                </button>
-              )}
-            </ListaPersonas>
+            />
           </>
         ) : (
           <div className="mt-3">

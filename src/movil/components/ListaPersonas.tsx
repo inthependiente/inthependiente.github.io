@@ -10,7 +10,6 @@ interface Props {
   tituloVacio: string;
   detalleVacio: string;
   onAbrir: (persona: Persona) => void;
-  children?: React.ReactNode;
 }
 
 export default function ListaPersonas({
@@ -19,7 +18,6 @@ export default function ListaPersonas({
   tituloVacio,
   detalleVacio,
   onAbrir,
-  children,
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
 
@@ -37,7 +35,7 @@ export default function ListaPersonas({
           <Users className="h-5 w-5" />
         </span>
         <h2 className="mt-4 text-[14px] font-semibold text-content">{tituloVacio}</h2>
-        <p className="mx-auto mt-1 max-w-[260px] text-[12px] leading-relaxed text-content-muted">
+        <p className="mx-auto mt-1 max-w-65 text-[12px] leading-relaxed text-content-muted">
           {detalleVacio}
         </p>
       </div>
@@ -113,8 +111,6 @@ export default function ListaPersonas({
           </section>
         ))}
       </div>
-
-      {children}
     </div>
   );
 }

@@ -419,7 +419,7 @@ export default function FormModal({
                     <div className="flex items-center gap-2 p-2 bg-subtle border border-hairline rounded-lg text-xs justify-between mt-1">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <img src={formValues.cliente} alt="Logo Cliente" className="w-10 h-10 object-contain rounded bg-surface p-0.5 border" referrerPolicy="no-referrer" />
-                        <span className="truncate font-mono text-content-muted max-w-[120px]">{formValues.cliente}</span>
+                        <span className="truncate font-mono text-content-muted max-w-30">{formValues.cliente}</span>
                       </div>
                       <div className="flex gap-1 justify-end">
                         <button
@@ -505,7 +505,7 @@ export default function FormModal({
                     <div className="flex items-center gap-2 p-2 bg-subtle border border-hairline rounded-lg text-xs justify-between mt-1">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <img src={formValues.logo_productora} alt="Logo Productora" className="w-10 h-10 object-contain rounded bg-surface p-0.5 border" referrerPolicy="no-referrer" />
-                        <span className="truncate font-mono text-content-muted max-w-[200px]">{formValues.logo_productora}</span>
+                        <span className="truncate font-mono text-content-muted max-w-50">{formValues.logo_productora}</span>
                       </div>
                       <div className="flex gap-1 justify-end">
                         <button

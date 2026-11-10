@@ -1278,7 +1278,7 @@ export default function TableEditor({
                       setSelectedLlamadoId(null);
                     }
                   }}
-                  className="bg-surface border border-hairline-strong text-content text-xs font-medium rounded-md px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand cursor-pointer min-w-[140px] max-w-[200px] transition-colors"
+                  className="bg-surface border border-hairline-strong text-content text-xs font-medium rounded-md px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-brand cursor-pointer min-w-35 max-w-50 transition-colors"
                 >
                   <option value="" className="bg-surface text-content-muted">-- Mostrar Todos --</option>
                   {lookups.proyectos?.map(p => (
@@ -1330,7 +1330,7 @@ export default function TableEditor({
                       setSelectedLlamadoId(null);
                     }
                   }}
-                  className="bg-subtle border border-hairline text-content-secondary text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-success cursor-pointer min-w-[140px] max-w-[240px]"
+                  className="bg-subtle border border-hairline text-content-secondary text-xs font-semibold rounded-lg px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-success cursor-pointer min-w-35 max-w-60"
                 >
                   <option value="" className="bg-surface text-content-muted">-- Seleccionar --</option>
                   {(lookups.llamados || [])
@@ -2141,7 +2141,7 @@ export default function TableEditor({
                                 (e.target as HTMLInputElement).blur();
                               }
                             }}
-                            className="w-full max-w-[140px] px-1.5 py-0.5 text-xs text-content-secondary bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
+                            className="w-full max-w-35 px-1.5 py-0.5 text-xs text-content-secondary bg-subtle border border-hairline rounded focus:bg-surface focus:ring-1 focus:ring-brand focus:outline-hidden"
                             placeholder="—"
                           />
                         </td>
