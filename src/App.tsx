@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { DbTable, Proyectos, Llamados, Locaciones } from "./types";
-import Sidebar from "./components/Sidebar";
+import Sidebar, { type AdminView } from "./components/Sidebar";
+import InvitacionesPanel from "./components/InvitacionesPanel";
 import TableEditor from "./components/TableEditor";
 import FormModal from "./components/FormModal";
 import ThemeToggle from "./components/ThemeToggle";
@@ -27,6 +28,7 @@ export default function App() {
 
   // Active collection and records state
   const [activeTable, setActiveTable] = useState<DbTable>("proyectos");
+  const [activeView, setActiveView] = useState<AdminView>("tablas");
   const [tableData, setTableData] = useState<any[]>([]);
 
   // Selected project/llamado working contexts persistable via localStorage
@@ -145,9 +147,23 @@ export default function App() {
   // 3. Load active table data whenever activeTable state changes
   useEffect(() => {
     if (sessionUser) {
-      fetchCurrentTableData();
+      if (activeView === "tablas") fetchCurrentTableData();
     }
-  }, [activeTable, sessionUser]);
+  }, [activeTable, activeView, sessionUser]);
+
+  const notify = (text: string, mode: "success" | "error" = "success") => {
+    setNotification({ text, mode });
+  };
+
+  // Etiqueta legible del llamado activo, para encabezar el panel de invitaciones.
+  const etiquetaLlamadoActivo = (() => {
+    if (selectedLlamadoId === null) return null;
+    const llamado = lookups.llamados.find((l) => Number(l.id) === Number(selectedLlamadoId));
+    if (!llamado) return `Llamado #${selectedLlamadoId}`;
+    const proyecto = lookups.proyectos.find((p) => Number(p.id) === Number(llamado.proyecto_id));
+    const fecha = llamado.fecha ? ` · ${llamado.fecha}` : "";
+    return `${proyecto?.campana ?? "Llamado"}${fecha}`;
+  })();
 
   // Toast auto-clearing timer
   useEffect(() => {
@@ -725,11 +741,19 @@ export default function App() {
               setActiveTable(table);
             }}
             counts={tableCounts}
+            activeView={activeView}
+            onViewChange={setActiveView}
           />
         )}
 
         {/* Central rows management zone */}
-        {isTableLoading && tableData.length === 0 ? (
+        {activeView === "invitaciones" ? (
+          <InvitacionesPanel
+            llamadoId={selectedLlamadoId}
+            etiquetaLlamado={etiquetaLlamadoActivo}
+            onNotify={notify}
+          />
+        ) : isTableLoading && tableData.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 bg-subtle">
             <Loader2 className="w-10 h-10 text-content-secondary animate-spin mb-2" />
             <p className="text-sm text-content-muted font-semibold uppercase font-mono tracking-wider">Cargando colección de '{activeTable}'...</p>

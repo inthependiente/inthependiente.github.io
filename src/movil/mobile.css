@@ -1,0 +1,92 @@
+:root {
+  --tabbar-h: 3.5rem;
+  --actionbar-h: 4.25rem;
+}
+
+/* iOS: evita que el texto se reescale al girar el dispositivo. */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.sheet-panel {
+  animation: sheet-up 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.overlay-in {
+  animation: overlay-in 150ms ease-out;
+}
+
+@keyframes rise-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.rise-in {
+  animation: rise-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* ── Leaflet ─────────────────────────────────────────────────────────
+   Sin controles propios en la esquina, el zoom queda arriba a la derecha con
+   un margen normal. El crédito de OpenStreetMap es obligatorio (licencia ODbL
+   y política de uso de los tiles): se mantiene visible pero más discreto. */
+.leaflet-control-zoom {
+  margin-top: 0.5rem !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12) !important;
+}
+
+.leaflet-control-zoom a {
+  color: var(--content) !important;
+  background-color: color-mix(in srgb, var(--surface) 95%, transparent) !important;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-control-zoom a:hover,
+.leaflet-control-zoom a:focus {
+  background-color: var(--subtle) !important;
+}
+
+.leaflet-control-attribution {
+  padding: 0 4px !important;
+  font-size: 9px !important;
+  line-height: 1.5 !important;
+  color: var(--content-subtle) !important;
+  background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+  border-top-left-radius: 0.375rem;
+}
+
+.leaflet-control-attribution a {
+  color: var(--content-muted) !important;
+}

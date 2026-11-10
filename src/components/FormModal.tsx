@@ -111,7 +111,10 @@ export default function FormModal({
     
     // Convert to proper types if numeric
     let parsedValue: any = value;
-    if (type === "number") {
+    if (name === "lat" || name === "lng") {
+      // Coordenadas: vacío significa "sin georreferenciar", no 0.
+      parsedValue = value === "" ? null : Number(value);
+    } else if (type === "number") {
       parsedValue = value === "" ? "" : Number(value);
     } else if (name === "proyecto_id" || name === "llamado_id" || name === "locacion_id" || name === "crew_id" || name === "shotlist_id" || name === "ciudad_id" || name === "hospital_id") {
       parsedValue = value === "" ? null : Number(value);
@@ -556,6 +559,36 @@ export default function FormModal({
                     placeholder="Url del mapa de la productora"
                   />
                 </div>
+                <div className="col-span-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-content-muted uppercase mb-1">Latitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      name="lat"
+                      value={formValues.lat ?? ""}
+                      onChange={handleChange}
+                      className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-brand focus:outline-hidden"
+                      placeholder="-17.783"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-content-muted uppercase mb-1">Longitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      name="lng"
+                      value={formValues.lng ?? ""}
+                      onChange={handleChange}
+                      className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-brand focus:outline-hidden"
+                      placeholder="-63.182"
+                    />
+                  </div>
+                  <p className="col-span-2 text-[11px] text-content-subtle">
+                    Se completan solas al resolver el link del mapa en la app móvil. Corrígelas solo si el pin
+                    queda desplazado.
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-content-muted uppercase mb-1">Color Cliente</label>
                   <div className="flex gap-2">
@@ -773,6 +806,36 @@ export default function FormModal({
                     className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand focus:outline-hidden"
                     placeholder="Ej: https://maps.app.goo.gl/..."
                   />
+                </div>
+                <div className="col-span-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-content-muted uppercase mb-1">Latitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      name="lat"
+                      value={formValues.lat ?? ""}
+                      onChange={handleChange}
+                      className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-brand focus:outline-hidden"
+                      placeholder="-17.783"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-content-muted uppercase mb-1">Longitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      name="lng"
+                      value={formValues.lng ?? ""}
+                      onChange={handleChange}
+                      className="w-full border border-hairline-strong rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-brand focus:outline-hidden"
+                      placeholder="-63.182"
+                    />
+                  </div>
+                  <p className="col-span-2 text-[11px] text-content-subtle">
+                    Se completan solas al resolver el link de Google Maps en la app móvil. Corrígelas solo si el
+                    pin queda desplazado.
+                  </p>
                 </div>
                 <hr className="col-span-2 border-hairline my-2" />
                 <div className="col-span-2">

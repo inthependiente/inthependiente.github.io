@@ -1,6 +1,8 @@
 import React from "react";
 import { DbTable } from "../types";
 import { 
+  Smartphone,
+  HelpCircle,
   SquareChartGantt, 
   Calendar, 
   MapPin, 
@@ -16,13 +18,23 @@ import {
   Database
 } from "lucide-react";
 
+export type AdminView = "tablas" | "invitaciones";
+
 interface SidebarProps {
   activeTable: DbTable;
   onTableChange: (table: DbTable) => void;
   counts: Record<DbTable, number>;
+  activeView: AdminView;
+  onViewChange: (view: AdminView) => void;
 }
 
-export default function Sidebar({ activeTable, onTableChange, counts }: SidebarProps) {
+export default function Sidebar({
+  activeTable,
+  onTableChange,
+  counts,
+  activeView,
+  onViewChange,
+}: SidebarProps) {
   
   const tablesInfo: { value: DbTable; label: string; description: string; icon: React.ComponentType<any> }[] = [
     {
@@ -128,18 +140,56 @@ export default function Sidebar({ activeTable, onTableChange, counts }: SidebarP
       {/* Navigation list */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         <h2 className="text-[10px] font-medium text-content-subtle uppercase px-2.5 mb-1.5 tracking-[0.14em]">
+          Comunicación
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => onViewChange("invitaciones")}
+          aria-current={activeView === "invitaciones" ? "page" : undefined}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors duration-150 cursor-pointer group ${
+            activeView === "invitaciones"
+              ? "bg-brand-subtle border-brand-border text-brand-content"
+              : "bg-transparent border-transparent text-content-secondary hover:bg-subtle hover:text-content"
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Smartphone
+              className={`w-4 h-4 shrink-0 ${
+                activeView === "invitaciones"
+                  ? "text-brand-content"
+                  : "text-content-subtle group-hover:text-content-muted"
+              }`}
+            />
+            <div className="min-w-0">
+              <p
+                className={`text-[13px] leading-tight truncate ${
+                  activeView === "invitaciones" ? "font-medium" : "font-normal"
+                }`}
+              >
+                Invitaciones
+              </p>
+              <p className="text-[11px] truncate text-content-subtle">Links, accesos y confirmaciones</p>
+            </div>
+          </div>
+        </button>
+
+        <h2 className="text-[10px] font-medium text-content-subtle uppercase px-2.5 mb-1.5 mt-3 tracking-[0.14em]">
           Tablas de la Base de Datos
         </h2>
         {tablesInfo.map((table) => {
           const Icon = table.icon;
-          const isActive = activeTable === table.value;
+          const isActive = activeView === "tablas" && activeTable === table.value;
           const count = counts[table.value] || 0;
           
           return (
             <button
               key={table.value}
-              onClick={() => onTableChange(table.value)}
-              aria-current={isActive ? "page" : undefined}
+              onClick={() => {
+              onViewChange("tablas");
+              onTableChange(table.value);
+            }}
+              aria-current={isActive && activeView === "tablas" ? "page" : undefined}
               className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-left transition-colors duration-150 cursor-pointer group ${
                 isActive
                   ? "bg-brand-subtle border-brand-border text-brand-content"

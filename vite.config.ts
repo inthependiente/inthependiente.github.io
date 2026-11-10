@@ -12,6 +12,15 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        // Dos entradas: panel de administración (index.html) y app móvil (movil/).
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          movil: path.resolve(__dirname, 'movil/index.html'),
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
