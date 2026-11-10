@@ -55,7 +55,7 @@ export default function App() {
       );
     }
 
-    if (tab === 'pdr') return <PlanRodajeScreen data={data} />;
+    if (tab === 'pdr') return <PlanRodajeScreen data={data} recargar={recargar} />;
     if (tab === 'locaciones') return <LocacionesScreen data={data} />;
     return <GenteScreen data={data} genteTab={genteTab} seleccionadoId={id} />;
   };

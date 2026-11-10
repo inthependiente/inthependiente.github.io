@@ -1,9 +1,9 @@
-import { Clapperboard, MapPin, Megaphone, Radio, Users } from 'lucide-react';
+import { Clapperboard, GalleryHorizontal, MapPin, Megaphone, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TabKey } from '../lib/router';
 
 interface Tab {
-  key: TabKey | 'envivo';
+  key: TabKey | 'storyboard';
   label: string;
   icon: LucideIcon;
   /** Se muestra atenuada y no navega. */
@@ -15,7 +15,7 @@ export const TABS: Tab[] = [
   { key: 'pdr', label: 'Rodaje', icon: Clapperboard },
   { key: 'locaciones', label: 'Locaciones', icon: MapPin },
   { key: 'gente', label: 'Gente', icon: Users },
-  { key: 'envivo', label: 'En vivo', icon: Radio, bloqueada: true },
+  { key: 'storyboard', label: 'Storyboard', icon: GalleryHorizontal, bloqueada: true },
 ];
 
 export default function TabBar({ active }: { active: TabKey }) {

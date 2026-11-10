@@ -164,6 +164,28 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
   muestra por fila: la jornada va en el encabezado. Los planos `ES`/`ED` (desayuno, armado,
   almuerzo, company move, cierre) se muestran como franjas a ancho completo. El encabezado
   resume inicio, término, jornada y cantidad de planos y locaciones del día.
+  - **Modo en vivo**: el interruptor **Ver en vivo** de la cabecera (a la izquierda del tema)
+    superpone el estado del rodaje sin cambiar de sección. Se apaga y la pantalla vuelve a la
+    normalidad.
+    - **Banner fijo**: queda pegado bajo la cabecera mientras se recorren los planos. Usa el
+      motor de tiempos (`src/movil/lib/timing/`, port de `ALGORITMO_TIEMPOS_RODAJE.md`) y
+      anuncia en mayúsculas `X MINUTOS ATRASADOS`, `X MINUTOS ADELANTADOS` o `A TIEMPO`, con un
+      chip `EN CURSO HACE X MINUTOS` y otro `PRÓXIMO PLANO A LAS: HH:MM` (inicio estimado del
+      siguiente). El color sale del estado tipado, no de buscar subcadenas en el texto.
+    - **Planos terminados**: se atenúan (opacidad reducida) para dejar a la vista lo que falta.
+    - **Plano en curso**: la primera fila pendiente del PDR —incluidos los bloques `ES`/`ED`—
+      lleva el borde de acento y el chip `EN CURSO`; el resto de su información no cambia.
+    - **Al encender**: la vista salta sola al plano en curso, dejándolo 20 px por debajo del
+      banner fijo (respeta `prefers-reduced-motion`). Apagarlo no mueve el scroll: el usuario
+      queda donde estaba.
+    - **Sincronización**: mientras el modo está activo, el llamado se vuelve a leer al encender,
+      cada 30 s y al volver a la pestaña, para reflejar los cierres que registra la app de
+      rodaje. Sin conexión el refresco se detiene y vuelve solo al recuperarla.
+    - Se recalcula cada segundo y al volver desde segundo plano. Una hora ausente se muestra
+      como `—`, nunca inventada, y los problemas de datos (hora de llamado inválida, cierre
+      ilegible, cierre en el futuro, orden duplicado…) se avisan bajo el banner.
+    - Las horas se calculan en la zona del rodaje (`proyectos.zona_horaria`; si falta, la del
+      dispositivo) y el desvío se mide contra el **fin planificado** de la toma activa.
 - **Locaciones**: mapa Leaflet + OpenStreetMap con los puntos del día (la productora marcada
   como `P` y las locaciones numeradas en orden de escenas) y lista con dirección, hora y centro
   médico cercano. Foto del comportamiento:
@@ -200,8 +222,8 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
   - **Talento**: misma estructura en una sola lista en orden de personaje, con rol, locación,
     hora en set y estado (`w_status`). No muestra teléfono ni acciones de contacto, tal como se
     definió.
-- **En vivo**: pestaña de la barra inferior visible pero deshabilitada (ícono y texto atenuados,
-  `aria-disabled`, sin `href`), reservada para una fase posterior.
+- **Storyboard**: quinta pestaña de la barra inferior, visible pero deshabilitada (ícono y texto
+  atenuados, `aria-disabled`, sin `href`), reservada para una fase posterior.
 
 ### Contactos
 
@@ -270,8 +292,13 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
 movil/index.html               entrada HTML (Vite multi-page)
 src/movil/App.tsx              shell + ruteo por hash + bottom nav
 src/movil/screens/             una pantalla por sección
-src/movil/data/                carga del llamado, clima y confirmación
+src/movil/data/                carga del llamado, clima, confirmación y plan en vivo
 src/movil/lib/                 formato, ICS, params, almacenamiento, PDR, geo/rutas, contactos
+src/movil/lib/timing/          motor de tiempos: hora/zona, cálculo, presentación y tests
 ```
 
-Todas las secciones del menú están implementadas, junto con el panel de invitaciones del admin.
+Los casos de aceptación del motor (estado, desvío, proyección, redondeo y avisos) se ejecutan
+con `npm test`; el type-check y el build siguen siendo `npm run lint` y `npm run build`.
+
+Todas las secciones del menú están implementadas —salvo **Storyboard**, que queda
+deshabilitada— junto con el panel de invitaciones del admin.

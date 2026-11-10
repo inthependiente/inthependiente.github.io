@@ -17,6 +17,8 @@ export interface Proyecto {
   color_campana: string | null;
   lat: number | null;
   lng: number | null;
+  /** Zona IANA del rodaje; si falta se usa la del dispositivo. */
+  zona_horaria?: string | null;
 }
 
 export interface Llamado {

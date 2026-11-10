@@ -5,9 +5,11 @@ interface Props {
   title: string;
   /** Cuando se entrega, se muestra el botón de volver (detalle de una persona). */
   onBack?: () => void;
+  /** Controles propios de la pantalla, a la izquierda del interruptor de tema. */
+  acciones?: React.ReactNode;
 }
 
-export default function AppBar({ title, onBack }: Props) {
+export default function AppBar({ title, onBack, acciones }: Props) {
   return (
     <header
       className="sticky top-0 z-20 border-b border-hairline bg-canvas/90 backdrop-blur"
@@ -32,6 +34,8 @@ export default function AppBar({ title, onBack }: Props) {
         >
           {title}
         </p>
+
+        {acciones}
 
         <ThemeToggle />
       </div>

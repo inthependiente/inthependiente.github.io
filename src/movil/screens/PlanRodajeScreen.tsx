@@ -1,19 +1,98 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, Clapperboard, MapPin, StickyNote, Users } from 'lucide-react';
 import AppBar from '../components/AppBar';
 import DetallePlano from '../components/DetallePlano';
+import LiveStatusBanner from '../components/LiveStatusBanner';
+import { useLivePlan } from '../data/useLivePlan';
+import { useOnline } from '../lib/online';
 import type { LlamadoData } from '../types';
 import { buildTimeline, formatDuracion, type TimelineRow } from '../lib/pdr';
 
-export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
+/** Estado de cada fila del plan cuando el modo en vivo está activo. */
+type EstadoPlano = 'terminado' | 'enCurso' | 'pendiente';
+
+/** Cada cuánto se vuelve a leer el llamado mientras el modo en vivo está activo. */
+const REFRESCO_MS = 30_000;
+/** Aire entre el banner fijo y el plano al que saltamos. */
+const MARGEN_SCROLL_PX = 20;
+
+export default function PlanRodajeScreen({ data, recargar }: { data: LlamadoData; recargar: () => void }) {
   const [detalle, setDetalle] = useState<number | null>(null);
+  const [enVivo, setEnVivo] = useState(false);
+
+  const online = useOnline();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const listaRef = useRef<HTMLOListElement>(null);
+  // Solo se hace scroll al encender el modo; apagarlo deja al usuario donde está.
+  const scrollPendiente = useRef(false);
 
   const timeline = useMemo(
     () => buildTimeline(data.pdr ?? [], data.talento ?? [], data.llamado.llamado_hora),
     [data.pdr, data.talento, data.llamado.llamado_hora],
   );
 
+  // El temporizador solo corre con el modo activo: apagado, la sección se
+  // comporta como siempre.
+  const { plan, now } = useLivePlan(data, enVivo);
+
   const planos = useMemo(() => timeline.rows.filter((row) => !row.especial), [timeline.rows]);
+
+  const estados = useMemo(() => {
+    const mapa = new Map<number, EstadoPlano>();
+    for (const fila of plan.rows) {
+      mapa.set(Number(fila.id), fila.isActive ? 'enCurso' : fila.isCompleted ? 'terminado' : 'pendiente');
+    }
+    return mapa;
+  }, [plan.rows]);
+
+  const proximoInicio = useMemo(() => {
+    const indice = plan.rows.findIndex((fila) => fila.isActive);
+    return indice === -1 ? null : (plan.rows[indice + 1]?.projectedStart ?? null);
+  }, [plan.rows]);
+
+  // Sincroniza con la base mientras el modo está activo, para que los cierres
+  // que registra la app de rodaje lleguen sin recargar a mano.
+  useEffect(() => {
+    if (!enVivo || !online) return;
+
+    recargar();
+    const id = window.setInterval(recargar, REFRESCO_MS);
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') recargar();
+    };
+
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [enVivo, online, recargar]);
+
+  // Al encender el modo, saltamos al plano que se está rodando. Se espera al
+  // primer tick del reloj (`now` fresco) para no calcular sobre el estado
+  // congelado que tenía la sección antes de activarse.
+  useEffect(() => {
+    if (!enVivo) {
+      scrollPendiente.current = false;
+      return;
+    }
+    if (!scrollPendiente.current || Date.now() - now > 2000) return;
+
+    scrollPendiente.current = false;
+    const objetivo = listaRef.current?.querySelector<HTMLElement>('[data-plano-activo="true"]');
+    if (!objetivo) return;
+
+    const bannerAbajo = bannerRef.current?.getBoundingClientRect().bottom ?? 0;
+    const destino = objetivo.getBoundingClientRect().top + window.scrollY - bannerAbajo - MARGEN_SCROLL_PX;
+    const menosMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+    window.scrollTo({ top: Math.max(0, destino), behavior: menosMovimiento ? 'auto' : 'smooth' });
+  }, [enVivo, now]);
+
+  const alternarEnVivo = () => {
+    if (!enVivo) scrollPendiente.current = true;
+    setEnVivo(!enVivo);
+  };
 
   const abrirPlano = (row: TimelineRow) => {
     const indice = planos.findIndex((plano) => plano.id === row.id);
@@ -22,9 +101,40 @@ export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
 
   return (
     <>
-      <AppBar title="Plan de rodaje" />
+      <AppBar
+        title="Plan de rodaje"
+        acciones={
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enVivo}
+            onClick={alternarEnVivo}
+            className={`flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+              enVivo
+                ? 'border-brand bg-brand-subtle text-brand-content'
+                : 'border-hairline text-content-muted active:bg-subtle'
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 rounded-full ${enVivo ? 'bg-brand' : 'bg-content-subtle'}`}
+            />
+            Ver en vivo
+          </button>
+        }
+      />
 
       <div className="px-3 pt-3">
+        {enVivo && (
+          <div
+            ref={bannerRef}
+            className="sticky z-10 -mx-3 border-b border-hairline bg-canvas/95 px-3 pb-2 backdrop-blur"
+            style={{ top: 'calc(env(safe-area-inset-top) + 2.75rem)' }}
+          >
+            <LiveStatusBanner plan={plan} now={now} proximoInicio={proximoInicio} />
+          </div>
+        )}
+
         {timeline.rows.length === 0 ? (
           <EmptyState />
         ) : (
@@ -36,18 +146,21 @@ export default function PlanRodajeScreen({ data }: { data: LlamadoData }) {
               totalPlanos={timeline.totalPlanos}
               locaciones={timeline.locaciones}
             />
-            <ol className="mt-3 space-y-2">
-              {timeline.rows.map((row) =>
-                row.especial ? (
-                  <li key={row.id}>
-                    <FilaEspecial row={row} />
+            <ol ref={listaRef} className="mt-3 space-y-2">
+              {timeline.rows.map((row) => {
+                const estado = enVivo ? estados.get(row.id) : undefined;
+                const enCurso = estado === 'enCurso';
+
+                return row.especial ? (
+                  <li key={row.id} data-plano-id={row.id} data-plano-activo={enCurso ? 'true' : undefined}>
+                    <FilaEspecial row={row} estado={estado} />
                   </li>
                 ) : (
-                  <li key={row.id}>
-                    <TarjetaPlano row={row} onAbrir={() => abrirPlano(row)} />
+                  <li key={row.id} data-plano-id={row.id} data-plano-activo={enCurso ? 'true' : undefined}>
+                    <TarjetaPlano row={row} estado={estado} onAbrir={() => abrirPlano(row)} />
                   </li>
-                ),
-              )}
+                );
+              })}
             </ol>
 
             <p className="mt-4 pb-2 text-center text-[10px] text-content-subtle">
@@ -119,26 +232,36 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 
 /* ─────────────────────────── Filas ─────────────────────────── */
 
-function FilaEspecial({ row }: { row: TimelineRow }) {
+function FilaEspecial({ row, estado }: { row: TimelineRow; estado?: EstadoPlano }) {
+  const enCurso = estado === 'enCurso';
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-hairline-strong bg-subtle px-3 py-2.5">
+    <div
+      className={`flex items-center gap-3 rounded-xl border bg-subtle px-3 py-2.5 ${
+        enCurso ? 'border-brand ring-1 ring-brand' : 'border-hairline-strong'
+      } ${estado === 'terminado' ? 'opacity-60' : ''}`}
+    >
       <span className="shrink-0 font-mono text-[11px] font-semibold text-content-secondary">
         {row.inicio}
       </span>
       <p className="min-w-0 flex-1 text-[11px] font-semibold uppercase leading-tight tracking-[0.08em] text-content-secondary">
         {row.descripcion}
       </p>
+      {enCurso && <ChipEnCurso />}
     </div>
   );
 }
 
 function TarjetaPlano({
   row,
+  estado,
   onAbrir,
 }: {
   row: TimelineRow;
+  estado?: EstadoPlano;
   onAbrir: () => void;
 }) {
+  const enCurso = estado === 'enCurso';
   const tieneMeta = Boolean(row.locacion || row.cast.length || row.notas);
   const tieneReferencias = row.referencias.length > 0;
 
@@ -147,11 +270,14 @@ function TarjetaPlano({
       type="button"
       onClick={onAbrir}
       aria-haspopup="dialog"
-      className="group block w-full overflow-hidden rounded-xl border border-hairline bg-surface text-left transition-colors active:bg-subtle"
+      className={`group block w-full overflow-hidden rounded-xl border bg-surface text-left transition-colors active:bg-subtle ${
+        enCurso ? 'border-brand ring-1 ring-brand' : 'border-hairline'
+      } ${estado === 'terminado' ? 'opacity-60' : ''}`}
     >
       <div className="flex items-center gap-2 px-3 pb-1.5 pt-2.5">
         <span className="font-mono text-[15px] font-semibold leading-none text-content">{row.inicio}</span>
 
+        {enCurso && <ChipEnCurso />}
         {row.escena && <Badge>ESC {row.escena}</Badge>}
         {row.plano && <Badge>PLANO {row.plano}</Badge>}
 
@@ -222,6 +348,15 @@ function Badge({ children }: { children: React.ReactNode }) {
   return (
     <span className="shrink-0 rounded border border-hairline bg-subtle px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-content-muted">
       {children}
+    </span>
+  );
+}
+
+/** Distintivo de la toma que se está rodando; el color no es el único indicador. */
+function ChipEnCurso() {
+  return (
+    <span className="shrink-0 rounded border border-brand-border bg-brand-subtle px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-brand-content">
+      EN CURSO
     </span>
   );
 }
