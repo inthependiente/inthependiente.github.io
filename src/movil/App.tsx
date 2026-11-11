@@ -49,6 +49,7 @@ export default function App() {
         <LlamadoScreen
           data={data}
           acceso={acceso}
+          esCliente={params.cliente}
           guardadoEn={guardadoEn}
           error={error}
           recargar={recargar}
@@ -72,7 +73,9 @@ export default function App() {
             : tab === 'storyboard'
               ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1rem)'
             : tab === 'llamado'
-              ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 7.5rem)'
+              ? params.cliente
+                ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1.5rem)'
+                : 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 7.5rem)'
               : 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1.5rem)',
         }}
       >

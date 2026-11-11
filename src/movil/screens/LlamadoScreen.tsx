@@ -27,11 +27,14 @@ import type { CrewLlamado, Llamado, LlamadoData } from '../types';
 import { agregarACalendario, construirEvento, downloadIcs } from '../lib/calendar';
 import { colorSeguro, inkSobre } from '../lib/color';
 import { formatFechaHoraDeIso, formatFechaLarga, iniciales, normalizarHora, slug } from '../lib/format';
+import { horaPersonalizada } from '../lib/personalizado';
 import { useOnline } from '../lib/online';
 
 interface Props {
   data: LlamadoData;
   acceso: Acceso;
+  /** Link de cliente: información general, sin confirmación. */
+  esCliente?: boolean;
   guardadoEn: number | null;
   error: string | null;
   recargar: () => void;
@@ -43,7 +46,14 @@ interface AvisoCalendario {
   conDescarga: boolean;
 }
 
-export default function LlamadoScreen({ data, acceso, guardadoEn, error, recargar }: Props) {
+export default function LlamadoScreen({
+  data,
+  acceso,
+  esCliente = false,
+  guardadoEn,
+  error,
+  recargar,
+}: Props) {
   const confirmacion = acceso;
   const online = useOnline();
   const { clima, cargando: cargandoClima } = useClima(data?.llamado.ciudades, data?.llamado.fecha);
@@ -60,7 +70,25 @@ export default function LlamadoScreen({ data, acceso, guardadoEn, error, recarga
   }, [avisoCalendario]);
 
   const { llamado } = data;
+
+  // Solo se personaliza la hora con un link personal reconocido (o cacheado):
+  // el link general y el de cliente siguen mostrando la hora general.
+  const personalizado = useMemo(() => {
+    if (esCliente || !confirmacion.persona || confirmacion.credencialReconocida === false) {
+      return null;
+    }
+
+    return horaPersonalizada(data.crew, confirmacion.persona, llamado.llamado_hora);
+  }, [
+    esCliente,
+    data.crew,
+    confirmacion.persona,
+    confirmacion.credencialReconocida,
+    llamado.llamado_hora,
+  ]);
+
   const mostrarAvisoToken =
+    !esCliente &&
     confirmacion.credencialReconocida === false &&
     Number.isFinite(confirmacion.llamadoId as number) &&
     confirmacion.estado !== 'validando' &&
@@ -131,7 +159,7 @@ export default function LlamadoScreen({ data, acceso, guardadoEn, error, recarga
         {online && error && <BannerActualizacion onRetry={recargar} />}
 
         <CabeceraLlamado llamado={llamado} />
-        <TarjetaHorario llamado={llamado} />
+        <TarjetaHorario llamado={llamado} personalizado={personalizado} />
         <TarjetaClima clima={clima} cargando={cargandoClima} nota={llamado.lluvia_c} />
         <TarjetaNotas notas={llamado.notas} />
         <TarjetaComidas llamado={llamado} />
@@ -148,35 +176,39 @@ export default function LlamadoScreen({ data, acceso, guardadoEn, error, recarga
 
       </div>
 
-      <div
-        className="fixed inset-x-0 z-30"
-        style={{ bottom: 'calc(var(--tabbar-h) + env(safe-area-inset-bottom))' }}
-      >
-        <div
-          className="mx-auto w-full max-w-130 border-t border-hairline bg-canvas/95 px-3 pb-2.5 pt-2 backdrop-blur"
-          role="status"
-          aria-live="polite"
-        >
-          <BarraConfirmacion
-            estado={confirmacion.estado}
-            persona={confirmacion.persona}
-            error={confirmacion.error}
-            online={online}
-            calendarioDisponible={Boolean(evento)}
-            avisoCalendario={avisoCalendario}
-            onDescargarIcs={descargarIcs}
-            onPrincipal={accionPrincipal}
-          />
-        </div>
-      </div>
+      {!esCliente && (
+        <>
+          <div
+            className="fixed inset-x-0 z-30"
+            style={{ bottom: 'calc(var(--tabbar-h) + env(safe-area-inset-bottom))' }}
+          >
+            <div
+              className="mx-auto w-full max-w-130 border-t border-hairline bg-canvas/95 px-3 pb-2.5 pt-2 backdrop-blur"
+              role="status"
+              aria-live="polite"
+            >
+              <BarraConfirmacion
+                estado={confirmacion.estado}
+                persona={confirmacion.persona}
+                error={confirmacion.error}
+                online={online}
+                calendarioDisponible={Boolean(evento)}
+                avisoCalendario={avisoCalendario}
+                onDescargarIcs={descargarIcs}
+                onPrincipal={accionPrincipal}
+              />
+            </div>
+          </div>
 
-      <SelectorCrewSheet
-        open={selectorAbierto}
-        crew={data.crew}
-        confirmando={confirmacion.estado === 'confirmando'}
-        onClose={() => setSelectorAbierto(false)}
-        onElegir={elegirPersona}
-      />
+          <SelectorCrewSheet
+            open={selectorAbierto}
+            crew={data.crew}
+            confirmando={confirmacion.estado === 'confirmando'}
+            onClose={() => setSelectorAbierto(false)}
+            onElegir={elegirPersona}
+          />
+        </>
+      )}
     </>
   );
 }
@@ -251,16 +283,22 @@ function Logo({
 
 /* ─────────────────────────── Bloques ─────────────────────────── */
 
-function TarjetaHorario({ llamado }: { llamado: Llamado }) {
-  const hora = normalizarHora(llamado.llamado_hora);
+function TarjetaHorario({
+  llamado,
+  personalizado,
+}: {
+  llamado: Llamado;
+  personalizado: { nombre: string; hora: string | null } | null;
+}) {
+  const hora = personalizado ? personalizado.hora : normalizarHora(llamado.llamado_hora);
   const fecha = formatFechaLarga(llamado.fecha);
   const ciudad = llamado.ciudades?.nombre ?? null;
 
   return (
     <section className="mt-3 overflow-hidden rounded-xl border border-hairline bg-surface">
       <div className="flex flex-col items-center px-4 pb-3.5 pt-3.5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-content-muted">
-          Hora de llamado
+        <p className="text-balance text-[10px] font-semibold uppercase tracking-[0.16em] text-content-muted">
+          {personalizado ? `${personalizado.nombre}, tu hora de llamado es:` : 'Hora de llamado'}
         </p>
         <div className="mt-1 flex items-baseline justify-center gap-1.5">
           <span className="font-mono text-[42px] font-semibold leading-none tracking-tight text-content">

@@ -87,6 +87,7 @@ export default function InvitacionesPanel({
   const [generando, setGenerando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [copiadoCliente, setCopiadoCliente] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [base, setBase] = useState<string>(() => {
     try {
@@ -97,6 +98,9 @@ export default function InvitacionesPanel({
   });
 
   const baseLimpia = base.trim().replace(/\/$/, "");
+
+  // Link de cliente: información general del llamado, sin confirmación.
+  const enlaceCliente = llamadoId ? `${baseLimpia}/?id=${llamadoId}&cliente=1` : null;
 
   // El link usa el código corto (49 caracteres) en lugar del uuid (83).
   const enlace = useCallback(
@@ -168,6 +172,17 @@ export default function InvitacionesPanel({
       await navigator.clipboard.writeText(url);
       setCopiado(String(fila.crew_id));
       window.setTimeout(() => setCopiado(null), 1600);
+    } catch {
+      onNotify("No pudimos copiar el link: selecciónalo desde el texto.", "error");
+    }
+  };
+
+  const copiarEnlaceCliente = async () => {
+    if (!enlaceCliente) return;
+    try {
+      await navigator.clipboard.writeText(enlaceCliente);
+      setCopiadoCliente(true);
+      window.setTimeout(() => setCopiadoCliente(false), 1600);
     } catch {
       onNotify("No pudimos copiar el link: selecciónalo desde el texto.", "error");
     }
@@ -369,6 +384,44 @@ export default function InvitacionesPanel({
             Los links se arman con esta base. Si el panel corre en local y quieres enviar links reales,
             escribe la dirección publicada de la app.
           </p>
+        </section>
+
+        <section className="rounded-xl border border-hairline bg-surface p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-content-muted uppercase tracking-[0.12em]">
+                Link para clientes
+              </p>
+              <p className="text-[11px] text-content-subtle mt-1 leading-relaxed">
+                Muestra la hora y la información general del llamado, sin el botón de confirmar ni
+                datos personales del crew.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void copiarEnlaceCliente()}
+              disabled={!enlaceCliente}
+              className="btn btn-sm btn-secondary shrink-0"
+              title="Copiar link para clientes"
+            >
+              {copiadoCliente ? (
+                <>
+                  <Check className="w-4 h-4 text-success" />
+                  Copiado
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copiar
+                </>
+              )}
+            </button>
+          </div>
+          {enlaceCliente && (
+            <p className="mt-2 truncate rounded bg-subtle px-2 py-1 font-mono text-[10px] text-content-subtle">
+              {enlaceCliente}
+            </p>
+          )}
         </section>
 
         {error && (
