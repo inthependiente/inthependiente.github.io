@@ -59,12 +59,16 @@ design system y el mismo cliente de Supabase.
 | Personal | `/movil/?c=<codigo>` | Recomendado. Identifica a la persona, registra su primer acceso, muestra su hora de llamado personalizada y ata la confirmación a su nombre |
 | Personal (largo) | `/movil/?id=<llamado_id>&t=<uuid>` | Formato anterior, se sigue aceptando para links ya enviados |
 | General | `/movil/?id=<llamado_id>` | Navegación libre; al confirmar se elige el nombre de la lista del crew |
-| Cliente | `/movil/?id=<llamado_id>&cliente=1` | Solo lectura: hora general e información del llamado, sin botón de confirmación. También se acepta `?vista=cliente` |
+| Cliente | `/movil/?id=<llamado_id>&cliente=1` | Solo lectura: hora de cliente e información del llamado, sin botón de confirmación. También se acepta `?vista=cliente` |
 
 En el link personal la tarjeta de horario reemplaza «Hora de llamado» por
 «NOMBRE, TU HORA DE LLAMADO ES:» y usa la hora propia de esa persona en el llamado
 (`crew_llamado.hora_llamado`, luego `crew.llamado_hora`, luego la general). El link general
-y el de cliente mantienen el encabezado y la hora generales.
+mantiene el encabezado y la hora generales.
+
+En el **link de cliente** la tarjeta mantiene el título «Hora de llamado», pero toma el
+`horario_loc` de la **primera fila de `cliente_agencia`** del llamado (ordenada por `id`); si
+esa fila no define horario, cae a la hora general.
 
 El **link de cliente** se copia desde el panel de invitaciones y siempre lleva `id`; si
 además trae un código o token, se ignoran, así que nunca confirma ni registra accesos. Al
@@ -111,7 +115,8 @@ de Llamados y muestra:
   (se guarda en `localStorage`), útil cuando el panel corre en local y los links deben apuntar
   al sitio publicado.
 - **Link para clientes**: botón para copiar `/movil/?id=<llamado>&cliente=1`, que abre la
-  información general del llamado sin el botón de confirmar.
+  información general del llamado (con el `horario_loc` del primer contacto de
+  `cliente_agencia`) sin el botón de confirmar.
 
 Todo pasa por las RPC `admin_generar_invitaciones(llamado)` y `admin_panel_invitaciones(llamado)`,
 que exigen rol `authenticated`: la anon key no puede leer tokens ni respuestas.
@@ -313,7 +318,8 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
 ### Secciones
 
 - **Llamado**: cabecera con logos y colores de campaña, `lugar_llamado`, hora grande (personalizada
-  con el nombre de la persona cuando se abre un link personal), fecha/D de D, clima de Open-Meteo,
+  con el nombre de la persona en un link personal y con el `horario_loc` del primer contacto de
+  `cliente_agencia` en el link de cliente), fecha/D de D, clima de Open-Meteo,
   comidas, notas y la barra de confirmación (ausente en el link de cliente).
 - **Plan de rodaje**: cronograma calculado sumando `pdr.duracion_min` desde la hora de llamado
   (misma lógica que el PDF). Cada plano es una tarjeta con la hora, los distintivos `ESC` y

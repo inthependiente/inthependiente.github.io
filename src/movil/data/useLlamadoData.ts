@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import type { CrewLlamado, Escena, Llamado, LlamadoData, PdrRow, Talento } from '../types';
+import type {
+  ClienteAgencia,
+  CrewLlamado,
+  Escena,
+  Llamado,
+  LlamadoData,
+  PdrRow,
+  Talento,
+} from '../types';
 import { readJson, writeJson } from '../lib/storage';
 
 interface CachePayload {
@@ -8,7 +16,7 @@ interface CachePayload {
   data: LlamadoData;
 }
 
-const cacheKey = (llamadoId: number) => `llamadoapp:movil:llamado:v4:${llamadoId}`;
+const cacheKey = (llamadoId: number) => `llamadoapp:movil:llamado:v5:${llamadoId}`;
 
 const CAMPOS_CREW =
   'id, crew_id, orden, hora_llamado, notas, crew(id, nombre, cargo, departamento, celular, llamado_hora, notas)';
@@ -21,6 +29,8 @@ const CAMPOS_ESCENAS =
 
 const CAMPOS_PDR =
   `id, orden, duracion_min, status, inicio_reg, shotlist(id, esc, plano, descripcion, cast_ids, notas, referencia_urls, locacion_id, locaciones(${CAMPOS_LOCACION}))`;
+
+const CAMPOS_CLIENTE = 'id, llamado_id, tipo, nombre, empresa, horario_loc';
 
 /**
  * Carga el llamado completo (cabecera + crew + escenas) con caché local:
@@ -59,7 +69,7 @@ export function useLlamadoData(llamadoId: number) {
       setNoEncontrado(false);
 
       try {
-        const [llamado, crew, escenas, pdr, talento] = await Promise.all([
+        const [llamado, crew, escenas, pdr, talento, clientes] = await Promise.all([
           supabase
             .from('llamados')
             .select('*, proyectos(*), ciudades(*)')
@@ -84,11 +94,17 @@ export function useLlamadoData(llamadoId: number) {
             .from('talento')
             .select('id, id_personaje, nombre, rol, llamado_hora, en_set, notas, w_status, locacion_id, locaciones(id, locacion)')
             .eq('llamado_id', llamadoId),
+          supabase
+            .from('cliente_agencia')
+            .select(CAMPOS_CLIENTE)
+            .eq('llamado_id', llamadoId)
+            .order('id', { ascending: true }),
         ]);
 
         if (!esVigente()) return;
 
-        const fallo = llamado.error ?? crew.error ?? escenas.error ?? pdr.error ?? talento.error;
+        const fallo =
+          llamado.error ?? crew.error ?? escenas.error ?? pdr.error ?? talento.error ?? clientes.error;
         if (fallo) throw fallo;
         if (!llamado.data) {
           setNoEncontrado(true);
@@ -101,6 +117,7 @@ export function useLlamadoData(llamadoId: number) {
           escenas: (escenas.data ?? []) as unknown as Escena[],
           pdr: (pdr.data ?? []) as unknown as PdrRow[],
           talento: (talento.data ?? []) as unknown as Talento[],
+          clientes: (clientes.data ?? []) as unknown as ClienteAgencia[],
         };
 
         const ahora = Date.now();

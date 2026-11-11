@@ -27,7 +27,7 @@ import type { CrewLlamado, Llamado, LlamadoData } from '../types';
 import { agregarACalendario, construirEvento, downloadIcs } from '../lib/calendar';
 import { colorSeguro, inkSobre } from '../lib/color';
 import { formatFechaHoraDeIso, formatFechaLarga, iniciales, normalizarHora, slug } from '../lib/format';
-import { horaPersonalizada } from '../lib/personalizado';
+import { horaCliente, horaPersonalizada } from '../lib/personalizado';
 import { useOnline } from '../lib/online';
 
 interface Props {
@@ -71,16 +71,18 @@ export default function LlamadoScreen({
 
   const { llamado } = data;
 
-  // Solo se personaliza la hora con un link personal reconocido (o cacheado):
-  // el link general y el de cliente siguen mostrando la hora general.
+  // El link personal usa la hora de la persona identificada; el de cliente, el
+  // `horario_loc` del primer contacto de cliente_agencia. El general no personaliza.
   const personalizado = useMemo(() => {
-    if (esCliente || !confirmacion.persona || confirmacion.credencialReconocida === false) {
+    if (esCliente) return horaCliente(data.clientes, llamado.llamado_hora);
+    if (!confirmacion.persona || confirmacion.credencialReconocida === false) {
       return null;
     }
 
     return horaPersonalizada(data.crew, confirmacion.persona, llamado.llamado_hora);
   }, [
     esCliente,
+    data.clientes,
     data.crew,
     confirmacion.persona,
     confirmacion.credencialReconocida,
@@ -159,7 +161,7 @@ export default function LlamadoScreen({
         {online && error && <BannerActualizacion onRetry={recargar} />}
 
         <CabeceraLlamado llamado={llamado} />
-        <TarjetaHorario llamado={llamado} personalizado={personalizado} />
+        <TarjetaHorario llamado={llamado} personalizado={personalizado} esCliente={esCliente} />
         <TarjetaClima clima={clima} cargando={cargandoClima} nota={llamado.lluvia_c} />
         <TarjetaNotas notas={llamado.notas} />
         <TarjetaComidas llamado={llamado} />
@@ -286,9 +288,12 @@ function Logo({
 function TarjetaHorario({
   llamado,
   personalizado,
+  esCliente,
 }: {
   llamado: Llamado;
   personalizado: { nombre: string; hora: string | null } | null;
+  /** En el link de cliente la hora es propia, pero el título sigue siendo general. */
+  esCliente: boolean;
 }) {
   const hora = personalizado ? personalizado.hora : normalizarHora(llamado.llamado_hora);
   const fecha = formatFechaLarga(llamado.fecha);
@@ -298,7 +303,9 @@ function TarjetaHorario({
     <section className="mt-3 overflow-hidden rounded-xl border border-hairline bg-surface">
       <div className="flex flex-col items-center px-4 pb-3.5 pt-3.5 text-center">
         <p className="text-balance text-[10px] font-semibold uppercase tracking-[0.16em] text-content-muted">
-          {personalizado ? `${personalizado.nombre}, tu hora de llamado es:` : 'Hora de llamado'}
+          {personalizado && !esCliente
+            ? `${personalizado.nombre}, tu hora de llamado es:`
+            : 'Hora de llamado'}
         </p>
         <div className="mt-1 flex items-baseline justify-center gap-1.5">
           <span className="font-mono text-[42px] font-semibold leading-none tracking-tight text-content">

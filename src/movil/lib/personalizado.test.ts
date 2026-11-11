@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { CrewLlamado } from '../types';
-import { horaPersonalizada } from './personalizado';
+import type { ClienteAgencia, CrewLlamado } from '../types';
+import { horaCliente, horaPersonalizada } from './personalizado';
 
 const crew: CrewLlamado[] = [
   {
@@ -85,4 +85,40 @@ test('usa el nombre del crew aunque el de la caché venga vacío', () => {
     nombre: 'Daniela Rojas',
     hora: '06:15',
   });
+});
+
+const clientes: ClienteAgencia[] = [
+  {
+    id: 21,
+    llamado_id: 4,
+    tipo: 'Cliente',
+    nombre: 'Felipe Martínez',
+    empresa: 'Marca',
+    horario_loc: '10:00 AM',
+  },
+  {
+    id: 22,
+    llamado_id: 4,
+    tipo: 'Agencia',
+    nombre: 'Ana Silva',
+    empresa: 'Agencia',
+    horario_loc: '11:30',
+  },
+];
+
+test('el link de cliente usa el horario_loc del primer contacto', () => {
+  assert.deepEqual(horaCliente(clientes, '07:00'), {
+    nombre: 'Felipe Martínez',
+    hora: '10:00',
+  });
+});
+
+test('el link de cliente cae a la hora general si el primer contacto no tiene horario', () => {
+  const sinHora = [{ ...clientes[0], horario_loc: null }];
+  assert.deepEqual(horaCliente(sinHora, '7:00'), {
+    nombre: 'Felipe Martínez',
+    hora: '07:00',
+  });
+  assert.deepEqual(horaCliente([], '7:00'), null);
+  assert.deepEqual(horaCliente(null, '7:00'), null);
 });

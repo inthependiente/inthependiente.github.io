@@ -108,6 +108,15 @@ export interface PdrRow {
   shotlist: Shotlist | null;
 }
 
+export interface ClienteAgencia {
+  id: number;
+  llamado_id: number | null;
+  tipo: string | null;
+  nombre: string;
+  empresa: string | null;
+  horario_loc: string | null;
+}
+
 export interface Talento {
   id: number;
   id_personaje: number | null;
@@ -127,6 +136,8 @@ export interface LlamadoData {
   escenas: Escena[];
   pdr: PdrRow[];
   talento: Talento[];
+  /** Contactos de cliente/agencia del llamado; el link de cliente usa el primero. */
+  clientes: ClienteAgencia[];
 }
 
 /** Persona identificada por su token personal o elegida de la lista. */
