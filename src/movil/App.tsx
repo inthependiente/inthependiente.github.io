@@ -14,6 +14,7 @@ import GenteScreen from './screens/GenteScreen';
 import LlamadoScreen from './screens/LlamadoScreen';
 import LocacionesScreen from './screens/LocacionesScreen';
 import PlanRodajeScreen from './screens/PlanRodajeScreen';
+import StoryboardScreen from './screens/StoryboardScreen';
 
 const params = readLinkParams();
 
@@ -57,6 +58,7 @@ export default function App() {
 
     if (tab === 'pdr') return <PlanRodajeScreen data={data} recargar={recargar} />;
     if (tab === 'locaciones') return <LocacionesScreen data={data} />;
+    if (tab === 'storyboard') return <StoryboardScreen data={data} />;
     return <GenteScreen data={data} genteTab={genteTab} seleccionadoId={id} />;
   };
 
@@ -67,6 +69,8 @@ export default function App() {
         style={{
           paddingBottom: tab === 'locaciones'
             ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom))'
+            : tab === 'storyboard'
+              ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1rem)'
             : tab === 'llamado'
               ? 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 7.5rem)'
               : 'calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1.5rem)',

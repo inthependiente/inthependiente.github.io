@@ -3,11 +3,9 @@ import type { LucideIcon } from 'lucide-react';
 import type { TabKey } from '../lib/router';
 
 interface Tab {
-  key: TabKey | 'storyboard';
+  key: TabKey;
   label: string;
   icon: LucideIcon;
-  /** Se muestra atenuada y no navega. */
-  bloqueada?: boolean;
 }
 
 export const TABS: Tab[] = [
@@ -15,7 +13,7 @@ export const TABS: Tab[] = [
   { key: 'pdr', label: 'Rodaje', icon: Clapperboard },
   { key: 'locaciones', label: 'Locaciones', icon: MapPin },
   { key: 'gente', label: 'Gente', icon: Users },
-  { key: 'storyboard', label: 'Storyboard', icon: GalleryHorizontal, bloqueada: true },
+  { key: 'storyboard', label: 'Storyboard', icon: GalleryHorizontal },
 ];
 
 export default function TabBar({ active }: { active: TabKey }) {
@@ -26,28 +24,12 @@ export default function TabBar({ active }: { active: TabKey }) {
       aria-label="Secciones del llamado"
     >
       <div className="mx-auto flex w-full max-w-130 items-stretch">
-        {TABS.map(({ key, label, icon: Icon, bloqueada }) => {
+        {TABS.map(({ key, label, icon: Icon }) => {
           const activo = key === active;
 
           const clases = `relative flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium tracking-wide transition-colors ${
-            activo ? 'text-brand-content' : bloqueada ? 'text-content-subtle/45' : 'text-content-subtle'
+            activo ? 'text-brand-content' : 'text-content-subtle'
           }`;
-
-          if (bloqueada) {
-            return (
-              <span
-                key={key}
-                aria-disabled="true"
-                aria-label={`${label} (próximamente)`}
-                title="Próximamente"
-                className={`${clases} cursor-default`}
-                style={{ height: 'var(--tabbar-h)' }}
-              >
-                <Icon className="h-5 w-5 opacity-60" strokeWidth={1.6} />
-                <span>{label}</span>
-              </span>
-            );
-          }
 
           return (
             <a

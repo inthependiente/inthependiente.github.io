@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export const TAB_KEYS = ['llamado', 'pdr', 'locaciones', 'gente'] as const;
+export const TAB_KEYS = ['llamado', 'pdr', 'locaciones', 'gente', 'storyboard'] as const;
 export type TabKey = (typeof TAB_KEYS)[number];
 
 /** Pestañas internas de la sección Gente. */
@@ -20,7 +20,7 @@ const idDe = (valor?: string): number | undefined => {
 
 /**
  * Rutas:
- *   #/llamado | #/pdr | #/locaciones
+ *   #/llamado | #/pdr | #/locaciones | #/storyboard
  *   #/gente                 → pestaña Crew
  *   #/gente/talento         → pestaña Talento
  *   #/gente/crew/12         → ficha de crew

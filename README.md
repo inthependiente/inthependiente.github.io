@@ -326,8 +326,33 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
   - **Talento**: misma estructura en una sola lista en orden de personaje, con rol, locación,
     hora en set y estado (`w_status`). No muestra teléfono ni acciones de contacto, tal como se
     definió.
-- **Storyboard**: quinta pestaña de la barra inferior, visible pero deshabilitada (ícono y texto
-  atenuados, `aria-disabled`, sin `href`), reservada para una fase posterior.
+- **Storyboard**: quinta pestaña de la barra inferior. Es una adaptación móvil de la **Vista
+  rodaje** del panel; la vista del dashboard no se modifica.
+  - **Tres modos**, conmutables con el control segmentado de la barra superior, en este orden:
+    - **Cards** (lectura, **por defecto en móvil**): todas las viñetas apiladas en vertical, cada
+      una en una tarjeta con la **imagen en el 50 % izquierdo y la locución en el 50 % derecho**.
+      No hay paginación ni deslizamiento: se recorre con el scroll de la página. Las imágenes usan
+      `loading="lazy"` porque la lista es larga y `object-contain`, así que una viñeta con otra
+      proporción nunca se recorta ni desborda su mitad (la proporción vive en un espaciador
+      interno: puesta en la celda, un texto largo la estiraba y el dibujo se salía).
+    - **1 × página** (detalle): una viñeta a ancho completo en `aspect-video` con el nombre del
+      plano y el contador `n de N` superpuestos.
+    - **4 × página** (paneo): rejilla de **2 × 2** —dos arriba y dos abajo— con el nombre en cada
+      viñeta. Tocar una viñeta la selecciona (borde de acento) y su locución aparece en la
+      tarjeta inferior.
+  - **Navegación** (solo en 1 × y 4 ×): deslizamiento horizontal (45 px de umbral, con acuse de
+    arrastre), botones de 44 px y puntos de posición; las flechas del teclado funcionan en
+    escritorio. En 1 × página avanza una viñeta y en 4 × página una página completa; los puntos y
+    el contador (`n de N` / `Página n de N`) reflejan el modo. La página siguiente se precarga
+    para que el cambio no muestre un hueco.
+  - El modo no altera el punto de lectura: al cambiarlo se mantiene la viñeta que se estaba
+    viendo.
+  - **Datos**: la lista del proyecto se pide ligera (`panel_count` es columna generada) y las
+    viñetas completas solo del storyboard abierto. Con varios storyboards aparece un selector
+    en la barra superior. Todo se guarda en caché (`llamadoapp:movil:storyboards:v1:<proyecto>`)
+    y, sin conexión, se muestra la copia guardada con su aviso.
+  - Estados propios: cargando, «sin storyboard» y «este storyboard no tiene viñetas»
+    (cuando la fila existe pero `panels` está vacío).
 
 ### Contactos
 
@@ -396,17 +421,17 @@ modo lectura y el botón Confirmar avisa que la confirmación aún no está habi
 movil/index.html               entrada HTML (Vite multi-page)
 src/movil/App.tsx              shell + ruteo por hash + bottom nav
 src/movil/screens/             una pantalla por sección
-src/movil/data/                carga del llamado, clima, confirmación y plan en vivo
+src/movil/data/                carga del llamado, clima, confirmación, plan en vivo y storyboards
 src/movil/lib/                 formato, ICS, params, almacenamiento, PDR, geo/rutas, contactos
 src/movil/lib/timing/          motor de tiempos: hora/zona, cálculo, presentación y tests
 src/App.tsx                    panel admin: auth, tablas, invitaciones y storyboard
 src/components/storyboard/     lista, editor, tabla, vista rodaje, CSV y exportadores
-src/components/storyboard/utils/  pdfGenerator.ts y pptGenerator.ts (import dinámico)
+src/components/storyboard/utils/  pdfGenerator.ts, pptGenerator.ts y csvParser.ts
 ```
 
 Los casos de aceptación del motor (estado, desvío, proyección, redondeo y avisos) se ejecutan
 con `npm test`; el type-check y el build siguen siendo `npm run lint` y `npm run build`.
 
 Todas las secciones del menú del admin están implementadas, junto con el panel de invitaciones
-y el de storyboard. En la **app móvil**, la pestaña **Storyboard** sigue visible pero
-deshabilitada, reservada para una fase posterior.
+y el de storyboard. En la **app móvil**, la pestaña **Storyboard** muestra el storyboard del
+proyecto con una viñeta por pantalla.
