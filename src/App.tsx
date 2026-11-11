@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { DbTable, Proyectos, Llamados, Locaciones } from "./types";
 import Sidebar, { type AdminView } from "./components/Sidebar";
 import InvitacionesPanel from "./components/InvitacionesPanel";
+import LimpiezaGeneralDialog from "./components/LimpiezaGeneralDialog";
 import StoryboardPanel from "./components/storyboard/StoryboardPanel";
 import TableEditor from "./components/TableEditor";
 import FormModal from "./components/FormModal";
@@ -18,7 +19,8 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  Menu
+  Menu,
+  Eraser
 } from "lucide-react";
 
 export default function App() {
@@ -29,6 +31,7 @@ export default function App() {
   // Active collection and records state
   const [activeTable, setActiveTable] = useState<DbTable>("proyectos");
   const [activeView, setActiveView] = useState<AdminView>("tablas");
+  const [isLimpiezaOpen, setIsLimpiezaOpen] = useState(false);
   const [tableData, setTableData] = useState<any[]>([]);
 
   // Selected project/llamado working contexts persistable via localStorage
@@ -710,6 +713,17 @@ export default function App() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
 
+          {/* Limpieza general: vacía el rodaje y reinicia los IDs */}
+          <button
+            onClick={() => setIsLimpiezaOpen(true)}
+            className="btn btn-sm btn-secondary text-danger-content"
+            title="Vaciar el rodaje y reiniciar los IDs (conserva Centros médicos, Crew, Cliente/Agencia y Storyboard)"
+            id="btn-limpieza-general"
+          >
+            <Eraser className="w-4 h-4 shrink-0" />
+            <span className="hidden md:inline font-medium text-[11px]">Limpieza</span>
+          </button>
+
           {/* Refresh current table button wrapper */}
           <button
             onClick={() => {
@@ -794,6 +808,26 @@ export default function App() {
         )}
 
       </div>
+
+      {isLimpiezaOpen && (
+        <LimpiezaGeneralDialog
+          onClose={() => setIsLimpiezaOpen(false)}
+          onNotify={notify}
+          onDone={() => {
+            // Los proyectos y llamados borrados ya no existen: se limpian los
+            // contextos activos para no quedar filtrando por IDs inexistentes.
+            // El diálogo sigue abierto mostrando el resumen de lo borrado.
+            setSelectedProjectId(null);
+            setSelectedLlamadoId(null);
+            setActiveTable("proyectos");
+            setTableData([]);
+            void fetchCurrentTableData();
+            void loadLookupCaches();
+            void loadAllTableCounts();
+            setRefreshToken((valor) => valor + 1);
+          }}
+        />
+      )}
 
       {/* Dynamic Creation / Editing Popover */}
       <FormModal

@@ -107,6 +107,33 @@ que exigen rol `authenticated`: la anon key no puede leer tokens ni respuestas.
 > Importante: el link personal es la credencial de esa persona. No lo reenvíes a terceros.
 > Si un link se filtra, borra su fila en `crew_invitaciones` y vuelve a generarlo.
 
+### Limpieza general (admin)
+
+El botón **Limpieza** de la barra superior (ícono `Eraser`, junto a *Actualizar*) es la **única**
+forma de vaciar tablas: los botones *Borrar todo* y *Resetear IDs* de cada panel se eliminaron
+(eran por tabla, sin control de dependencias y con un `execute_sql` que no existía en la base).
+La limpieza vacía el rodaje y reinicia los contadores de ID en una sola transacción. Abre un
+diálogo con lo que se borra, lo que se conserva y un campo donde hay que escribir `LIMPIAR` para
+habilitar la acción.
+
+- **Se borra**: `proyectos`, `llamados`, `locaciones`, `escenas`, `shotlist`, `pdr`, `talento`,
+  `crew_llamado`, `crew_invitaciones` (invitaciones) y `llamado_respuestas` (confirmaciones).
+  Los IDs de esas tablas se reinician en 1 (`alter column id restart with 1`), que es lo que en
+  la práctica equivale a volver al primer registro.
+- **Se conserva**: `hospitales` (Centros médicos), `crew`, `cliente_agencia`, `ciudades`
+  (catálogo de apoyo, igual que Centros médicos) y `storyboards`.
+- **Cliente / Agencia no se borra**, pero se le pone `llamado_id = null`: la FK no es
+  `on delete set null` y sin eso no se podría borrar `llamados`. Esas filas quedan visibles en
+  la vista **Sin asignar** para reasignarlas.
+- **Storyboard**: `storyboards.proyecto_id` es `not null` con `on delete cascade`, así que borrar
+  los proyectos arrastraría los storyboards. La función **aborta** si existe alguno y pide
+  borrarlos desde su propio botón; en ese caso no se borra nada.
+- Todo pasa por la RPC `public.admin_limpieza_general()`
+  (`supabase/migrations/20261110220000_admin_limpieza_general.sql`), `security definer`,
+  ejecutable solo por `authenticated` y `service_role` (`anon` no la puede llamar). Al terminar
+  devuelve el conteo por tabla, y el panel limpia los contextos de proyecto/llamado activos y
+  recarga los contadores.
+
 ### Filtros de las sub-tablas (admin)
 
 Las tablas hijas (`escenas`, `crew_llamado`, `cliente_agencia`, `talento`, `pdr`) se filtran por
