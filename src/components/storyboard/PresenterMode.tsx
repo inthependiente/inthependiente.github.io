@@ -217,18 +217,7 @@ export default function PresenterMode({
               </button>
             </div>
 
-            <div className="mt-5 grid w-full gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-hairline bg-surface p-4">
-                <h3
-                  className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                  style={{ color: projectColors.color_cliente }}
-                >
-                  Descripción del plano
-                </h3>
-                <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-content-secondary">
-                  {activo?.description || <span className="italic text-content-subtle">—</span>}
-                </p>
-              </div>
+            <div className="mt-5 w-full">
               <div className="rounded-xl border border-hairline bg-surface p-4">
                 <h3
                   className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
@@ -292,24 +281,13 @@ export default function PresenterMode({
                   </button>
 
                   {!compacto && (
-                    <div className="flex flex-1 flex-col gap-2">
+                    <div className="flex flex-1 flex-col">
                       <div className="flex-1 rounded-lg border border-hairline bg-subtle p-2">
                         <strong
-                          className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em]"
-                          style={{ color: projectColors.color_cliente }}
-                        >
-                          Descripción
-                        </strong>
-                        <p className="whitespace-pre-wrap text-[11px] leading-snug text-content-secondary">
-                          {panel.description || <span className="italic text-content-subtle">—</span>}
-                        </p>
-                      </div>
-                      <div className="flex-1 rounded-lg border border-hairline bg-subtle p-2">
-                        <strong
-                          className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em]"
+                          className="mb-1 block text-[9px] font-semibold uppercase tracking-widest"
                           style={{ color: projectColors.color_campana }}
                         >
-                          Locución
+                          Locución  / audio
                         </strong>
                         <p className="whitespace-pre-wrap text-[11px] leading-snug text-content-secondary">
                           {locucion || <span className="italic text-content-subtle">—</span>}
@@ -350,11 +328,6 @@ export default function PresenterMode({
 
             <div className="max-w-lg rounded-xl border border-white/10 bg-black/70 px-4 py-2.5 text-center">
               <span className="block font-mono text-[12px] font-semibold text-brand">{lightbox.filename}</span>
-              {lightbox.description && (
-                <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-white/80">
-                  {lightbox.description}
-                </p>
-              )}
             </div>
           </div>
         </div>

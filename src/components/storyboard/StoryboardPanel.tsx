@@ -431,7 +431,6 @@ export default function StoryboardPanel({
             filename: nombreDeArchivo(original),
             image_path: filePath,
             image_url: publicUrl,
-            description: '',
             version: Date.now(),
           } satisfies StoryboardPanel;
         }),
@@ -592,7 +591,6 @@ export default function StoryboardPanel({
       filename: `Nueva_${panels.length + 1}`,
       image_path: '',
       image_url: '',
-      description: '',
       version: Date.now(),
     };
 
@@ -635,19 +633,12 @@ export default function StoryboardPanel({
         const index = actualizados.findIndex(
           (panel) => panel.filename.toLowerCase() === row.filename.toLowerCase(),
         );
-        if (index !== -1) {
-          if (row.description) actualizados[index].description = row.description;
-          if (row.locution) nuevasLocutions[index] = row.locution;
-        }
+        if (index !== -1 && row.locution) nuevasLocutions[index] = row.locution;
         return;
       }
 
-      if (i < actualizados.length) {
-        if (row.description) actualizados[i].description = row.description;
-        if (row.locution) nuevasLocutions[i] = row.locution;
-      } else {
-        nuevasLocutions[i] = row.locution || '';
-      }
+      // Sin nombre de viñeta se asigna por orden de aparición en el CSV.
+      nuevasLocutions[i] = row.locution || '';
     });
 
     setPanels(actualizados);
@@ -761,7 +752,7 @@ export default function StoryboardPanel({
           <div className="min-w-0">
             <h1 className="text-base font-semibold tracking-tight text-content">Storyboard</h1>
             <p className="mt-0.5 text-[12px] text-content-muted">
-              Viñetas, descripciones y locuciones por proyecto.
+              Viñetas y locuciones por proyecto.
             </p>
           </div>
 
@@ -925,7 +916,7 @@ export default function StoryboardPanel({
                   </span>
                   <p className="text-[13px] font-semibold text-content">Cargar guión (CSV)</p>
                   <p className="mb-3 mt-1 max-w-xs text-[11px] leading-relaxed text-content-muted">
-                    Importa descripciones y locuciones desde un CSV de tres columnas.
+                    Importa locuciones desde un CSV de dos columnas (viñeta y locución).
                   </p>
                   <CSVImporter onImport={importarCSV} onError={(mensaje) => onNotify(mensaje, 'error')} />
                 </div>
@@ -1019,7 +1010,7 @@ export default function StoryboardPanel({
               <EstadoVacio
                 Icono={FolderOpen}
                 titulo="Este proyecto no tiene storyboards"
-                detalle="Crea el primero para empezar a cargar viñetas, descripciones y locuciones."
+                detalle="Crea el primero para empezar a cargar viñetas y locuciones."
                 accion={
                   <button type="button" onClick={() => setCreando(true)} className="btn btn-sm btn-primary">
                     <Plus className="h-3.5 w-3.5" />

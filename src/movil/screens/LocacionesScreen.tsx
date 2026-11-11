@@ -381,7 +381,7 @@ function DetallePunto({
           <div className="mx-3 mb-2 flex items-start gap-1.5 rounded-lg border border-info-border bg-info-subtle px-2 py-1.5">
             <Cross className="mt-0.5 h-3 w-3 shrink-0 text-info-content" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-info-content/70">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-info-content/70">
                 Centro médico más cercano
               </p>
               <p className="truncate text-[11px] font-medium leading-tight text-info-content">

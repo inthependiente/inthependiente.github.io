@@ -2,13 +2,13 @@ import { useRef } from 'react';
 import Papa from 'papaparse';
 import { FileSpreadsheet } from 'lucide-react';
 import type { CsvRow } from './types';
+import { parseCsvRows } from './utils/csvParser';
 
 interface Props {
   onImport: (rows: CsvRow[]) => void;
   onError: (mensaje: string) => void;
 }
 
-/** Lee un CSV de tres columnas (viñeta, descripción, locución) o de una sola columna. */
 export default function CSVImporter({ onImport, onError }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -26,46 +26,7 @@ export default function CSVImporter({ onImport, onError }: Props) {
           return;
         }
 
-        const primera = rows[0] ?? [];
-        const esEncabezado = primera.some((cell) => {
-          const texto = String(cell).toLowerCase();
-          return (
-            texto.includes('descripcion') ||
-            texto.includes('descripción') ||
-            texto.includes('locucion') ||
-            texto.includes('locución') ||
-            texto.includes('viñeta') ||
-            texto.includes('audio') ||
-            texto.includes('id') ||
-            texto.includes('nombre')
-          );
-        });
-
-        const importadas: CsvRow[] = [];
-
-        for (let i = esEncabezado ? 1 : 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.length === 0 || (row.length === 1 && !row[0])) continue;
-
-          let filename = '';
-          let description = '';
-          let locution = '';
-
-          if (row.length >= 3) {
-            filename = String(row[0]).trim();
-            description = String(row[1]).trim();
-            locution = String(row[2]).trim();
-          } else if (row.length === 2) {
-            description = String(row[0]).trim();
-            locution = String(row[1]).trim();
-          } else {
-            description = String(row[0]).trim();
-          }
-
-          if (filename || description || locution) {
-            importadas.push({ filename, description, locution });
-          }
-        }
+        const importadas = parseCsvRows(rows);
 
         if (importadas.length === 0) {
           onError('No se encontraron datos válidos en el archivo CSV.');

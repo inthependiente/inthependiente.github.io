@@ -15,7 +15,6 @@ import {
   Loader2, 
   Globe, 
   User, 
-  ShieldCheck,
   CheckCircle,
   XCircle,
   HelpCircle,
@@ -702,10 +701,6 @@ export default function App() {
               {isSidebarOpen ? "Ocultar Menú" : "Mostrar Menú"}
             </span>
           </button>
-          <div className="flex items-center gap-2 bg-success-subtle px-2.5 py-1.5 rounded-lg border border-success-border text-xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-success" />
-            <span className="font-medium text-success-content">Nivel Admin: Total Control</span>
-          </div>
           <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-content-muted">
             <Globe className="w-3.5 h-3.5" />
             <span className="font-mono truncate max-w-xs">{sessionUser.email}</span>

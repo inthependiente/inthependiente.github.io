@@ -6,7 +6,12 @@ export interface StoryboardPanel {
   filename: string;
   image_path: string;
   image_url: string;
-  description: string;
+  /**
+   * @deprecated El panel ya no edita ni muestra descripciones. Se conserva
+   * opcional solo para no perder el texto que quedó guardado en viñetas
+   * antiguas al reescribir los JSONB.
+   */
+  description?: string;
   /** Marca de tiempo para invalidar la caché de la imagen tras reemplazarla. */
   version?: number;
 }
@@ -40,10 +45,9 @@ export interface ProyectoStoryboard {
   color_campana?: string | null;
 }
 
-/** Fila leída de un CSV: nombre de viñeta, descripción y locución. */
+/** Fila leída de un CSV: nombre de viñeta y locución. */
 export interface CsvRow {
   filename: string;
-  description: string;
   locution: string;
 }
 

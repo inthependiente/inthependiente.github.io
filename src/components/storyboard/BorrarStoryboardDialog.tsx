@@ -192,13 +192,13 @@ export default function BorrarStoryboardDialog({ storyboard, onClose, onDeleted,
 
         <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline">
           <div className="bg-surface px-2.5 py-2">
-            <dt className="text-[9px] font-semibold uppercase tracking-[0.1em] text-content-subtle">Viñetas</dt>
+            <dt className="text-[9px] font-semibold uppercase tracking-widest text-content-subtle">Viñetas</dt>
             <dd className="mt-0.5 font-mono text-[13px] font-semibold text-content">
               {storyboard.panel_count ?? storyboard.panels?.length ?? '—'}
             </dd>
           </div>
           <div className="bg-surface px-2.5 py-2">
-            <dt className="text-[9px] font-semibold uppercase tracking-[0.1em] text-content-subtle">Archivos</dt>
+            <dt className="text-[9px] font-semibold uppercase tracking-widest text-content-subtle">Archivos</dt>
             <dd className="mt-0.5 font-mono text-[13px] font-semibold text-content">
               {fase === 'calculando' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : archivos.length}
             </dd>

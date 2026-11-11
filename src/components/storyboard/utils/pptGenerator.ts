@@ -127,7 +127,7 @@ export async function generateStoryboardPPT(
       addImageToSlide(slide, img, imgLeft, imgY + offsetY, imgW, imgH);
       slide.addText(
         [
-          { text: 'Locución: ', options: { bold: true, fontFace: FONT, fontSize: 15, color: TXT_COLOR } },
+          { text: 'Locución / audio: ', options: { bold: true, fontFace: FONT, fontSize: 15, color: TXT_COLOR } },
           { text: loc, options: { italic: true, fontFace: FONT, fontSize: 15, color: TXT_COLOR } },
         ],
         { x: imgLeft, y: SH - M - 0.4, w: SW - imgLeft - M, h: 0.5 },
@@ -178,7 +178,7 @@ export async function generateStoryboardPPT(
         const textY = imgY + imgH + 0.06;
         slide.addText(
           [
-            { text: 'Locución: ', options: { bold: true, fontFace: FONT, fontSize: locSize, color: TXT_COLOR } },
+            { text: 'Locución / audio: ', options: { bold: true, fontFace: FONT, fontSize: locSize, color: TXT_COLOR } },
             { text: loc, options: { italic: true, fontFace: FONT, fontSize: locSize, color: TXT_COLOR } },
           ],
           { x: imgLeft, y: textY, w: cardW - offsetX, h: cardH - (textY - y), valign: 'top' },

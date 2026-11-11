@@ -121,18 +121,26 @@ desde el proyecto `storyboard-app` y restilizada con los tokens del panel. Traba
   - **Reemplazo individual** desde la miniatura (misma ruta, `version` nueva para invalidar
     la caché) y **revisión rápida** subiendo varios archivos: se emparejan por nombre de
     viñeta sin distinguir mayúsculas y se informa cuántos se actualizaron y cuáles fallaron.
-  - **Importar CSV** (viñeta, descripción, locución) y **añadir viñeta** en cualquier posición.
-- **Tabla**: nombre de la viñeta, descripción, locución, mover arriba/abajo, mover a una
-  posición y eliminar (con confirmación, porque también borra el archivo del storage).
+  - **Importar CSV** (viñeta, locución) y **añadir viñeta** en cualquier posición. Con
+    encabezado se respeta el orden real de las columnas; sin él se asume `viñeta, locución` y,
+    en archivos de tres columnas, la última es la locución (los CSV antiguos traían la
+    descripción en medio y se ignora).
+- **Tabla**: nombre de la viñeta, locución, mover arriba/abajo, mover a una posición y eliminar
+  (con confirmación, porque también borra el archivo del storage).
   Las **locuciones van atadas al índice** y no se desplazan al mover o borrar viñetas: es el
   comportamiento heredado de la app original.
+- **Sin descripciones**: el panel no edita, muestra ni exporta descripciones de plano (se
+  quitaron de la tabla, de la vista rodaje, del lightbox y de los PDF/PPT en todos los layouts).
+  El campo `description` de los JSONB antiguos se conserva intacto al guardar, pero ya no se
+  usa; las viñetas nuevas se crean sin él.
 - **Guardado**: los cambios de texto se escriben con retardo (800 ms) para no lanzar un
   `update` del JSONB por tecla; el guardado pendiente se vacía al salir del editor, cambiar de
   proyecto o cerrar la sección, y al pulsar **Guardar**. Las escrituras se encadenan una tras
   otra y se aplican con **lock optimista** (`update … where id = :id and updated_at = :visto`):
   si otro usuario guardó antes, el panel avisa y recarga la versión más reciente.
 - **Vista rodaje**: pantalla completa de solo lectura con layouts 1/4/6/20 por página
-  (en móvil, galería y deslizable), lightbox por viñeta e indicadores de página.
+  (en móvil, galería y deslizable), lightbox por viñeta e indicadores de página. Muestra el
+  nombre del plano y, por debajo del dibujo, la locución.
 - **Exportar PDF / PPT**: `jspdf` y `pptxgenjs` se cargan con `import()` dinámico solo al
   exportar, para no engordar el bundle del panel.
   - El PDF usa las fuentes Barlow Condensed (movidas a `src/components/storyboard/fonts/`) e

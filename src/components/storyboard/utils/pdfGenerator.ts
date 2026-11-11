@@ -48,7 +48,6 @@ export async function generateStoryboardPDF(
   panels: StoryboardPanel[],
   locutions: string[],
   panelsPerPage: LayoutPDF,
-  showDescription = false,
 ): Promise<void> {
   // Todos los PDF se exportan en horizontal.
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
@@ -123,7 +122,6 @@ export async function generateStoryboardPDF(
       }
 
       const textX = 14;
-      let textY = cardY + 12;
 
       doc.setFont('BarlowCondensed', 'bold');
       doc.setFontSize(13);
@@ -131,39 +129,17 @@ export async function generateStoryboardPDF(
       doc.text(`PLANO: ${panel.filename || `Panel ${i + 1}`}`, textX - 3, 17);
 
       doc.setTextColor(50, 50, 50);
-      textY += 14;
 
-      if (showDescription) {
-        doc.setFont('BarlowCondensed', 'bold');
-        doc.setFontSize(12);
-        doc.text('DESCRIPCIÓN:', textX, textY + 130);
-        doc.setFont('BarlowCondensed', 'normal');
-        doc.setFontSize(11);
-        const descLines = doc.splitTextToSize(panel.description || '', 250);
-        doc.text(descLines, textX, textY + 135);
-        textY += 15 + descLines.length * 4.5;
-      } else {
-        textY = imgY + imgH + 8;
-      }
+      const textY = imgY + imgH + 8;
 
-      if (showDescription) {
-        doc.setFont('BarlowCondensed', 'bold');
-        doc.setFontSize(12);
-        doc.text('LOCUCIÓN / LETRA:', textX, textY + 122);
-        doc.setFont('BarlowCondensed', 'italic');
-        doc.setFontSize(11);
-        const locLines = doc.splitTextToSize(locution, 250);
-        doc.text(locLines, textX, textY + 127);
-      } else {
-        doc.setFont('BarlowCondensed', 'bold');
-        doc.setFontSize(12);
-        doc.text('LOCUCIÓN / LETRA:', textX, textY);
-        doc.roundedRect(textX - 3, textY + 3, cardW - 14, 22, 2, 2, 'S');
-        doc.setFont('BarlowCondensed', 'italic');
-        doc.setFontSize(11);
-        const locLines = doc.splitTextToSize(locution, 250);
-        doc.text(locLines.slice(0, 4), textX, textY + 9);
-      }
+      doc.setFont('BarlowCondensed', 'bold');
+      doc.setFontSize(12);
+      doc.text('LOCUCIÓN / AUDIO:', textX, textY);
+      doc.roundedRect(textX - 3, textY + 3, cardW - 14, 22, 2, 2, 'S');
+      doc.setFont('BarlowCondensed', 'italic');
+      doc.setFontSize(11);
+      const locLines = doc.splitTextToSize(locution, 250);
+      doc.text(locLines.slice(0, 4), textX, textY + 9);
     }
   } else if (panelsPerPage === 4) {
     const panelsPerPg = 4;
@@ -215,28 +191,16 @@ export async function generateStoryboardPDF(
         doc.setDrawColor(210, 210, 210);
         doc.roundedRect(x, y, colWidth, colHeight, cornerRadius, cornerRadius, 'S');
 
-        let textY = imgY + imgH + 4;
+        const textY = imgY + imgH + 3;
         doc.setFontSize(10);
         doc.setTextColor(60, 60, 60);
 
-        if (showDescription) {
-          doc.setFont('BarlowCondensed', 'bold');
-          doc.text('Descripción:', x + 3, textY);
-          doc.roundedRect(x + 2, textY + 1, 106, 10, 2, 2, 'S');
-          doc.setFont('BarlowCondensed', 'normal');
-          const descLines = doc.splitTextToSize(panel.description || '', colWidth - 4);
-          doc.text(descLines.slice(0, 2), x + 4, textY + 5);
-          textY += 4.5;
-        } else {
-          textY -= 1;
-        }
-
         doc.setFont('BarlowCondensed', 'bold');
-        doc.text('Locución / Letra:', x + 3, textY + (showDescription ? 10 : 1));
-        doc.roundedRect(x + 2, textY + (showDescription ? 11 : 2), 106, showDescription ? 10 : 20, 2, 2, 'S');
+        doc.text('Locución / audio:', x + 3, textY + 1);
+        doc.roundedRect(x + 2, textY + 2, 106, 20, 2, 2, 'S');
         doc.setFont('BarlowCondensed', 'italic');
         const locLines = doc.splitTextToSize(locution, colWidth - 4);
-        doc.text(locLines.slice(0, showDescription ? 2 : 4), x + 4, textY + (showDescription ? 15 : 6));
+        doc.text(locLines.slice(0, 4), x + 4, textY + 6);
       }
     }
   } else if (panelsPerPage === 6) {
@@ -290,26 +254,16 @@ export async function generateStoryboardPDF(
         doc.setDrawColor(210, 210, 210);
         doc.roundedRect(x, y, colWidth, colHeight, cornerRadius, cornerRadius, 'S');
 
-        let textY = imgY + imgH + 4;
+        const textY = imgY + imgH + 4;
         doc.setFontSize(10);
         doc.setTextColor(60, 60, 60);
 
-        if (showDescription) {
-          doc.setFont('BarlowCondensed', 'bold');
-          doc.text('Descripción:', x + 4, textY + 1);
-          doc.roundedRect(x + 2, textY + 2, 78, 10, 2, 2, 'S');
-          doc.setFont('BarlowCondensed', 'normal');
-          const descLines = doc.splitTextToSize(panel.description || '', colWidth - 10);
-          doc.text(descLines.slice(0, 2), x + 5, textY + 6);
-          textY += 10;
-        }
-
         doc.setFont('BarlowCondensed', 'bold');
-        doc.text('Locución / Letra:', x + 4, textY + (showDescription ? 7 : 1));
-        doc.roundedRect(x + 2, textY + (showDescription ? 9 : 3), 78, showDescription ? 10 : 25, 2, 2, 'S');
+        doc.text('Locución / audio:', x + 4, textY + 1);
+        doc.roundedRect(x + 2, textY + 3, 78, 25, 2, 2, 'S');
         doc.setFont('BarlowCondensed', 'italic');
         const locLines = doc.splitTextToSize(locution, colWidth - 10);
-        doc.text(locLines.slice(0, showDescription ? 2 : 4), x + 5, textY + (showDescription ? 13 : 7));
+        doc.text(locLines.slice(0, 4), x + 5, textY + 7);
       }
     }
   } else if (panelsPerPage === 20) {
@@ -368,7 +322,7 @@ export async function generateStoryboardPDF(
         doc.setTextColor(60, 60, 60);
 
         doc.setFont('BarlowCondensed', 'bold');
-        doc.text('Locución / Letra:', x + 2.5, textY);
+        doc.text('Locución / audio:', x + 2.5, textY);
         doc.setFont('BarlowCondensed', 'italic');
 
         const locLines = doc.splitTextToSize(locution, colWidth - 5);

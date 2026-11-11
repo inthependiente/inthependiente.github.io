@@ -62,7 +62,6 @@ export default function StoryboardTable({
             <tr className="border-b border-hairline bg-thead text-[10px] font-semibold uppercase tracking-[0.12em] text-thead-content">
               <th className="w-14 px-3 py-2.5 text-center">#</th>
               <th className="w-44 px-3 py-2.5">Viñeta</th>
-              <th className="px-3 py-2.5">Descripción (sigue al cuadro)</th>
               <th className="px-3 py-2.5">Locución / audio</th>
               <th className="w-40 px-3 py-2.5 text-center">Acciones</th>
             </tr>
@@ -108,16 +107,6 @@ export default function StoryboardTable({
                       className="w-32 rounded-md border border-hairline-strong bg-surface px-2 py-1 text-center font-mono text-[11px] font-semibold text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand"
                     />
                   </div>
-                </td>
-
-                <td className="px-3 py-3">
-                  <textarea
-                    value={panel.description || ''}
-                    onChange={(e) => onUpdatePanel(index, { ...panel, description: e.target.value })}
-                    placeholder="Acción, cámara o plano…"
-                    aria-label={`Descripción de la viñeta ${index + 1}`}
-                    className="h-20 w-full min-w-52 resize-y rounded-lg border border-hairline-strong bg-surface p-2.5 text-[12px] leading-relaxed text-content placeholder-content-subtle transition-colors focus:outline-hidden focus:ring-2 focus:ring-brand"
-                  />
                 </td>
 
                 <td className="px-3 py-3">
@@ -188,7 +177,7 @@ export default function StoryboardTable({
 
             {panels.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-10 text-center">
+                <td colSpan={4} className="px-3 py-10 text-center">
                   <p className="text-[13px] font-medium text-content">No hay viñetas en este storyboard.</p>
                   <p className="mt-1 text-[12px] text-content-muted">
                     Sube imágenes o importa un CSV para comenzar.
