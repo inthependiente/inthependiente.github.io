@@ -107,6 +107,21 @@ que exigen rol `authenticated`: la anon key no puede leer tokens ni respuestas.
 > Importante: el link personal es la credencial de esa persona. No lo reenvíes a terceros.
 > Si un link se filtra, borra su fila en `crew_invitaciones` y vuelve a generarlo.
 
+### Filtros de las sub-tablas (admin)
+
+Las tablas hijas (`escenas`, `crew_llamado`, `cliente_agencia`, `talento`, `pdr`) se filtran por
+el **proyecto** y el **llamado activos** del selector superior; sin llamado activo muestran un
+aviso y no listan filas, para no mezclar días de rodaje.
+
+- **Cliente / Agencia · «Sin asignar»**: un perfil puede existir en la tabla sin llamado
+  (`llamado_id` nulo) —por ejemplo, alguien cargado a mano o que quedó suelto al borrar un
+  llamado—. Como la vista normal solo muestra el llamado activo, esas filas eran invisibles.
+  El conmutador **Mostrar: Del llamado / Sin asignar (N)** del buscador cambia a una lista con
+  **todas** las entradas sin llamado asignado, sin depender del llamado activo. Cada fila lleva
+  el chip `Sin asignar` y **Editar** abre el formulario con el llamado vacío y obligatorio, así
+  que al guardar se le asigna proyecto y llamado y la fila sale de esa vista. El contador del
+  conmutador muestra cuántas quedan pendientes.
+
 ### Storyboard (admin)
 
 El admin tiene una entrada **Storyboard** en la barra lateral (sección «Producción»), integrada

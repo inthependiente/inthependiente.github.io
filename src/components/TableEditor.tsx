@@ -65,6 +65,16 @@ export default function TableEditor({
   // Se guarda el id (no el índice) porque los índices cambian al filtrar/buscar.
   const [draggedRowId, setDraggedRowId] = useState<number | null>(null);
   const [crewSortMode, setCrewSortMode] = useState<"id" | "dept">("id");
+  /**
+   * Cliente / Agencia puede tener perfiles sin llamado (`llamado_id` nulo).
+   * Esa vista los muestra todos para poder asignarles proyecto y llamado.
+   */
+  const [verSinAsignar, setVerSinAsignar] = useState(false);
+
+  // El filtro solo tiene sentido en Cliente / Agencia: al cambiar de tabla se apaga.
+  React.useEffect(() => {
+    setVerSinAsignar(false);
+  }, [table]);
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     proyecto_id: true,
@@ -1077,6 +1087,7 @@ export default function TableEditor({
   };
 
   const resolveLlamado = (id: number) => {
+    if (id === null || id === undefined) return "Sin asignar";
     const parent = lookups.llamados.find((l) => l.id === id);
     if (!parent) return `Llamado #${id}`;
     const proj = lookups.proyectos.find((p) => p.id === parent.proyecto_id);
@@ -1124,8 +1135,23 @@ export default function TableEditor({
       .filter(Boolean);
   };
 
+  // Perfiles de Cliente / Agencia que aún no tienen llamado asignado.
+  const sinAsignar = React.useMemo(
+    () =>
+      table === "cliente_agencia"
+        ? data.filter((row) => row.llamado_id === null || row.llamado_id === undefined)
+        : [],
+    [data, table],
+  );
+
   // 1. Filter dynamically by Active Project / Active Called working context
   const relationallyFilteredData = data.filter((row) => {
+    // Vista «sin asignar»: ignora el llamado activo y muestra solo los perfiles
+    // que todavía no tienen llamado, para poder asignarles uno.
+    if (table === "cliente_agencia" && verSinAsignar) {
+      return row.llamado_id === null || row.llamado_id === undefined;
+    }
+
     // If called is active, filter llamados by project if selected
     if (table === "llamados" && selectedProjectId !== null) {
       return row.proyecto_id === selectedProjectId;
@@ -1362,7 +1388,7 @@ export default function TableEditor({
 
         {/* Warning Badge if no active filter */}
         <div className="text-right flex items-center gap-2">
-          {(!selectedProjectId || !selectedLlamadoId) && (
+          {(!selectedProjectId || !selectedLlamadoId) && !verSinAsignar && (
             <span className="text-xs text-brand-content font-medium inline-flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>Para filtrar sub-tablas, activa un proyecto/llamado en sus secciones.</span>
@@ -1504,6 +1530,17 @@ export default function TableEditor({
         </div>
       </div>
 
+      {verSinAsignar && (
+        <div className="bg-warning-subtle border border-warning-border rounded-xl px-4 py-2.5 shrink-0 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-warning-content" />
+          <p className="text-xs text-warning-content leading-relaxed">
+            Mostrando <span className="font-bold">todos los clientes y agencias sin llamado asignado</span>.
+            Usa <span className="font-semibold">Editar</span> para elegirles proyecto y llamado; al guardar
+            dejarán de aparecer en esta vista.
+          </p>
+        </div>
+      )}
+
       {/* Search Input Card */}
       <div className="bg-surface rounded-xl shadow-xs border border-hairline p-4 shrink-0">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
@@ -1517,6 +1554,50 @@ export default function TableEditor({
               className="w-full pl-10 pr-4 py-2.5 bg-subtle border border-hairline-strong rounded-lg text-sm text-content placeholder-content-subtle focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-surface transition-all"
             />
           </div>
+
+          {table === "cliente_agencia" && (selectedLlamadoId !== null || sinAsignar.length > 0) && (
+            <div className="flex items-center gap-2.5 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-hairline">
+              <span className="text-xs font-bold text-content-muted uppercase tracking-wider shrink-0">
+                Mostrar:
+              </span>
+              <div className="inline-flex rounded-lg bg-subtle p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setVerSinAsignar(false)}
+                  aria-pressed={!verSinAsignar}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    !verSinAsignar
+                      ? "bg-surface text-content shadow-xs"
+                      : "text-content-muted hover:text-content"
+                  }`}
+                >
+                  Del llamado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerSinAsignar(true)}
+                  aria-pressed={verSinAsignar}
+                  title="Perfiles de cliente/agencia que todavía no tienen un llamado asignado"
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    verSinAsignar
+                      ? "bg-surface text-content shadow-xs"
+                      : "text-content-muted hover:text-content"
+                  }`}
+                >
+                  Sin asignar
+                  <span
+                    className={`ml-1.5 rounded px-1 py-0.5 font-mono text-[10px] ${
+                      sinAsignar.length > 0
+                        ? "bg-warning-subtle text-warning-content"
+                        : "bg-subtle text-content-subtle"
+                    }`}
+                  >
+                    {sinAsignar.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {(table === "crew" || table === "crew_llamado") && (
             <div className="flex items-center gap-2.5 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-hairline">
@@ -1591,7 +1672,10 @@ export default function TableEditor({
 
       {/* Main Database Table Display */}
       <div className="flex-1 bg-surface border border-hairline rounded-xl overflow-hidden flex flex-col min-h-0">
-        {["crew_llamado", "cliente_agencia", "pdr"].includes(table) && !selectedLlamadoId ? (
+        {["crew_llamado", "cliente_agencia", "pdr"].includes(table) &&
+        !selectedLlamadoId &&
+        // La vista «sin asignar» de Cliente / Agencia no depende de un llamado.
+        !(table === "cliente_agencia" && verSinAsignar) ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto my-auto animate-fade-in">
             <div className="p-3 bg-success-subtle border border-success-border rounded-lg text-success mb-4">
               <Calendar className="w-8 h-8" />
@@ -1651,9 +1735,11 @@ export default function TableEditor({
             <HelpCircle className="w-12 h-12 text-content-subtle mb-3" />
             <h4 className="font-bold text-lg text-content-secondary">No se encontraron registros</h4>
             <p className="text-content-muted text-sm max-w-sm mt-1">
-              {searchQuery 
-                ? "Prueba cambiando tu búsqueda o limpiando el filtro actual." 
-                : "No existen filas en esta tabla todavía. Crea una entrada presionando el botón 'Nueva Entrada' de arriba."}
+              {searchQuery
+                ? "Prueba cambiando tu búsqueda o limpiando el filtro actual."
+                : verSinAsignar
+                  ? "Todos los clientes y agencias tienen un llamado asignado."
+                  : "No existen filas en esta tabla todavía. Crea una entrada presionando el botón 'Nueva Entrada' de arriba."}
             </p>
             {searchQuery && (
               <button
@@ -2082,7 +2168,16 @@ export default function TableEditor({
                           </div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          {row.llamado_id === null || row.llamado_id === undefined ? (
+                            <span
+                              className="bg-warning-subtle text-warning-content border border-warning-border px-2 py-1 rounded-md inline-block font-mono font-bold"
+                              title="Sin llamado asignado: edita la fila para asignarle un proyecto y un llamado"
+                            >
+                              Sin asignar
+                            </span>
+                          ) : (
+                            <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          )}
                         </td>
                         <td className="p-1">
                           <select
@@ -2172,7 +2267,16 @@ export default function TableEditor({
                     {table === "cliente_agencia" && (
                       <>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          {row.llamado_id === null || row.llamado_id === undefined ? (
+                            <span
+                              className="bg-warning-subtle text-warning-content border border-warning-border px-2 py-1 rounded-md inline-block font-mono font-bold"
+                              title="Sin llamado asignado: edita la fila para asignarle un proyecto y un llamado"
+                            >
+                              Sin asignar
+                            </span>
+                          ) : (
+                            <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          )}
                         </td>
                         <td className="p-3.5">
                           <span className="text-[10px] bg-danger-subtle text-danger-content font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider mr-2">{row.tipo}</span>
@@ -2220,7 +2324,16 @@ export default function TableEditor({
                           </div>
                         </td>
                         <td className="p-3.5 text-xs">
-                          <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          {row.llamado_id === null || row.llamado_id === undefined ? (
+                            <span
+                              className="bg-warning-subtle text-warning-content border border-warning-border px-2 py-1 rounded-md inline-block font-mono font-bold"
+                              title="Sin llamado asignado: edita la fila para asignarle un proyecto y un llamado"
+                            >
+                              Sin asignar
+                            </span>
+                          ) : (
+                            <span className="bg-subtle text-content-secondary px-2 py-1 rounded-md inline-block font-mono font-bold">{resolveLlamado(row.llamado_id)}</span>
+                          )}
                         </td>
                         <td className="p-1 text-xs">
                           <div className="flex items-center gap-1">
